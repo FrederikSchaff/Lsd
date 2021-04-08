@@ -283,7 +283,7 @@ const char* abmat_varname_convert( const char* lab)
   //check if exists, else create
   if (m_abmat_varnames.count(lab) == 0 ) {
     std::string s_short = std::string(lab);
-
+    
     if ( true == abmat_short_names ) {
     
       if (s_short.length() > MAX_ABMAT_BASEVAR_LENGTH) {
@@ -369,7 +369,7 @@ std::string get_abmat_varname(Tabmat stattype, const char* var1lab, const char* 
       varname.insert(0, "_");
       varname.insert(0, apar_mic);
       break;
-
+      
     case a_fmac:
       varname.insert(0, "_");
       varname.insert(0, afin_mac);
@@ -438,24 +438,25 @@ std::string get_abmat_varname(Tabmat stattype, const char* var1lab, const char* 
       else {
         varname.append("_shr");    //share in 0,1
       }
-      break;  
-
+      
+      break;
+      
     //nothing to add
     case a_comp:
-    case a_fmac:    
+    case a_fmac:
     case a_macro:
     case a_pLSD:
     case a_pmac:
     case a_pstat:
-    break;
-
+      break;
+      
     default:
       error_hard( __DEV_ERR_INFO__, "defaulting should not happen (2)",
                   "contact the developer.",
                   true );
       return "";
   }
-
+  
   return varname;
 }
 
@@ -956,7 +957,7 @@ void abmat_create_tree()
       case a_pmac:
         typeLab = lpmac;
         break;
-
+        
       case a_fmic:
         typeLab = lfmic;
         break;
@@ -1015,10 +1016,10 @@ void abmat_add_object_intern(Tabmat type, char const* varlab, char const* var2la
   //check if the abmat object associated to the variable
   //exists. Note: It may be included in multiple categories
   //so we check on category level.
-
-  #ifdef NO_WINDOW
+  
+#ifdef NO_WINDOW
   no_res = true; //never save results in no window mode IF ABMAT IS ACTIVE.
-  #endif
+#endif
   
   //check that the object added is not a function.
   variable* target1 = root->search_var_global(root, varlab);
@@ -1100,11 +1101,11 @@ void abmat_add_object_intern(Tabmat type, char const* varlab, char const* var2la
     case a_pmac:
       typeLab = lpmac;
       break;
-    
+      
     case a_fmic:
-        typeLab = lfmic;
-        break;
-        
+      typeLab = lfmic;
+      break;
+      
     case a_fmac:
       typeLab = lfmac;
       break;
@@ -1681,31 +1682,29 @@ void abmat_scalars(variable* vVar, Tabmat type, ms_statsT& scalars)
         break;
         
       case a_pmac:
-      case a_pmic: 
-      {
-        auto vname2 = abmat_varname_tot(vVar->label, i);          
-        scalars.emplace(vname2, data.front());
-        plog("\nAdded variable ");
-        plog(vname2.c_str());
-        plog(" with value ");
-        plog(std::to_string(data.front()).c_str());
-        //auto vname = abmat_varname_tot(vVar->label, i, stat.first);
+      case a_pmic: {
+          auto vname2 = abmat_varname_tot(vVar->label, i);
+          scalars.emplace(vname2, data.front());
+          plog("\nAdded variable ");
+          plog(vname2.c_str());
+          plog(" with value ");
+          plog(std::to_string(data.front()).c_str());
+          //auto vname = abmat_varname_tot(vVar->label, i, stat.first);
+          
+        }
+        break;
         
-      }
-      break;
-
       case a_fmac:
-      case a_fmic: 
-      {
-        auto vname2 = abmat_varname_tot(vVar->label, i);          
-        scalars.emplace(vname2, data.back());
-        plog("\nAdded variable ");
-        plog(vname2.c_str());
-        plog(" with value ");
-        plog(std::to_string(data.back()).c_str());
-        //auto vname = abmat_varname_tot(vVar->label, i, stat.first);
-        
-      }
+      case a_fmic: {
+          auto vname2 = abmat_varname_tot(vVar->label, i);
+          scalars.emplace(vname2, data.back());
+          plog("\nAdded variable ");
+          plog(vname2.c_str());
+          plog(" with value ");
+          plog(std::to_string(data.back()).c_str());
+          //auto vname = abmat_varname_tot(vVar->label, i, stat.first);
+          
+        }
         
         return;
         
