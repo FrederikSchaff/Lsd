@@ -3,7 +3,7 @@
 --style=stroustrup #The base style
 --indent=spaces=2 #Use indents of size of 2 spaces
 --attach-inlines #Attach braces to class and struct inline function definitions.
---attach-extern-c #Attach braces to a braced extern "C" statement...
+--attach-extern-c #Attach braces to a braced extern 'C' statement...
 --attach-closing-while # Attach the closing 'while' of a 'do-while' statement to the closing brace. This has precedence over both the brace style and the break closing braces option.
 --indent-classes # Indent 'class' and 'struct' blocks so that the entire block is indented.
 --indent-switches  #Indent 'switch' blocks so that the 'case X:' statements are indented in the switch block.
