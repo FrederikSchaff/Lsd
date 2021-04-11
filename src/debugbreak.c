@@ -4,16 +4,16 @@ Debug break (CTRL+C) helper for Windows.
 
 by Kyle McKay
 
-If you have ever tried to interrupt a program running under cygwin gdb, 
-you have probably experienced some frustration. You've probably discovered 
-that pressing Ctrl-C in the gdb window/ prompt while the program being 
-debugged is running is a fruitless exercise. 
+If you have ever tried to interrupt a program running under cygwin gdb,
+you have probably experienced some frustration. You've probably discovered
+that pressing Ctrl-C in the gdb window/ prompt while the program being
+debugged is running is a fruitless exercise.
 
-The small debugbreak utility provides a workaround to Ctrl-C. Open a new 
-cygwin command line prompt. Use ps -W to find the WINPID of the process 
-being debugged and then execute debugbreak with that WINPID. gdb will then 
-regain control and the program being debugged will break just as though 
-Ctrl-C was working properly. Be sure to use the WINPID of the process being 
+The small debugbreak utility provides a workaround to Ctrl-C. Open a new
+cygwin command line prompt. Use ps -W to find the WINPID of the process
+being debugged and then execute debugbreak with that WINPID. gdb will then
+regain control and the program being debugged will break just as though
+Ctrl-C was working properly. Be sure to use the WINPID of the process being
 debugged rather than the WINPID of gdb. In gdb, the WINPID are the start
 numbers (before the point) of all created threads after running the program.
 
@@ -67,37 +67,37 @@ static const char *geterrstr(DWORD errcode)
 
 int main(int argc, char *argv[])
 {
-    HANDLE proc;
-    unsigned proc_id = 0;
-    BOOL break_result;
+	HANDLE proc;
+	unsigned proc_id = 0;
+	BOOL break_result;
 
-    if (argc != 2) {
-        printf("Usage: debugbreak process_id_number\n");
-        return 1;
-    }
-    proc_id = (unsigned) strtol(argv[1], NULL, 0);
-    if (proc_id == 0) {
-        printf("Invalid process id %u\n", proc_id);
-        return 1;
-    }
-    proc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, (DWORD)proc_id);
-    if (proc == NULL) {
-        DWORD lastError = GetLastError();
-        printf("Failed to open process %u\n", proc_id);
-        printf("Error code is %lu (%s)\n", (unsigned long)lastError, geterrstr(lastError));
-        return 1;
-    }
-    break_result = DebugBreakProcess(proc);
-    if (!break_result) {
-        DWORD lastError = GetLastError();
-        printf("Failed to debug break process %u\n", proc_id);
-        printf("Error code is %lu (%s)\n", (unsigned long)lastError, geterrstr(lastError));
-        CloseHandle(proc);
-        return 1;
-    }
-    printf("DebugBreak sent successfully to process id %u\n", proc_id);
-    CloseHandle(proc);
-    return 0;
+	if (argc != 2) {
+		printf("Usage: debugbreak process_id_number\n");
+		return 1;
+	}
+	proc_id = (unsigned) strtol(argv[1], NULL, 0);
+	if (proc_id == 0) {
+		printf("Invalid process id %u\n", proc_id);
+		return 1;
+	}
+	proc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, (DWORD)proc_id);
+	if (proc == NULL) {
+		DWORD lastError = GetLastError();
+		printf("Failed to open process %u\n", proc_id);
+		printf("Error code is %lu (%s)\n", (unsigned long)lastError, geterrstr(lastError));
+		return 1;
+	}
+	break_result = DebugBreakProcess(proc);
+	if (!break_result) {
+		DWORD lastError = GetLastError();
+		printf("Failed to debug break process %u\n", proc_id);
+		printf("Error code is %lu (%s)\n", (unsigned long)lastError, geterrstr(lastError));
+		CloseHandle(proc);
+		return 1;
+	}
+	printf("DebugBreak sent successfully to process id %u\n", proc_id);
+	CloseHandle(proc);
+	return 0;
 }
 
 /* END debugbreak.c */

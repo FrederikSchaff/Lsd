@@ -21,8 +21,8 @@
 
 
 #if defined( EIGENLIB ) && __cplusplus >= 201103L   // required C++11
-  #include <Eigen/Eigen>                  // Eigen linear algebra library
-  using namespace Eigen;
+#include <Eigen/Eigen>                  // Eigen linear algebra library
+using namespace Eigen;
 #endif
 
 #include "decl.h"                   // LSD classes
@@ -31,9 +31,9 @@
 
 // set ABMAT max variable length
 #if ! defined MAX_ABMAT_VAR_LENGTH
-  int MAX_ABMAT_BASEVAR_LENGTH = ( 30 - 18 ) / 2;
+int MAX_ABMAT_BASEVAR_LENGTH = ( 30 - 18 ) / 2;
 #else
-  int MAX_ABMAT_BASEVAR_LENGTH = ( MAX_ABMAT_VAR_LENGTH - 18 ) / 2;
+int MAX_ABMAT_BASEVAR_LENGTH = ( MAX_ABMAT_VAR_LENGTH - 18 ) / 2;
 #endif
 
 // create and set fast lookup flag
@@ -89,7 +89,7 @@ bool no_ptr_chk = true;
 
 // user defined variables for all equations (to be defined in equation file)
 #ifndef EQ_USER_VARS
-  #define EQ_USER_VARS
+#define EQ_USER_VARS
 #endif
 
 #define EQ_BEGIN \
@@ -304,12 +304,12 @@ bool no_ptr_chk = true;
 #define GRANDPARENTS(OBJ) ( CHK_PTR_OBJ( OBJ->up ) OBJ->up->up )
 // some macros to define unique ids for some objects
 #ifdef CPP11
-  #define MAKE_UNIQUE( LAB ) p->declare_as_unique( ( char * ) LAB )
-  #define UID  ( p->unique_id( )  )
-  #define UIDS( PTR ) ( CHK_PTR_DBL(PTR) PTR->unique_id_int( ) ) 
-  #define UID_INT  ( p->unique_id( )  )
-  #define UID_INTS( PTR ) ( CHK_PTR_INT(PTR) PTR->unique_id_int( ) ) 
-  #define SEARCH_UID( ID ) ( root->obj_by_unique_id( int ( ID ) ) )
+#define MAKE_UNIQUE( LAB ) p->declare_as_unique( ( char * ) LAB )
+#define UID  ( p->unique_id( )  )
+#define UIDS( PTR ) ( CHK_PTR_DBL(PTR) PTR->unique_id_int( ) )
+#define UID_INT  ( p->unique_id( )  )
+#define UID_INTS( PTR ) ( CHK_PTR_INT(PTR) PTR->unique_id_int( ) )
+#define SEARCH_UID( ID ) ( root->obj_by_unique_id( int ( ID ) ) )
 #endif //#ifdef CPP11
 #define RND_SEED ( ( double ) seed - 1 )
 #define T ( ( double ) t )
@@ -623,516 +623,516 @@ bool no_ptr_chk = true;
 #define CYCLE_EXTS( O, X, Y, Z ) for ( X = EXEC_EXTS( O, Y, Z, begin ); X != EXEC_EXTS( O, Y, Z, end ); ++X )
 
 #ifdef CPP11
-  
-  // GIS MACROS
-  // The GIS is implemented as a 2d map (continous euclidean space) with a
-  //   raster-filter (the integer positions). All different kind of LSD objects
-  //   can be registered in a map. They can share the same map, but it is also
-  //   possible to have multiple maps.
-  //
-  // As with all LSD macros, the macro uses the current object (p) as starting
-  //   point. Alternative "S" versions of the macros exist as well as all the
-  //   other standard LSD macro-types, when appropriate (CHEAT, L, S)
-  //   CHEAT: Please note that passing NULL is equivalent of passing the candidate
-  //          itself (i.e. using non-cheat version)
-  //
-  // A new, GIS-specific post-fix is SHARE which means that the target object
-  //   (TARGET) will use GIS information of the calling object.
-  //
-  // Many macros require the reference to an existing gis-object to defer
-  //  from this object the map. In this case, GISOBJ relates to such an object.
-  //  If the user selected one of the "root" options (see below) the user
-  //  may safely use root each time GISOBJ is demanded.
-  //
-  //
-  //
-  // There are NN classes of macros:
-  // a) Initialisation of the map
-  // b) Adding and Removing objects from the map
-  //    (note: if an object is deleted, it is removed from the map automatically)
-  // c) Moving objects inside the map (MOVE, TELEPORT)
-  // d) General utilities (POSITION, DISTANCE)
-  // e) Search utilities (search at (grid-)position, CYCLE_NEIGHBOUR, get nearest neighbour with conditions
-  
-  // Initialisation macros
-  //
-  // WRAP Versions allow to define world wrapping
-  // Non-WRAP Versions assume there is no world wrapping
-  // there are 2^4 options. We use a bit-code (0=off):
-  //   0-bit: left     : 0=0 1=1
-  //   1-bit: right    : 0=0 1=2
-  //   2-bit: top      : 0=0 1=4
-  //   3-bit: bottom   : 0=0 1=8
-  //   sum the values to generate desired wrapping (e.g. 15 - torus world)
-  
-  // INIT_SPACE_ROOT
-  // If there is only one GIS or a single GIS is used heavily, it makes sense to
-  // host in in the root object for easy accessing later on.
-  #define INIT_SPACE_ROOT(XN,YN)  { root->init_gis_singleObj(0, 0, XN, YN); }
-  #define INIT_SPACE_ROOT_WRAP(XN, YN, WRAP)  { root->init_gis_singleObj(0, 0, XN, YN, WRAP); }
-  #define ADD_ROOT_TO_SPACE(GISOBJ) { ( root==GISOBJ ? false : root->register_at_map(GISOBJ->ptr_map(), 0, 0) ); }
-  
-  // INIT_SPACE_SINGLE
-  // Initialise the space with a single object
-  #define INIT_SPACE_SINGLE( X, Y, XN, YN)              { p->init_gis_singleObj(X, Y, XN, YN); }
-  #define INIT_SPACE_SINGLES( GISOBJ, X, Y, XN, YN)              { GISOBJ->init_gis_singleObj(X, Y, XN, YN); }
-  #define INIT_SPACE_SINGLE_WRAP( X, Y, XN, YN, WRAP )  { p->init_gis_singleObj( X, Y, XN, YN, WRAP ); }
-  #define INIT_SPACE_SINGLE_WRAPS( GISOBJ, X, Y, XN, YN, WRAP )  { GISOBJ->init_gis_singleObj( X, Y, XN, YN, WRAP ); }
-  
-  // INIT_SPACE_GRID
-  //  bool object::init_gis_regularGrid(char const lab[], int xn, int yn, int _wrap, int _lag, int n){
-  // Initialise the regular space and use the object LAB contained in p as "Patches"
-  // Using Column Major (change?) the objects are added to a 2d grid and get xy coords respectively
-  #define INIT_SPACE_PATCH( LAB, XN, YN )             { p->init_gis_regularGrid( LAB, XN, YN, 0, 0 ); }
-  #define INIT_SPACE_PATCH_WHERE(LAB, XN, YN, WHERE )             { WHERE->init_gis_regularGrid( LAB, XN, YN, 0, 0 ); }
-  
-  #define INIT_SPACE_PATCHL( LAB, XN, YN, TIME )             { p->init_gis_regularGrid( LAB, XN, YN, 0, TIME ); }
-  #define INIT_SPACE_PATCHL_WHERE( LAB, XN, YN, TIME, WHERE )             { WHERE->init_gis_regularGrid( LAB, XN, YN, 0, TIME ); }
-  
-  #define INIT_SPACE_PATCH_WRAP( LAB, XN, YN, WRAP )  { p->init_gis_regularGrid( LAB, XN, YN, WRAP, 0 ); }
-  #define INIT_SPACE_PATCH_WRAP_WHERE( LAB, XN, YN, WRAP, WHERE )  { WHERE->init_gis_regularGrid( LAB, XN, YN, WRAP, 0 ); }
-  
-  #define INIT_SPACE_PATCH_WRAPL( LAB, XN, YN, WRAP, TIME )  { p->init_gis_regularGrid( LAB, XN, YN, WRAP, TIME ); }
-  #define INIT_SPACE_PATCH_WRAPL_WHERE( LAB, XN, YN, WRAP, TIME, WHERE )  { WHERE->init_gis_regularGrid( LAB, XN, YN, WRAP, TIME ); }
-  
-  //n versions with sparce space
-  #define INIT_SPACE_PATCHN( LAB, XN, YN, N )             { p->init_gis_regularGrid( LAB, XN, YN, 0, 0, N ); }
-  #define INIT_SPACE_PATCHN_WHERE( LAB, XN, YN, N, WHERE )             { WHERE->init_gis_regularGrid( LAB, XN, YN, 0, 0, N ); }
-  
-  #define INIT_SPACE_PATCHNL( LAB, XN, YN, N, TIME )             { p->init_gis_regularGrid( LAB, XN, YN, 0, TIME, N ); }
-  #define INIT_SPACE_PATCHNL_WHERE( LAB, XN, YN, N, TIME, WHERE )             { WHERE->init_gis_regularGrid( LAB, XN, YN, 0, TIME, N ); }
-  
-  #define INIT_SPACE_PATCH_WRAPN( LAB, XN, YN, WRAP, N )  { p->init_gis_regularGrid( LAB, XN, YN, WRAP, 0, N ); }
-  #define INIT_SPACE_PATCH_WRAPN_WHERE(  LAB, XN, YN, WRAP, N, WHERE )  { WHERE->init_gis_regularGrid( LAB, XN, YN, WRAP, 0, N ); }
-  
-  #define INIT_SPACE_PATCH_WRAPNL( LAB, XN, YN, WRAP, N , TIME )  { p->init_gis_regularGrid( LAB, XN, YN, WRAP, TIME, N ); }
-  #define INIT_SPACE_PATCH_WRAPNL_WHERE(  LAB, XN, YN, WRAP, N, TIME, WHERE )  { WHERE->init_gis_regularGrid( LAB, XN, YN, WRAP, TIME, N ); }
-  
-  #define SET_GIS_DISTANCE_TYPE( TYPE ) { p->set_distance_type( TYPE ) ; }
-  #define SET_GIS_DISTANCE_TYPE_WHERE( TYPE, WHERE ) { WHERE->set_distance_type( TYPE ) ; }
-  
-  // DELETE_SPACE / DELETE_FROM_SPACE
-  // Delete the map and unregister all object-registrations in the map. Do not delte the LSD objects.
-  #define DELETE_SPACE( WHERE ) { WHERE->delete_map(); }
-  #define DELETE_FROM_SPACE { p->unregister_from_gis(); }
-  #define DELETE_FROM_SPACES( PTR ) {CHK_PTR_BOOL( PTR )  PTR->unregister_from_gis(); }
-  
-  // ADD_TO_SPACE
-  // Register object in space, providing explicit x,y position or sharing object
-  // If already registered, move instead and print info.
-  #define ADD_TO_SPACE_XY_WHERE( X, Y, WHERE)  { p->register_at_map(WHERE->ptr_map(), X, Y); }
-  #define ADD_TO_SPACE_XYS_WHERE( PTR, X, Y, WHERE)  {CHK_PTR_BOOL( PTR )  PTR->register_at_map(WHERE, X, Y); }
-  #define ADD_TO_SPACE_SHARE_WHERE( WHERE ) { p->register_at_map(WHERE); }
-  #define ADD_TO_SPACE_SHARES_WHERE(PTR, WHERE) {CHK_PTR_BOOL( PTR )  PTR->register_at_map(WHERE); }
-  #define ADD_TO_SPACE_SHARES(PTR) {CHK_PTR_BOOL( PTR )  PTR->register_at_map(p); }
-  
-  #define ADD_TO_SPACE_CENTER_XY_WHERE( X, Y, X2, Y2, WHERE)  { p->register_at_map_between(WHERE, X, Y, X2, Y2); }
-  #define ADD_TO_SPACE_CENTER_XYS_WHERE( PTR, X, Y, X2, Y2, WHERE)  { CHK_PTR_BOOL( PTR )  PTR->register_at_map_between(WHERE, X, Y, X2, Y2); }
-  #define ADD_TO_SPACE_CENTER_SHARE_WHERE2(WHERE1, WHERE2) { p->register_at_map_between(WHERE1, WHERE2); }
-  #define ADD_TO_SPACE_CENTER_SHARES_WHERE2(PTR, WHERE1, WHERE2) { CHK_PTR_BOOL( PTR )  PTR->register_at_map_between(WHERE1, WHERE2); }
-  
-  #define ADD_TO_SPACE_RND_WHERE(WHERE) { p->register_at_map_rnd(WHERE); }
-  #define ADD_TO_SPACE_RNDS_WHERE(PTR, WHERE) { CHK_PTR_BOOL( PTR )  PTR->register_at_map_rnd(WHERE); }
-  #define ADD_TO_SPACE_RND_GRID_WHERE(WHERE) { p->register_at_map_rnd(WHERE,true); }
-  #define ADD_TO_SPACE_RND_GRIDS_WHERE(PTR, WHERE) { CHK_PTR_BOOL( PTR )  PTR->register_at_map_rnd(WHERE,true); }
-  
-  #define ADD_ALL_TO_SPACE( LABEL ) { p->register_allOfKind_at_grid_rnd( LABEL ); }
-  #define ADD_ALL_TO_SPACE_WHERE( LABEL, WHERE ) { WHERE->register_allOfKind_at_grid_rnd( LABEL); }
-  
-  #define ADD_ALL_TO_SPACE_CND(obj, condVarLab, condition, condVal ) { p->register_allOfKind_at_grid_rnd_cnd( obj, condVarLab, condition, condVal); }
-  #define ADD_ALL_TO_SPACE_CND_WHERE( obj, condVarLab, condition, condVal, WHERE ) { CHK_PTR_BOOL( WHERE )  WHERE->register_allOfKind_at_grid_rnd_cnd( obj, condVarLab, condition, condVal); }
-  
-  // POSITION
-  // Macros to get x or y position or produce random position
-  #define POSITION_X ( p->get_pos('x') )
-  #define POSITION_Y ( p->get_pos('y') )
-  #define POSITION_Z ( p->get_pos('z') )
-  #define POSITION_XS(PTR) ( CHK_PTR_DBL( PTR )  PTR->get_pos('x') )
-  #define POSITION_YS(PTR) ( CHK_PTR_DBL( PTR )  PTR->get_pos('y') )
-  #define POSITION_ZS(PTR) ( CHK_PTR_DBL( PTR )  PTR->get_pos('z') )
-  #define RANDOM_POSITION_X ( p->random_pos('x') )
-  #define RANDOM_POSITION_Y ( p->random_pos('y') )
-  #define RANDOM_POSITION_X_WHERE(WHERE) ( WHERE->random_pos('x') )
-  #define RANDOM_POSITION_Y_WHERE(WHERE) ( WHERE->random_pos('y') )
-  
-  #define CENTER_POSITIONX ( p->center_position('x') )
-  #define CENTER_POSITIONY ( p->center_position('y') )
-  #define CENTER_POSITIONX_WHERE( WHERE ) ( WHERE->center_position('x') )
-  #define CENTER_POSITIONY_WHERE( WHERE ) ( WHERE->center_position('y') )
-  
-  #define POSITION_INTERCEPT_WHERE2(REL_POS, OBJ1, OBJ2) { p->position_between(v[0], v[1], OBJ1, OBJ2, REL_POS); }
-  #define POSITION_INTERCEPT_XY(x1, y1, x2, y2, REL_POS) { p->position_between(v[0], v[1], x1, y1, x2, y2, REL_POS); }
-  #define POSITION_INTERCEPT_XY_WHERE(x1, y1, x2, y2, REL_POS, WHERE) { WHERE->position_between(v[0], v[1], x1, y1, x2, y2, REL_POS); }
-  
-  
-  
-  // DISTANCE
-  // measures the distance from self to a TARGET or a position
-  #define DISTANCE_TO(TARGET) ( p -> distance (TARGET) )
-  #define DISTANCE_FROM(SOURCE) ( SOURCE -> distance (p) ) //only relevant for asymmetric wrapping
-  #define DISTANCE_TO_XY(X, Y) ( p-> distance (X,Y) )
-  #define DISTANCE_TO_XYS(PTR, X, Y) (CHK_PTR_DBL( PTR )  PTR-> distance (X,Y) )
-  
-  //DISTANCE2 - Distance between different items / points in space
-  #define DISTANCE_BETWEEN(TARGET1, TARGET2) ( TARGET1 -> distance (TARGET2) )
-  #define DISTANCE_BETWEEN_XY(X1, Y1, X2, Y2) ( p-> distance (X1, Y1, X2, Y2) )
-  #define DISTANCE_BETWEEN_WHERE(X1, Y1, X2, Y2, WHERE) ( WHERE-> distance (X1, Y1, X2, Y2) )
-  
-  #define RELATIVE_DISTANCE( dist ) ( p->relative_distance(dist) )
-  #define RELATIVE_DISTANCE_WHERE( dist, WHERE ) ( WHERE->relative_distance(dist) )
-  
-  #define ABSOLUTE_DISTANCE( dist ) ( p->absolute_distance(dist) )
-  #define ABSOLUTE_DISTANCE_WHERE( dist, WHERE ) ( WHERE->absolute_distance(dist) )
-  
-  
-  // POSSIBLE_MOVEMENTS
-  // return a vector of the integers of the possible movements.
-  
-  #define POSSIBLE_MOVEMENT ( p->possible_movements_full() )
-  #define POSSIBLE_MOVEMENT_WHERE(WHERE) ( WHERE->possible_movements_full() )
-  #define POSSIBLE_MOVEMENT_NOSTAY ( p->possible_movements_move() )
-  #define POSSIBLE_MOVEMENT_NOSTAY_WHERE(WHERE) ( WHERE->possible_movements_move() )
-  
-  //implementations for xy exist but API not yet defined.
-  
-  
-  
-  // MOVE
-  // move a single step in one of eight directions
-  // 0: stay put. 1: north, 2: north-east, 3: east, 4: south-east,
-  // 5: south, 6: sout-west, 7: west and 8: north-west
-  // Note: There is no "orientation" currently.
-  // return value: succes, bool (true == 1/false == 0)
-  #define MOVE(DIRECTION) ( p->move(DIRECTION) )
-  #define MOVES(PTR, DIRECTION) (CHK_PTR_BOOL( PTR )  PTR->move(DIRECTION) )
 
-  #define MOVE_TOWARD(TARGET) ( p->move_toward(TARGET) )
-  #define MOVE_TOWARDS(PTR,TARGET) ( CHK_PTR_BOOL( PTR )->move_toward(TARGET) )
+// GIS MACROS
+// The GIS is implemented as a 2d map (continous euclidean space) with a
+//   raster-filter (the integer positions). All different kind of LSD objects
+//   can be registered in a map. They can share the same map, but it is also
+//   possible to have multiple maps.
+//
+// As with all LSD macros, the macro uses the current object (p) as starting
+//   point. Alternative "S" versions of the macros exist as well as all the
+//   other standard LSD macro-types, when appropriate (CHEAT, L, S)
+//   CHEAT: Please note that passing NULL is equivalent of passing the candidate
+//          itself (i.e. using non-cheat version)
+//
+// A new, GIS-specific post-fix is SHARE which means that the target object
+//   (TARGET) will use GIS information of the calling object.
+//
+// Many macros require the reference to an existing gis-object to defer
+//  from this object the map. In this case, GISOBJ relates to such an object.
+//  If the user selected one of the "root" options (see below) the user
+//  may safely use root each time GISOBJ is demanded.
+//
+//
+//
+// There are NN classes of macros:
+// a) Initialisation of the map
+// b) Adding and Removing objects from the map
+//    (note: if an object is deleted, it is removed from the map automatically)
+// c) Moving objects inside the map (MOVE, TELEPORT)
+// d) General utilities (POSITION, DISTANCE)
+// e) Search utilities (search at (grid-)position, CYCLE_NEIGHBOUR, get nearest neighbour with conditions
 
-  //to add: Move sequence, use ints.
-  
-  // TELEPORT
-  // Move object to target xy or position of target
-  // return value: succes, bool (true == 1/false == 0)
-  // the ADJUST version allows to adjust positions if wrapping is allowed.
-  // the direction is from the starting position in direction of the new one
-  #define TELEPORT_XY(X,Y) { p->change_position(X,Y,true); }
-  #define TELEPORT_XYS(PTR,X,Y) {CHK_PTR_BOOL( PTR )  PTR->change_position(X,Y,true); }
-  #define TELEPORT_ADJUST_XY(X,Y) { p->change_position(X,Y); }
-  #define TELEPORT_ADJUST_XYS(PTR,X,Y) {CHK_PTR_BOOL( PTR )  PTR->change_position(X,Y); }
-  #define TELEPORT_SHARE(TARGET) { p->change_position(TARGET); }
-  #define TELEPORT_SHARES(PTR, TARGET) {CHK_PTR_BOOL( PTR )  PTR->change_position(TARGET); }
-  
-  //Cycle through all the objects LAB anywhere in random order (RCYCLE) or unsorted fast (FCYCLE)
-  #define RCYCLE_GIS( O, LAB ) for ( O = p->first_neighbour_full(LAB, true); O != NULL; O = p->next_neighbour() )
-  #define RCYCLE_GIS_WHERE( O, LAB, WHERE ) for ( O = WHERE->first_neighbour_full(LAB, true); O != NULL; O = WHERE->next_neighbour() )
-  #define FCYCLE_GIS( O, LAB ) for ( O = p->first_neighbour_full(LAB, false); O != NULL; O = p->next_neighbour() )
-  #define FCYCLE_GIS_WHERE( O, LAB, WHERE ) for ( O = WHERE->first_neighbour_full(LAB, false); O != NULL; O = WHERE->next_neighbour() )
-  
-  // CYCLE_NEIGHBOUR
-  // Cycle through all the objects LAB within radius RAD by increasing radius
-  // _CND: Special version that checks conditions
-  // For each candidate it is checked if the Variable VAR with lag LAG called by
-  // either the candidate or CHEAT_C is  COND (<,>,==,!=) CONDVAL
-  // Note that CHEAT does not work with NULL.
-  
-  //The RCYCLE options randomise the order.
-  #define RCYCLE_NEIGHBOUR( O, LAB, RAD ) for ( O = p->first_neighbour(LAB, RAD, 'r'); O != NULL; O = p->next_neighbour() )
-  #define RCYCLE_NEIGHBOURS( C, O, LAB, RAD ) for ( O = C->first_neighbour(LAB, RAD, 'r'); O != NULL; O = C->next_neighbour() )
-  
-  #define RCYCLE_NEIGHBOUR_CND(O, LAB, RAD, VAR, COND, CONDVAL ) for ( O = p->first_neighbour(LAB, RAD, 'r', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define RCYCLE_NEIGHBOUR_CNDS(C, O, LAB, RAD, VAR, COND, CONDVAL ) for ( O = C->first_neighbour(LAB, RAD, 'r', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  
-  #define RCYCLE_NEIGHBOUR_CNDL(O, LAB, RAD, VAR, COND, CONDVAL, LAG ) for ( O = p->first_neighbour(LAB, RAD, 'r', NULL,LAG,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define RCYCLE_NEIGHBOUR_CNDLS(C, O, LAB, RAD, VAR, COND, CONDVAL, LAG ) for ( O = C->first_neighbour(LAB, RAD, 'r', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  
-  #define RCYCLE_NEIGHBOUR_CND_CHEAT(O, LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = p->first_neighbour(LAB, RAD, 'r',CHEAT_C,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define RCYCLE_NEIGHBOUR_CND_CHEATS(C, O, LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = C->first_neighbour(LAB, RAD, 'r',CHEAT_C,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  //The DCYCLE options cycle in increasing distance, randomising agents with same distances.
-  #define DCYCLE_NEIGHBOUR( O, LAB, RAD ) for ( O = p->first_neighbour(LAB, RAD, 'd'); O != NULL; O = p->next_neighbour() )
-  #define DCYCLE_NEIGHBOURS( C, O, LAB, RAD ) for ( O = C->first_neighbour(LAB, RAD, 'd'); O != NULL; O = C->next_neighbour() )
-  
-  #define DCYCLE_NEIGHBOUR_CND(O, LAB, RAD, VAR, COND, CONDVAL ) for ( O = p->first_neighbour(LAB, RAD, 'd', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define DCYCLE_NEIGHBOUR_CNDS(C, O, LAB, RAD, VAR, COND, CONDVAL ) for ( O = C->first_neighbour(LAB, RAD, 'd', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  
-  #define DCYCLE_NEIGHBOUR_CNDL(O, LAB, RAD, VAR, COND, CONDVAL, LAG ) for ( O = p->first_neighbour(LAB, RAD, 'd', NULL,LAG,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define DCYCLE_NEIGHBOUR_CNDLS(C, O, LAB, RAD, VAR, COND, CONDVAL, LAG ) for ( O = C->first_neighbour(LAB, RAD, 'd', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  
-  #define DCYCLE_NEIGHBOUR_CND_CHEAT(O, LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = p->first_neighbour(LAB, RAD, 'd',CHEAT_C,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define DCYCLE_NEIGHBOUR_CND_CHEATS(C, O, LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = C->first_neighbour(LAB, RAD, 'd',CHEAT_C,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  //The FCYCLE options cycles through the elements without controlling distance or randomisation.
-  #define FCYCLE_NEIGHBOUR( O, LAB, RAD ) for ( O = p->first_neighbour(LAB, RAD, 'f'); O != NULL; O = p->next_neighbour() )
-  #define FCYCLE_NEIGHBOURS( C, O, LAB, RAD ) for ( O = C->first_neighbour(LAB, RAD, 'f'); O != NULL; O = C->next_neighbour() )
-  
-  #define FCYCLE_NEIGHBOUR_CND(O, LAB, RAD, VAR, COND, CONDVAL ) for ( O = p->first_neighbour(LAB, RAD, 'f', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define FCYCLE_NEIGHBOUR_CNDS(C, O, LAB, RAD, VAR, COND, CONDVAL ) for ( O = C->first_neighbour(LAB, RAD, 'f', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  
-  #define FCYCLE_NEIGHBOUR_CNDL(O, LAB, RAD, VAR, COND, CONDVAL, LAG ) for ( O = p->first_neighbour(LAB, RAD, 'f', NULL,LAG,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define FCYCLE_NEIGHBOUR_CNDLS(C, O, LAB, RAD, VAR, COND, CONDVAL, LAG ) for ( O = C->first_neighbour(LAB, RAD, 'f', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  
-  #define FCYCLE_NEIGHBOUR_CND_CHEAT(O, LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = p->first_neighbour(LAB, RAD, 'f',CHEAT_C,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define FCYCLE_NEIGHBOUR_CND_CHEATS(C, O, LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = C->first_neighbour(LAB, RAD, 'f',CHEAT_C,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  
-  // The "N" Options allow to specify the number of elements and the radius searched. They are efficient when it is uncertain how large the search needs to be, but only a small part of the total
-  // Elements shall be searched.
-  
-  //The NRCYCLE options randomise the order.
-  #define NRCYCLE_NEIGHBOUR( O, LAB, N, RAD ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'r'); O != NULL; O = p->next_neighbour() )
-  #define NRCYCLE_NEIGHBOURS( C, O, LAB, N, RAD ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'r'); O != NULL; O = C->next_neighbour() )
-  
-  #define NRCYCLE_NEIGHBOUR_CND(O, LAB, N, RAD, VAR, COND, CONDVAL ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'r', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define NRCYCLE_NEIGHBOUR_CNDS(C, O, LAB, N, RAD, VAR, COND, CONDVAL ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'r', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  
-  #define NRCYCLE_NEIGHBOUR_CNDL(O, LAB, N, RAD, VAR, COND, CONDVAL, LAG ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'r', NULL,LAG,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define NRCYCLE_NEIGHBOUR_CNDLS(C, O, LAB, N, RAD, VAR, COND, CONDVAL, LAG ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'r', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  
-  #define NRCYCLE_NEIGHBOUR_CND_CHEAT(O, LAB, N, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'r',CHEAT_C,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define NRCYCLE_NEIGHBOUR_CND_CHEATS(C, O, LAB, N, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'r',CHEAT_C,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  //The NDCYCLE options cycle in increasing distance, randomising agents with same distances.
-  #define NDCYCLE_NEIGHBOUR( O, LAB, N, RAD ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'd'); O != NULL; O = p->next_neighbour() )
-  #define NDCYCLE_NEIGHBOURS( C, O, LAB, N, RAD ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'd'); O != NULL; O = C->next_neighbour() )
-  
-  #define NDCYCLE_NEIGHBOUR_CND(O, LAB, N, RAD, VAR, COND, CONDVAL ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'd', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define NDCYCLE_NEIGHBOUR_CNDS(C, O, LAB, N, RAD, VAR, COND, CONDVAL ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'd', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  
-  #define NDCYCLE_NEIGHBOUR_CNDL(O, LAB, N, RAD, VAR, COND, CONDVAL, LAG ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'd', NULL,LAG,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define NDCYCLE_NEIGHBOUR_CNDLS(C, O, LAB, N, RAD, VAR, COND, CONDVAL, LAG ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'd', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  
-  #define NDCYCLE_NEIGHBOUR_CND_CHEAT(O, LAB, N, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'd',CHEAT_C,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define NDCYCLE_NEIGHBOUR_CND_CHEATS(C, O, LAB, N, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'd',CHEAT_C,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  //The NFCYCLE options cycles through the elements without controlling distance or randomisation.
-  #define NFCYCLE_NEIGHBOUR( O, LAB, N, RAD ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'f'); O != NULL; O = p->next_neighbour() )
-  #define NFCYCLE_NEIGHBOURS( C, O, LAB, N, RAD ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'f'); O != NULL; O = C->next_neighbour() )
-  
-  #define NFCYCLE_NEIGHBOUR_CND(O, LAB, N, RAD, VAR, COND, CONDVAL ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'f', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define NFCYCLE_NEIGHBOUR_CNDS(C, O, LAB, N, RAD, VAR, COND, CONDVAL ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'f', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  
-  #define NFCYCLE_NEIGHBOUR_CNDL(O, LAB, N, RAD, VAR, COND, CONDVAL, LAG ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'f', NULL,LAG,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define NFCYCLE_NEIGHBOUR_CNDLS(C, O, LAB, N, RAD, VAR, COND, CONDVAL, LAG ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'f', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  
-  #define NFCYCLE_NEIGHBOUR_CND_CHEAT(O, LAB, N, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'f',CHEAT_C,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
-  #define NFCYCLE_NEIGHBOUR_CND_CHEATS(C, O, LAB, N, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'f',CHEAT_C,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
-  
-  
-  
-  // NEAREST_IN_DISTANCE
-  // Provide the closest item in distance RAD with label LAB or NULL if none.
-  // A radius <0 searches everything
-  // If several items with the same distance exist, draw randomly with equal probability
-  // _CND: Special version that checks conditions
-  // For each candidate it is checked if the Variable VAR with lag LAG called by
-  // either the candidate or CHEAT_C is  COND (<,>,==,!=) CONDVAL
-  // Note that CHEAT does not work with NULL.
-  
-  #define NEAREST(LAB) ( p->closest_in_distance(LAB, -1, true) )
-  #define NEARESTS(PTR, LAB) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, -1, true) )
-  
-  #define NEAREST_CND(LAB, VAR, COND, CONDVAL ) ( p->closest_in_distance(LAB, -1, true, NULL, 0, VAR, COND, CONDVAL) )
-  #define NEAREST_CNDS(PTR, LAB, VAR, COND, CONDVAL ) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, -1, true, NULL, 0, VAR, COND, CONDVAL) )
-  
-  #define NEAREST_CNDL(LAB, VAR, COND, CONDVAL, LAG ) ( p->closest_in_distance(LAB, -1, true, NULL, LAG, VAR, COND, CONDVAL) )
-  #define NEAREST_CNDLS(PTR, LAB, VAR, COND, CONDVAL, LAG ) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, -1, true, NULL, LAG, VAR, COND, CONDVAL) )
-  
-  #define NEAREST_CND_CHEAT(LAB, VAR, COND, CONDVAL, CHEAT_C  ) ( p->closest_in_distance(LAB, -1, true, CHEAT_C, 0, VAR, COND, CONDVAL) )
-  #define NEAREST_CND_CHEATS(PTR, LAB, VAR, COND, CONDVAL, CHEAT_C  ) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, -1, true, CHEAT_C, 0, VAR, COND, CONDVAL) )
-  
-  
-  
-  #define NEAREST_IN_DISTANCE(LAB, RAD) ( p->closest_in_distance(LAB, RAD, true) )
-  #define NEAREST_IN_DISTANCES(PTR, LAB, RAD) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, RAD, true) )
-  
-  #define NEAREST_IN_DISTANCE_CND(LAB, RAD, VAR, COND, CONDVAL ) ( p->closest_in_distance(LAB, RAD, true, NULL, 0, VAR, COND, CONDVAL) )
-  #define NEAREST_IN_DISTANCE_CNDS(PTR, LAB, RAD, VAR, COND, CONDVAL ) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, RAD, true, NULL, 0, VAR, COND, CONDVAL) )
-  
-  #define NEAREST_IN_DISTANCE_CNDL(LAB, RAD, VAR, COND, CONDVAL, LAG ) ( p->closest_in_distance(LAB, RAD, true, NULL, LAG, VAR, COND, CONDVAL) )
-  #define NEAREST_IN_DISTANCE_CNDLS(PTR, LAB, RAD, VAR, COND, CONDVAL, LAG ) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, RAD, true, NULL, LAG, VAR, COND, CONDVAL) )
-  
-  #define NEAREST_IN_DISTANCE_CND_CHEAT(LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) ( p->closest_in_distance(LAB, RAD, true, CHEAT_C, 0, VAR, COND, CONDVAL) )
-  #define NEAREST_IN_DISTANCE_CND_CHEATS(PTR, LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, RAD, true, CHEAT_C, 0, VAR, COND, CONDVAL) )
-  
-  // SEARCH_POSITION_NEIGHBOUR, RSEARCH_POSITION_NEIGHBOUR
-  // Searches at one patch in given direction.
-  // Useful in case of wrapping (automatic handling) but also elsewhen.
-  
-  
-  #define SEARCH_POSITION_NEIGHBOUR(LAB, direction)  ( p->search_at_neighbour_position(LAB, direction, true) )
-  #define SEARCH_POSITION_NEIGHBOURS(PTR, LAB, direction)  (CHK_PTR_OBJ( PTR )  PTR->search_at_neighbour_position(LAB, direction, true) )
-  #define RSEARCH_POSITION_NEIGHBOUR(LAB, direction)  ( p->search_at_neighbour_position(LAB, direction, false) )
-  #define RSEARCH_POSITION_NEIGHBOURS(PTR, LAB, direction)  (CHK_PTR_OBJ( PTR )  PTR->search_at_neighbour_position(LAB, direction, false) )
-  
-  
-  //  SEARCH_POSITION, RSEARCH_POSITION
-  //  Searches at an exact position for an object with label LAB
-  //  If it exists it is reported. The RND version works if there can be more
-  //  than one object at the same place (returning one randomly)
-  //  The standard version will yield an error if more than one option exist.
-  //  Change style
-  
-  #define SEARCH_POSITION_XY(LAB, X, Y)  ( p->search_at_position(LAB, X, Y, true) )
-  #define SEARCH_POSITION_XY_WHERE( LAB, X, Y, WHERE )  ( CHK_PTR_OBJ( WHERE ) WHERE->search_at_position(LAB, X, Y, true) )
+// Initialisation macros
+//
+// WRAP Versions allow to define world wrapping
+// Non-WRAP Versions assume there is no world wrapping
+// there are 2^4 options. We use a bit-code (0=off):
+//   0-bit: left     : 0=0 1=1
+//   1-bit: right    : 0=0 1=2
+//   2-bit: top      : 0=0 1=4
+//   3-bit: bottom   : 0=0 1=8
+//   sum the values to generate desired wrapping (e.g. 15 - torus world)
 
-  #define SEARCH_POSITION(LAB)  ( p->search_at_position(LAB, true) )
-  #define SEARCH_POSITIONS(PTR, LAB)  (CHK_PTR_OBJ( PTR )  PTR->search_at_position(LAB, true) )
-  
-  #define SEARCH_POSITION_WHERE(LAB,WHERE)  ( p->search_at_position(LAB, true, false, WHERE) )
-  #define SEARCH_POSITIONS_WHERE(PTR, LAB,WHERE)  (CHK_PTR_OBJ( PTR )  PTR->search_at_position(LAB, true, false, WHERE) )
-  //TODO: Add other WHERE options to search, handle non-same layout (add layout check!), get writ of defaulted functions (instead implement multiple))
-  
-  
-  #define RSEARCH_POSITION_XY(LAB, X, Y)  ( p->search_at_position(LAB, X, Y, false) )
-  #define RSEARCH_POSITION_XY_WHERE( LAB, X, Y, WHERE)  ( WHERE->search_at_position(LAB, X, Y, false) )
-  #define RSEARCH_POSITION(LAB)  ( p->search_at_position(LAB, false) )
-  #define RSEARCH_POSITIONS(PTR, LAB)  (CHK_PTR_OBJ( PTR )  PTR->search_at_position(LAB, false) )
-  
-  //  SEARCH_POSITION_GRID and SEARCH_POSITION_RND_GRID
-  //  Similar to above, but it searches at the truncated position.
-  //  This macro is useful if one set of agents is distributed in continuous space
-  //  And another one, like "land patches", in discrete space. Then, the modeller
-  //  Can safely get information on the associated "land patch" of an "agent" with
-  //  this command.
-  
-  #define SEARCH_POSITION_GRID_XY(LAB, X, Y)  ( p->search_at_position(LAB, X, Y, true) )
-  #define SEARCH_POSITION_GRID_XY_WHERE( LAB, X, Y, WHERE)  ( WHERE->search_at_position(LAB, trunc(X), trunc(Y), true) )
-  #define SEARCH_POSITION_GRID(LAB)  ( p->search_at_position(LAB, true, true) )
-  #define SEARCH_POSITION_GRIDS(PTR, LAB)  (CHK_PTR_OBJ( PTR )  PTR->search_at_position(LAB, true, true) )
-  
-  #define RSEARCH_POSITION_GRID_XY(LAB, X, Y)  ( p->search_at_position(LAB, X, Y, false) )
-  #define RSEARCH_POSITION_GRID_XY_WHERE( LAB, X, Y, WHERE)  ( WHERE->search_at_position(LAB, trunc(X), trunc(Y), false) )
-  #define RSEARCH_POSITION_GRID(LAB)  ( p->search_at_position(LAB, false, true) )
-  #define RSEARCH_POSITION_GRIDS(PTR, LAB)  (CHK_PTR_OBJ( PTR )  PTR->search_at_position(LAB, false, true) )
-  
-  //  COUNT_POSITION(S)(_GRID(S))
-  //  Similar to the search, you can use these macros to count the number of
-  //  elements at the given position.
-  
-  #define COUNT_POSITION(LAB)  ( p->elements_at_position( LAB, false ) )
-  #define COUNT_POSITION_WHERE(LAB, WHERE) (CHK_PTR_DBL( WHERE )  WHERE->elements_at_position( LAB, false ) )
-  
-  #define COUNT_POSITION_XY(LAB, X, Y)  ( p->elements_at_position( LAB, X, Y ) )
-  #define COUNT_POSITION_XY_WHERE( LAB, X, Y, WHERE) ( WHERE->elements_at_position( LAB, X, Y ) )
-  
-  #define COUNT_POSITION_GRID(LAB)  ( p->elements_at_position( LAB, true ) )
-  #define COUNT_POSITION_GRID_WHERE(LAB, WHERE) (CHK_PTR_DBL( WHERE )  WHERE->elements_at_position( LAB, true ) )
-  
-  // Additional Utilities
-  // ANY_GIS just checks if there is a map associated to the object
-  // SAME_GIS checks if the two objects share the same map
-  #define ANY_GIS ( p->position != NULL ? true : false  )
-  #define ANY_GISS(PTR) (CHK_PTR_BOOL( PTR )  PTR->position != NULL ? true : false )
-  
-  #define SAME_GIS_WHERE(WHERE) ( p->ptr_map() == WHERE->ptr_map() )
-  #define SAME_GISS_WHERE(PTR,WHERE) (CHK_PTR_BOOL( PTR )  PTR->ptr_map() == WHERE->ptr_map() )
-  
-  #define GIS_INFOS( PTR ) ( ( CHK_PTR_CHR(PTR) PTR->gis_info().c_str()) )
-  #define GIS_INFO ( (p->gis_info().c_str()) )
-  
-  // GIS Lattice utilities
-  
-  
-  #ifndef NO_WINDOW
-    
-    #define INIT_LAT_GIS( ... )         ( p->init_lattice_gis( __VA_ARGS__ ) )
-    #define INIT_LAT_GISS( PTR, ... )   ( CHK_PTR_DBL( PTR )  PTR->init_lattice_gis( __VA_ARGS__ ) )
-    #define DELETE_LAT_GIS              ( close_lattice_gis( ) ) // convenient
-    #define SAVE_LAT_GIS( ... )         ( save_lattice( __VA_ARGS__ ) ) //convenient
-    
-    #define V_LAT_GIS                   ( p->read_lattice_gis( ) )
-    #define V_LAT_GISS( PTR )           ( CHK_PTR_DBL( PTR )  PTR->read_lattice_gis( ) )
-    #define WRITE_LAT_GIS( VAL )        ( p->write_lattice_gis( VAL ) )
-    #define WRITE_LAT_GISS( PTR, VAL )  ( CHK_PTR_DBL( PTR )  PTR->write_lattice_gis( VAL ) )
-    
-    #define V_LAT_GIS_XY( X, Y )                    ( p->read_lattice_gis( X, Y, true ) )
-    #define V_LAT_GIS_XYS( PTR, X, Y )              ( CHK_PTR_DBL( PTR )  PTR->read_lattice_gis( X, Y, true ) )
-    #define WRITE_LAT_GIS_XY( X, Y, VAL )           ( p->write_lattice_gis( X, Y, VAL, true ) )
-    #define WRITE_LAT_GIS_XYS( PTR, X, Y, VAL )     ( CHK_PTR_DBL( PTR )  PTR->write_lattice_gis( X, Y, VAL, true ) )
-    
-    #define V_LAT_GIS_ADJUST_XY( X, Y )                 ( p->read_lattice_gis( X, Y, false ) )
-    #define V_LAT_GIS_ADJUST_XYS( PTR, X, Y )           ( CHK_PTR_DBL( PTR )  PTR->read_lattice_gis( X, Y, false ) )
-    #define WRITE_LAT_GIS_ADJUST_XY( X, Y, VAL )        ( p->write_lattice_gis( X, Y, VAL, false ) )
-    #define WRITE_LAT_GIS_ADJUST_XYS( PTR, X, Y, VAL )  ( CHK_PTR_DBL( PTR )  PTR->write_lattice_gis( X, Y, VAL, false ) )
-    
-    #define SET_LAT_PRIORITY( VAL ) ( p->set_lattice_priority( ( VAL ) ) )
-    #define SET_LAT_PRIORITYS( PTR, VAL ) ( CHK_PTR_VOID( PTR )  PTR->set_lattice_priority( ( VAL ) ) )
-    #define SET_LAT_COLOR( VAL ) ( p->set_lattice_color( ( VAL ) ) )
-    #define SET_LAT_COLORS( PTR, VAL ) ( CHK_PTR_VOID( PTR )  PTR->set_lattice_color( ( VAL ) ) )
-    
-    #define RETRIVE_LAT_COLOR           ( p->read_lattice_color( ) )
-    #define RETRIVE_LAT_COLORS( PTR )   ( CHK_PTR_DBL( PTR )  PTR->read_lattice_color( ) )
-    
-  #else
-    
-    #define INIT_LAT_GIS( ... )         ( void( ) )
-    #define INIT_LAT_GISS( PTR, ... )   ( void( ) )
-    #define DELETE_LAT_GIS              ( void( ) ) // convenient
-    #define SAVE_LAT_GIS( ... )         ( void( ) ) //convenient
-    
-    #define V_LAT_GIS                   ( void( ) )
-    #define V_LAT_GISS( PTR )           ( void( ) )
-    #define WRITE_LAT_GIS( VAL )        ( void( ) )
-    #define WRITE_LAT_GISS( PTR, VAL )  ( void( ) )
-    
-    #define V_LAT_GIS_XY( X, Y )                    ( void( ) )
-    #define V_LAT_GIS_XYS( PTR, X, Y )              ( void( ) )
-    #define WRITE_LAT_GIS_XY( X, Y, VAL )           ( void( ) )
-    #define WRITE_LAT_GIS_XYS( PTR, X, Y, VAL )     ( void( ) )
-    
-    #define V_LAT_GIS_ADJUST_XY( X, Y )                 ( void( ) )
-    #define V_LAT_GIS_ADJUST_XYS( PTR, X, Y )           ( void( ) )
-    #define WRITE_LAT_GIS_ADJUST_XY( X, Y, VAL )        ( void( ) )
-    #define WRITE_LAT_GIS_ADJUST_XYS( PTR, X, Y, VAL )  ( void( ) )
-    
-    #define SET_LAT_PRIORITY( VAL )         ( void( ) )
-    #define SET_LAT_PRIORITYS( PTR, VAL )   ( void( ) )
-    #define SET_LAT_COLOR( VAL )            ( void( ) )
-    #define SET_LAT_COLORS( PTR, VAL )      ( void( ) )
-  #endif
-  
-  //And some new macros to load data from txt files.
-  //The txt file is in the format x \t y \t value \n
-  #define LOAD_DATA_GIS(inputfile, obj_lab, var_lab ) p->load_data_gis( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t )
-  #define LOAD_DATA_GISL(inputfile, obj_lab, var_lab, t_update ) p->load_data_gis( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t_update )
-  #define LOAD_DATA_GIS_WHERE(inputfile, obj_lab, var_lab, WHERE ) WHERE->load_data_gis( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t )
-  #define LOAD_DATA_GISL_WHERE(inputfile, obj_lab, var_lab, t_update, WHERE ) WHERE->load_data_gis( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t_update )
-  
-  //The txt file is in gridded format with row and colum headers. In the grid single values are stored. (0,0) is bottom left.
-  #define LOAD_DATA_GIS_MAT(inputfile, obj_lab, var_lab ) p->load_data_gis_mat( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t )
-  #define LOAD_DATA_GIS_MATL(inputfile, obj_lab, var_lab, t_update ) p->load_data_gis_mat( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t_update )
-  #define LOAD_DATA_GIS_MAT_WHERE(inputfile, obj_lab, var_lab, WHERE ) WHERE->load_data_gis_mat( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t )
-  #define LOAD_DATA_GIS_MATL_WHERE(inputfile, obj_lab, var_lab, t_update, WHERE ) WHERE->load_data_gis_mat( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t_update )
-  
-  
-  // Some simple functions to load data to rapidscv::Document type
-  // #define LOAD_DATA_CSV(doc_name, inputfile) rapidcsv::Document doc_name(inputfile, rapidcsv::LabelParams( -1, -1), ',' );
-  // #define LOAD_DATA_S(doc_name, inputfile, separator) rapidcsv::Document doc_name(inputfile, rapidcsv::LabelParams( -1, -1), rapidcsv::SeparatorParams(separator) );
-  // #define LOAD_DATA_SC(doc_name, inputfile, separator) rapidcsv::Document doc_name(inputfile, rapidcsv::LabelParams( 0, -1), rapidcsv::SeparatorParams(separator) );
-  // #define LOAD_DATA_SR(doc_name, inputfile, separator) rapidcsv::Document doc_name(inputfile, rapidcsv::LabelParams( -1, 0), rapidcsv::SeparatorParams(separator) );
-  // #define LOAD_DATA_SCR(doc_name, inputfile, separator) rapidcsv::Document doc_name(inputfile, rapidcsv::LabelParams( 0, 0), rapidcsv::SeparatorParams(separator) );
-  
-  //Simple function to cycle through x,y from csv loadet before.
-  // #define CYCLE_DATA_ROWS(doc_name,)
-  // for (int row = 0; row< f_in.GetRowCount(); ++row) {
-  //   for (int col = 0; col< f_in.GetColumnCount(); ++col) {
-  //
-  //   }
-  // }
-  
-  #define ABMAT_USE_LONG_NAMES { abmat_use_long_names(); } //TODO ENSURE CALLED FIRST!
-  #define ABMAT_DYNAMIC_FACTORS { abmat_allow_dynamic_factors(); }
-  #define ABMAT_ADD_MICRO( lab1 ) { abmat_add_micro( lab1 ); }
-  #define ABMAT_ADD_MACRO( lab1 ) { abmat_add_macro( lab1 ); }
-  #define ABMAT_ADD_FACT( lab1, factList ) { abmat_add_fact( lab1, factList ); }
-  #define ABMAT_ADD_COMP( lab1, lab2 ) { abmat_add_comp( lab1, lab2 ); }
-  #define ABMAT_ADD_COND( lab1, lab2 ) { abmat_add_cond( lab1, lab2 ); }
-  
-  #define ABMAT_ADD_PSTATIC( lab1 ) { abmat_add_par_static( lab1 ); }
-  #define ABMAT_ADD_PMACRO( lab1 ) { abmat_add_par_macro( lab1 ); }
-  #define ABMAT_ADD_PMICRO( lab1 ) { abmat_add_par_micro( lab1 ); }
+// INIT_SPACE_ROOT
+// If there is only one GIS or a single GIS is used heavily, it makes sense to
+// host in in the root object for easy accessing later on.
+#define INIT_SPACE_ROOT(XN,YN)  { root->init_gis_singleObj(0, 0, XN, YN); }
+#define INIT_SPACE_ROOT_WRAP(XN, YN, WRAP)  { root->init_gis_singleObj(0, 0, XN, YN, WRAP); }
+#define ADD_ROOT_TO_SPACE(GISOBJ) { ( root==GISOBJ ? false : root->register_at_map(GISOBJ->ptr_map(), 0, 0) ); }
 
-  #define ABMAT_ADD_FMACRO( lab1 ) { abmat_add_final_macro( lab1 ); }
-  #define ABMAT_ADD_FMICRO( lab1 ) { abmat_add_final_micro( lab1 ); }
-  
-  #define ABMAT_ADD_INTERVAL( start, end ) { abmat_add_interval(start, end); }
-  
+// INIT_SPACE_SINGLE
+// Initialise the space with a single object
+#define INIT_SPACE_SINGLE( X, Y, XN, YN)              { p->init_gis_singleObj(X, Y, XN, YN); }
+#define INIT_SPACE_SINGLES( GISOBJ, X, Y, XN, YN)              { GISOBJ->init_gis_singleObj(X, Y, XN, YN); }
+#define INIT_SPACE_SINGLE_WRAP( X, Y, XN, YN, WRAP )  { p->init_gis_singleObj( X, Y, XN, YN, WRAP ); }
+#define INIT_SPACE_SINGLE_WRAPS( GISOBJ, X, Y, XN, YN, WRAP )  { GISOBJ->init_gis_singleObj( X, Y, XN, YN, WRAP ); }
+
+// INIT_SPACE_GRID
+//  bool object::init_gis_regularGrid(char const lab[], int xn, int yn, int _wrap, int _lag, int n){
+// Initialise the regular space and use the object LAB contained in p as "Patches"
+// Using Column Major (change?) the objects are added to a 2d grid and get xy coords respectively
+#define INIT_SPACE_PATCH( LAB, XN, YN )             { p->init_gis_regularGrid( LAB, XN, YN, 0, 0 ); }
+#define INIT_SPACE_PATCH_WHERE(LAB, XN, YN, WHERE )             { WHERE->init_gis_regularGrid( LAB, XN, YN, 0, 0 ); }
+
+#define INIT_SPACE_PATCHL( LAB, XN, YN, TIME )             { p->init_gis_regularGrid( LAB, XN, YN, 0, TIME ); }
+#define INIT_SPACE_PATCHL_WHERE( LAB, XN, YN, TIME, WHERE )             { WHERE->init_gis_regularGrid( LAB, XN, YN, 0, TIME ); }
+
+#define INIT_SPACE_PATCH_WRAP( LAB, XN, YN, WRAP )  { p->init_gis_regularGrid( LAB, XN, YN, WRAP, 0 ); }
+#define INIT_SPACE_PATCH_WRAP_WHERE( LAB, XN, YN, WRAP, WHERE )  { WHERE->init_gis_regularGrid( LAB, XN, YN, WRAP, 0 ); }
+
+#define INIT_SPACE_PATCH_WRAPL( LAB, XN, YN, WRAP, TIME )  { p->init_gis_regularGrid( LAB, XN, YN, WRAP, TIME ); }
+#define INIT_SPACE_PATCH_WRAPL_WHERE( LAB, XN, YN, WRAP, TIME, WHERE )  { WHERE->init_gis_regularGrid( LAB, XN, YN, WRAP, TIME ); }
+
+//n versions with sparce space
+#define INIT_SPACE_PATCHN( LAB, XN, YN, N )             { p->init_gis_regularGrid( LAB, XN, YN, 0, 0, N ); }
+#define INIT_SPACE_PATCHN_WHERE( LAB, XN, YN, N, WHERE )             { WHERE->init_gis_regularGrid( LAB, XN, YN, 0, 0, N ); }
+
+#define INIT_SPACE_PATCHNL( LAB, XN, YN, N, TIME )             { p->init_gis_regularGrid( LAB, XN, YN, 0, TIME, N ); }
+#define INIT_SPACE_PATCHNL_WHERE( LAB, XN, YN, N, TIME, WHERE )             { WHERE->init_gis_regularGrid( LAB, XN, YN, 0, TIME, N ); }
+
+#define INIT_SPACE_PATCH_WRAPN( LAB, XN, YN, WRAP, N )  { p->init_gis_regularGrid( LAB, XN, YN, WRAP, 0, N ); }
+#define INIT_SPACE_PATCH_WRAPN_WHERE(  LAB, XN, YN, WRAP, N, WHERE )  { WHERE->init_gis_regularGrid( LAB, XN, YN, WRAP, 0, N ); }
+
+#define INIT_SPACE_PATCH_WRAPNL( LAB, XN, YN, WRAP, N , TIME )  { p->init_gis_regularGrid( LAB, XN, YN, WRAP, TIME, N ); }
+#define INIT_SPACE_PATCH_WRAPNL_WHERE(  LAB, XN, YN, WRAP, N, TIME, WHERE )  { WHERE->init_gis_regularGrid( LAB, XN, YN, WRAP, TIME, N ); }
+
+#define SET_GIS_DISTANCE_TYPE( TYPE ) { p->set_distance_type( TYPE ) ; }
+#define SET_GIS_DISTANCE_TYPE_WHERE( TYPE, WHERE ) { WHERE->set_distance_type( TYPE ) ; }
+
+// DELETE_SPACE / DELETE_FROM_SPACE
+// Delete the map and unregister all object-registrations in the map. Do not delte the LSD objects.
+#define DELETE_SPACE( WHERE ) { WHERE->delete_map(); }
+#define DELETE_FROM_SPACE { p->unregister_from_gis(); }
+#define DELETE_FROM_SPACES( PTR ) {CHK_PTR_BOOL( PTR )  PTR->unregister_from_gis(); }
+
+// ADD_TO_SPACE
+// Register object in space, providing explicit x,y position or sharing object
+// If already registered, move instead and print info.
+#define ADD_TO_SPACE_XY_WHERE( X, Y, WHERE)  { p->register_at_map(WHERE->ptr_map(), X, Y); }
+#define ADD_TO_SPACE_XYS_WHERE( PTR, X, Y, WHERE)  {CHK_PTR_BOOL( PTR )  PTR->register_at_map(WHERE, X, Y); }
+#define ADD_TO_SPACE_SHARE_WHERE( WHERE ) { p->register_at_map(WHERE); }
+#define ADD_TO_SPACE_SHARES_WHERE(PTR, WHERE) {CHK_PTR_BOOL( PTR )  PTR->register_at_map(WHERE); }
+#define ADD_TO_SPACE_SHARES(PTR) {CHK_PTR_BOOL( PTR )  PTR->register_at_map(p); }
+
+#define ADD_TO_SPACE_CENTER_XY_WHERE( X, Y, X2, Y2, WHERE)  { p->register_at_map_between(WHERE, X, Y, X2, Y2); }
+#define ADD_TO_SPACE_CENTER_XYS_WHERE( PTR, X, Y, X2, Y2, WHERE)  { CHK_PTR_BOOL( PTR )  PTR->register_at_map_between(WHERE, X, Y, X2, Y2); }
+#define ADD_TO_SPACE_CENTER_SHARE_WHERE2(WHERE1, WHERE2) { p->register_at_map_between(WHERE1, WHERE2); }
+#define ADD_TO_SPACE_CENTER_SHARES_WHERE2(PTR, WHERE1, WHERE2) { CHK_PTR_BOOL( PTR )  PTR->register_at_map_between(WHERE1, WHERE2); }
+
+#define ADD_TO_SPACE_RND_WHERE(WHERE) { p->register_at_map_rnd(WHERE); }
+#define ADD_TO_SPACE_RNDS_WHERE(PTR, WHERE) { CHK_PTR_BOOL( PTR )  PTR->register_at_map_rnd(WHERE); }
+#define ADD_TO_SPACE_RND_GRID_WHERE(WHERE) { p->register_at_map_rnd(WHERE,true); }
+#define ADD_TO_SPACE_RND_GRIDS_WHERE(PTR, WHERE) { CHK_PTR_BOOL( PTR )  PTR->register_at_map_rnd(WHERE,true); }
+
+#define ADD_ALL_TO_SPACE( LABEL ) { p->register_allOfKind_at_grid_rnd( LABEL ); }
+#define ADD_ALL_TO_SPACE_WHERE( LABEL, WHERE ) { WHERE->register_allOfKind_at_grid_rnd( LABEL); }
+
+#define ADD_ALL_TO_SPACE_CND(obj, condVarLab, condition, condVal ) { p->register_allOfKind_at_grid_rnd_cnd( obj, condVarLab, condition, condVal); }
+#define ADD_ALL_TO_SPACE_CND_WHERE( obj, condVarLab, condition, condVal, WHERE ) { CHK_PTR_BOOL( WHERE )  WHERE->register_allOfKind_at_grid_rnd_cnd( obj, condVarLab, condition, condVal); }
+
+// POSITION
+// Macros to get x or y position or produce random position
+#define POSITION_X ( p->get_pos('x') )
+#define POSITION_Y ( p->get_pos('y') )
+#define POSITION_Z ( p->get_pos('z') )
+#define POSITION_XS(PTR) ( CHK_PTR_DBL( PTR )  PTR->get_pos('x') )
+#define POSITION_YS(PTR) ( CHK_PTR_DBL( PTR )  PTR->get_pos('y') )
+#define POSITION_ZS(PTR) ( CHK_PTR_DBL( PTR )  PTR->get_pos('z') )
+#define RANDOM_POSITION_X ( p->random_pos('x') )
+#define RANDOM_POSITION_Y ( p->random_pos('y') )
+#define RANDOM_POSITION_X_WHERE(WHERE) ( WHERE->random_pos('x') )
+#define RANDOM_POSITION_Y_WHERE(WHERE) ( WHERE->random_pos('y') )
+
+#define CENTER_POSITIONX ( p->center_position('x') )
+#define CENTER_POSITIONY ( p->center_position('y') )
+#define CENTER_POSITIONX_WHERE( WHERE ) ( WHERE->center_position('x') )
+#define CENTER_POSITIONY_WHERE( WHERE ) ( WHERE->center_position('y') )
+
+#define POSITION_INTERCEPT_WHERE2(REL_POS, OBJ1, OBJ2) { p->position_between(v[0], v[1], OBJ1, OBJ2, REL_POS); }
+#define POSITION_INTERCEPT_XY(x1, y1, x2, y2, REL_POS) { p->position_between(v[0], v[1], x1, y1, x2, y2, REL_POS); }
+#define POSITION_INTERCEPT_XY_WHERE(x1, y1, x2, y2, REL_POS, WHERE) { WHERE->position_between(v[0], v[1], x1, y1, x2, y2, REL_POS); }
+
+
+
+// DISTANCE
+// measures the distance from self to a TARGET or a position
+#define DISTANCE_TO(TARGET) ( p -> distance (TARGET) )
+#define DISTANCE_FROM(SOURCE) ( SOURCE -> distance (p) ) //only relevant for asymmetric wrapping
+#define DISTANCE_TO_XY(X, Y) ( p-> distance (X,Y) )
+#define DISTANCE_TO_XYS(PTR, X, Y) (CHK_PTR_DBL( PTR )  PTR-> distance (X,Y) )
+
+//DISTANCE2 - Distance between different items / points in space
+#define DISTANCE_BETWEEN(TARGET1, TARGET2) ( TARGET1 -> distance (TARGET2) )
+#define DISTANCE_BETWEEN_XY(X1, Y1, X2, Y2) ( p-> distance (X1, Y1, X2, Y2) )
+#define DISTANCE_BETWEEN_WHERE(X1, Y1, X2, Y2, WHERE) ( WHERE-> distance (X1, Y1, X2, Y2) )
+
+#define RELATIVE_DISTANCE( dist ) ( p->relative_distance(dist) )
+#define RELATIVE_DISTANCE_WHERE( dist, WHERE ) ( WHERE->relative_distance(dist) )
+
+#define ABSOLUTE_DISTANCE( dist ) ( p->absolute_distance(dist) )
+#define ABSOLUTE_DISTANCE_WHERE( dist, WHERE ) ( WHERE->absolute_distance(dist) )
+
+
+// POSSIBLE_MOVEMENTS
+// return a vector of the integers of the possible movements.
+
+#define POSSIBLE_MOVEMENT ( p->possible_movements_full() )
+#define POSSIBLE_MOVEMENT_WHERE(WHERE) ( WHERE->possible_movements_full() )
+#define POSSIBLE_MOVEMENT_NOSTAY ( p->possible_movements_move() )
+#define POSSIBLE_MOVEMENT_NOSTAY_WHERE(WHERE) ( WHERE->possible_movements_move() )
+
+//implementations for xy exist but API not yet defined.
+
+
+
+// MOVE
+// move a single step in one of eight directions
+// 0: stay put. 1: north, 2: north-east, 3: east, 4: south-east,
+// 5: south, 6: sout-west, 7: west and 8: north-west
+// Note: There is no "orientation" currently.
+// return value: succes, bool (true == 1/false == 0)
+#define MOVE(DIRECTION) ( p->move(DIRECTION) )
+#define MOVES(PTR, DIRECTION) (CHK_PTR_BOOL( PTR )  PTR->move(DIRECTION) )
+
+#define MOVE_TOWARD(TARGET) ( p->move_toward(TARGET) )
+#define MOVE_TOWARDS(PTR,TARGET) ( CHK_PTR_BOOL( PTR )->move_toward(TARGET) )
+
+//to add: Move sequence, use ints.
+
+// TELEPORT
+// Move object to target xy or position of target
+// return value: succes, bool (true == 1/false == 0)
+// the ADJUST version allows to adjust positions if wrapping is allowed.
+// the direction is from the starting position in direction of the new one
+#define TELEPORT_XY(X,Y) { p->change_position(X,Y,true); }
+#define TELEPORT_XYS(PTR,X,Y) {CHK_PTR_BOOL( PTR )  PTR->change_position(X,Y,true); }
+#define TELEPORT_ADJUST_XY(X,Y) { p->change_position(X,Y); }
+#define TELEPORT_ADJUST_XYS(PTR,X,Y) {CHK_PTR_BOOL( PTR )  PTR->change_position(X,Y); }
+#define TELEPORT_SHARE(TARGET) { p->change_position(TARGET); }
+#define TELEPORT_SHARES(PTR, TARGET) {CHK_PTR_BOOL( PTR )  PTR->change_position(TARGET); }
+
+//Cycle through all the objects LAB anywhere in random order (RCYCLE) or unsorted fast (FCYCLE)
+#define RCYCLE_GIS( O, LAB ) for ( O = p->first_neighbour_full(LAB, true); O != NULL; O = p->next_neighbour() )
+#define RCYCLE_GIS_WHERE( O, LAB, WHERE ) for ( O = WHERE->first_neighbour_full(LAB, true); O != NULL; O = WHERE->next_neighbour() )
+#define FCYCLE_GIS( O, LAB ) for ( O = p->first_neighbour_full(LAB, false); O != NULL; O = p->next_neighbour() )
+#define FCYCLE_GIS_WHERE( O, LAB, WHERE ) for ( O = WHERE->first_neighbour_full(LAB, false); O != NULL; O = WHERE->next_neighbour() )
+
+// CYCLE_NEIGHBOUR
+// Cycle through all the objects LAB within radius RAD by increasing radius
+// _CND: Special version that checks conditions
+// For each candidate it is checked if the Variable VAR with lag LAG called by
+// either the candidate or CHEAT_C is  COND (<,>,==,!=) CONDVAL
+// Note that CHEAT does not work with NULL.
+
+//The RCYCLE options randomise the order.
+#define RCYCLE_NEIGHBOUR( O, LAB, RAD ) for ( O = p->first_neighbour(LAB, RAD, 'r'); O != NULL; O = p->next_neighbour() )
+#define RCYCLE_NEIGHBOURS( C, O, LAB, RAD ) for ( O = C->first_neighbour(LAB, RAD, 'r'); O != NULL; O = C->next_neighbour() )
+
+#define RCYCLE_NEIGHBOUR_CND(O, LAB, RAD, VAR, COND, CONDVAL ) for ( O = p->first_neighbour(LAB, RAD, 'r', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define RCYCLE_NEIGHBOUR_CNDS(C, O, LAB, RAD, VAR, COND, CONDVAL ) for ( O = C->first_neighbour(LAB, RAD, 'r', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+
+#define RCYCLE_NEIGHBOUR_CNDL(O, LAB, RAD, VAR, COND, CONDVAL, LAG ) for ( O = p->first_neighbour(LAB, RAD, 'r', NULL,LAG,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define RCYCLE_NEIGHBOUR_CNDLS(C, O, LAB, RAD, VAR, COND, CONDVAL, LAG ) for ( O = C->first_neighbour(LAB, RAD, 'r', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+
+#define RCYCLE_NEIGHBOUR_CND_CHEAT(O, LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = p->first_neighbour(LAB, RAD, 'r',CHEAT_C,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define RCYCLE_NEIGHBOUR_CND_CHEATS(C, O, LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = C->first_neighbour(LAB, RAD, 'r',CHEAT_C,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+//The DCYCLE options cycle in increasing distance, randomising agents with same distances.
+#define DCYCLE_NEIGHBOUR( O, LAB, RAD ) for ( O = p->first_neighbour(LAB, RAD, 'd'); O != NULL; O = p->next_neighbour() )
+#define DCYCLE_NEIGHBOURS( C, O, LAB, RAD ) for ( O = C->first_neighbour(LAB, RAD, 'd'); O != NULL; O = C->next_neighbour() )
+
+#define DCYCLE_NEIGHBOUR_CND(O, LAB, RAD, VAR, COND, CONDVAL ) for ( O = p->first_neighbour(LAB, RAD, 'd', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define DCYCLE_NEIGHBOUR_CNDS(C, O, LAB, RAD, VAR, COND, CONDVAL ) for ( O = C->first_neighbour(LAB, RAD, 'd', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+
+#define DCYCLE_NEIGHBOUR_CNDL(O, LAB, RAD, VAR, COND, CONDVAL, LAG ) for ( O = p->first_neighbour(LAB, RAD, 'd', NULL,LAG,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define DCYCLE_NEIGHBOUR_CNDLS(C, O, LAB, RAD, VAR, COND, CONDVAL, LAG ) for ( O = C->first_neighbour(LAB, RAD, 'd', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+
+#define DCYCLE_NEIGHBOUR_CND_CHEAT(O, LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = p->first_neighbour(LAB, RAD, 'd',CHEAT_C,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define DCYCLE_NEIGHBOUR_CND_CHEATS(C, O, LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = C->first_neighbour(LAB, RAD, 'd',CHEAT_C,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+//The FCYCLE options cycles through the elements without controlling distance or randomisation.
+#define FCYCLE_NEIGHBOUR( O, LAB, RAD ) for ( O = p->first_neighbour(LAB, RAD, 'f'); O != NULL; O = p->next_neighbour() )
+#define FCYCLE_NEIGHBOURS( C, O, LAB, RAD ) for ( O = C->first_neighbour(LAB, RAD, 'f'); O != NULL; O = C->next_neighbour() )
+
+#define FCYCLE_NEIGHBOUR_CND(O, LAB, RAD, VAR, COND, CONDVAL ) for ( O = p->first_neighbour(LAB, RAD, 'f', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define FCYCLE_NEIGHBOUR_CNDS(C, O, LAB, RAD, VAR, COND, CONDVAL ) for ( O = C->first_neighbour(LAB, RAD, 'f', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+
+#define FCYCLE_NEIGHBOUR_CNDL(O, LAB, RAD, VAR, COND, CONDVAL, LAG ) for ( O = p->first_neighbour(LAB, RAD, 'f', NULL,LAG,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define FCYCLE_NEIGHBOUR_CNDLS(C, O, LAB, RAD, VAR, COND, CONDVAL, LAG ) for ( O = C->first_neighbour(LAB, RAD, 'f', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+
+#define FCYCLE_NEIGHBOUR_CND_CHEAT(O, LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = p->first_neighbour(LAB, RAD, 'f',CHEAT_C,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define FCYCLE_NEIGHBOUR_CND_CHEATS(C, O, LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = C->first_neighbour(LAB, RAD, 'f',CHEAT_C,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+
+// The "N" Options allow to specify the number of elements and the radius searched. They are efficient when it is uncertain how large the search needs to be, but only a small part of the total
+// Elements shall be searched.
+
+//The NRCYCLE options randomise the order.
+#define NRCYCLE_NEIGHBOUR( O, LAB, N, RAD ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'r'); O != NULL; O = p->next_neighbour() )
+#define NRCYCLE_NEIGHBOURS( C, O, LAB, N, RAD ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'r'); O != NULL; O = C->next_neighbour() )
+
+#define NRCYCLE_NEIGHBOUR_CND(O, LAB, N, RAD, VAR, COND, CONDVAL ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'r', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define NRCYCLE_NEIGHBOUR_CNDS(C, O, LAB, N, RAD, VAR, COND, CONDVAL ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'r', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+
+#define NRCYCLE_NEIGHBOUR_CNDL(O, LAB, N, RAD, VAR, COND, CONDVAL, LAG ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'r', NULL,LAG,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define NRCYCLE_NEIGHBOUR_CNDLS(C, O, LAB, N, RAD, VAR, COND, CONDVAL, LAG ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'r', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+
+#define NRCYCLE_NEIGHBOUR_CND_CHEAT(O, LAB, N, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'r',CHEAT_C,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define NRCYCLE_NEIGHBOUR_CND_CHEATS(C, O, LAB, N, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'r',CHEAT_C,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+//The NDCYCLE options cycle in increasing distance, randomising agents with same distances.
+#define NDCYCLE_NEIGHBOUR( O, LAB, N, RAD ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'd'); O != NULL; O = p->next_neighbour() )
+#define NDCYCLE_NEIGHBOURS( C, O, LAB, N, RAD ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'd'); O != NULL; O = C->next_neighbour() )
+
+#define NDCYCLE_NEIGHBOUR_CND(O, LAB, N, RAD, VAR, COND, CONDVAL ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'd', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define NDCYCLE_NEIGHBOUR_CNDS(C, O, LAB, N, RAD, VAR, COND, CONDVAL ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'd', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+
+#define NDCYCLE_NEIGHBOUR_CNDL(O, LAB, N, RAD, VAR, COND, CONDVAL, LAG ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'd', NULL,LAG,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define NDCYCLE_NEIGHBOUR_CNDLS(C, O, LAB, N, RAD, VAR, COND, CONDVAL, LAG ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'd', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+
+#define NDCYCLE_NEIGHBOUR_CND_CHEAT(O, LAB, N, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'd',CHEAT_C,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define NDCYCLE_NEIGHBOUR_CND_CHEATS(C, O, LAB, N, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'd',CHEAT_C,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+//The NFCYCLE options cycles through the elements without controlling distance or randomisation.
+#define NFCYCLE_NEIGHBOUR( O, LAB, N, RAD ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'f'); O != NULL; O = p->next_neighbour() )
+#define NFCYCLE_NEIGHBOURS( C, O, LAB, N, RAD ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'f'); O != NULL; O = C->next_neighbour() )
+
+#define NFCYCLE_NEIGHBOUR_CND(O, LAB, N, RAD, VAR, COND, CONDVAL ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'f', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define NFCYCLE_NEIGHBOUR_CNDS(C, O, LAB, N, RAD, VAR, COND, CONDVAL ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'f', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+
+#define NFCYCLE_NEIGHBOUR_CNDL(O, LAB, N, RAD, VAR, COND, CONDVAL, LAG ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'f', NULL,LAG,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define NFCYCLE_NEIGHBOUR_CNDLS(C, O, LAB, N, RAD, VAR, COND, CONDVAL, LAG ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'f', NULL,0,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+
+#define NFCYCLE_NEIGHBOUR_CND_CHEAT(O, LAB, N, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = p->first_neighbour_n(LAB, N, RAD, 'f',CHEAT_C,0,VAR,COND,CONDVAL); O!=NULL; O = p->next_neighbour() )
+#define NFCYCLE_NEIGHBOUR_CND_CHEATS(C, O, LAB, N, RAD, VAR, COND, CONDVAL, CHEAT_C  ) for ( O = C->first_neighbour_n(LAB, N, RAD, 'f',CHEAT_C,VAR,COND,CONDVAL); O!=NULL; O = C->next_neighbour() )
+
+
+
+// NEAREST_IN_DISTANCE
+// Provide the closest item in distance RAD with label LAB or NULL if none.
+// A radius <0 searches everything
+// If several items with the same distance exist, draw randomly with equal probability
+// _CND: Special version that checks conditions
+// For each candidate it is checked if the Variable VAR with lag LAG called by
+// either the candidate or CHEAT_C is  COND (<,>,==,!=) CONDVAL
+// Note that CHEAT does not work with NULL.
+
+#define NEAREST(LAB) ( p->closest_in_distance(LAB, -1, true) )
+#define NEARESTS(PTR, LAB) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, -1, true) )
+
+#define NEAREST_CND(LAB, VAR, COND, CONDVAL ) ( p->closest_in_distance(LAB, -1, true, NULL, 0, VAR, COND, CONDVAL) )
+#define NEAREST_CNDS(PTR, LAB, VAR, COND, CONDVAL ) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, -1, true, NULL, 0, VAR, COND, CONDVAL) )
+
+#define NEAREST_CNDL(LAB, VAR, COND, CONDVAL, LAG ) ( p->closest_in_distance(LAB, -1, true, NULL, LAG, VAR, COND, CONDVAL) )
+#define NEAREST_CNDLS(PTR, LAB, VAR, COND, CONDVAL, LAG ) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, -1, true, NULL, LAG, VAR, COND, CONDVAL) )
+
+#define NEAREST_CND_CHEAT(LAB, VAR, COND, CONDVAL, CHEAT_C  ) ( p->closest_in_distance(LAB, -1, true, CHEAT_C, 0, VAR, COND, CONDVAL) )
+#define NEAREST_CND_CHEATS(PTR, LAB, VAR, COND, CONDVAL, CHEAT_C  ) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, -1, true, CHEAT_C, 0, VAR, COND, CONDVAL) )
+
+
+
+#define NEAREST_IN_DISTANCE(LAB, RAD) ( p->closest_in_distance(LAB, RAD, true) )
+#define NEAREST_IN_DISTANCES(PTR, LAB, RAD) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, RAD, true) )
+
+#define NEAREST_IN_DISTANCE_CND(LAB, RAD, VAR, COND, CONDVAL ) ( p->closest_in_distance(LAB, RAD, true, NULL, 0, VAR, COND, CONDVAL) )
+#define NEAREST_IN_DISTANCE_CNDS(PTR, LAB, RAD, VAR, COND, CONDVAL ) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, RAD, true, NULL, 0, VAR, COND, CONDVAL) )
+
+#define NEAREST_IN_DISTANCE_CNDL(LAB, RAD, VAR, COND, CONDVAL, LAG ) ( p->closest_in_distance(LAB, RAD, true, NULL, LAG, VAR, COND, CONDVAL) )
+#define NEAREST_IN_DISTANCE_CNDLS(PTR, LAB, RAD, VAR, COND, CONDVAL, LAG ) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, RAD, true, NULL, LAG, VAR, COND, CONDVAL) )
+
+#define NEAREST_IN_DISTANCE_CND_CHEAT(LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) ( p->closest_in_distance(LAB, RAD, true, CHEAT_C, 0, VAR, COND, CONDVAL) )
+#define NEAREST_IN_DISTANCE_CND_CHEATS(PTR, LAB, RAD, VAR, COND, CONDVAL, CHEAT_C  ) (CHK_PTR_OBJ( PTR )  PTR->closest_in_distance(LAB, RAD, true, CHEAT_C, 0, VAR, COND, CONDVAL) )
+
+// SEARCH_POSITION_NEIGHBOUR, RSEARCH_POSITION_NEIGHBOUR
+// Searches at one patch in given direction.
+// Useful in case of wrapping (automatic handling) but also elsewhen.
+
+
+#define SEARCH_POSITION_NEIGHBOUR(LAB, direction)  ( p->search_at_neighbour_position(LAB, direction, true) )
+#define SEARCH_POSITION_NEIGHBOURS(PTR, LAB, direction)  (CHK_PTR_OBJ( PTR )  PTR->search_at_neighbour_position(LAB, direction, true) )
+#define RSEARCH_POSITION_NEIGHBOUR(LAB, direction)  ( p->search_at_neighbour_position(LAB, direction, false) )
+#define RSEARCH_POSITION_NEIGHBOURS(PTR, LAB, direction)  (CHK_PTR_OBJ( PTR )  PTR->search_at_neighbour_position(LAB, direction, false) )
+
+
+//  SEARCH_POSITION, RSEARCH_POSITION
+//  Searches at an exact position for an object with label LAB
+//  If it exists it is reported. The RND version works if there can be more
+//  than one object at the same place (returning one randomly)
+//  The standard version will yield an error if more than one option exist.
+//  Change style
+
+#define SEARCH_POSITION_XY(LAB, X, Y)  ( p->search_at_position(LAB, X, Y, true) )
+#define SEARCH_POSITION_XY_WHERE( LAB, X, Y, WHERE )  ( CHK_PTR_OBJ( WHERE ) WHERE->search_at_position(LAB, X, Y, true) )
+
+#define SEARCH_POSITION(LAB)  ( p->search_at_position(LAB, true) )
+#define SEARCH_POSITIONS(PTR, LAB)  (CHK_PTR_OBJ( PTR )  PTR->search_at_position(LAB, true) )
+
+#define SEARCH_POSITION_WHERE(LAB,WHERE)  ( p->search_at_position(LAB, true, false, WHERE) )
+#define SEARCH_POSITIONS_WHERE(PTR, LAB,WHERE)  (CHK_PTR_OBJ( PTR )  PTR->search_at_position(LAB, true, false, WHERE) )
+//TODO: Add other WHERE options to search, handle non-same layout (add layout check!), get writ of defaulted functions (instead implement multiple))
+
+
+#define RSEARCH_POSITION_XY(LAB, X, Y)  ( p->search_at_position(LAB, X, Y, false) )
+#define RSEARCH_POSITION_XY_WHERE( LAB, X, Y, WHERE)  ( WHERE->search_at_position(LAB, X, Y, false) )
+#define RSEARCH_POSITION(LAB)  ( p->search_at_position(LAB, false) )
+#define RSEARCH_POSITIONS(PTR, LAB)  (CHK_PTR_OBJ( PTR )  PTR->search_at_position(LAB, false) )
+
+//  SEARCH_POSITION_GRID and SEARCH_POSITION_RND_GRID
+//  Similar to above, but it searches at the truncated position.
+//  This macro is useful if one set of agents is distributed in continuous space
+//  And another one, like "land patches", in discrete space. Then, the modeller
+//  Can safely get information on the associated "land patch" of an "agent" with
+//  this command.
+
+#define SEARCH_POSITION_GRID_XY(LAB, X, Y)  ( p->search_at_position(LAB, X, Y, true) )
+#define SEARCH_POSITION_GRID_XY_WHERE( LAB, X, Y, WHERE)  ( WHERE->search_at_position(LAB, trunc(X), trunc(Y), true) )
+#define SEARCH_POSITION_GRID(LAB)  ( p->search_at_position(LAB, true, true) )
+#define SEARCH_POSITION_GRIDS(PTR, LAB)  (CHK_PTR_OBJ( PTR )  PTR->search_at_position(LAB, true, true) )
+
+#define RSEARCH_POSITION_GRID_XY(LAB, X, Y)  ( p->search_at_position(LAB, X, Y, false) )
+#define RSEARCH_POSITION_GRID_XY_WHERE( LAB, X, Y, WHERE)  ( WHERE->search_at_position(LAB, trunc(X), trunc(Y), false) )
+#define RSEARCH_POSITION_GRID(LAB)  ( p->search_at_position(LAB, false, true) )
+#define RSEARCH_POSITION_GRIDS(PTR, LAB)  (CHK_PTR_OBJ( PTR )  PTR->search_at_position(LAB, false, true) )
+
+//  COUNT_POSITION(S)(_GRID(S))
+//  Similar to the search, you can use these macros to count the number of
+//  elements at the given position.
+
+#define COUNT_POSITION(LAB)  ( p->elements_at_position( LAB, false ) )
+#define COUNT_POSITION_WHERE(LAB, WHERE) (CHK_PTR_DBL( WHERE )  WHERE->elements_at_position( LAB, false ) )
+
+#define COUNT_POSITION_XY(LAB, X, Y)  ( p->elements_at_position( LAB, X, Y ) )
+#define COUNT_POSITION_XY_WHERE( LAB, X, Y, WHERE) ( WHERE->elements_at_position( LAB, X, Y ) )
+
+#define COUNT_POSITION_GRID(LAB)  ( p->elements_at_position( LAB, true ) )
+#define COUNT_POSITION_GRID_WHERE(LAB, WHERE) (CHK_PTR_DBL( WHERE )  WHERE->elements_at_position( LAB, true ) )
+
+// Additional Utilities
+// ANY_GIS just checks if there is a map associated to the object
+// SAME_GIS checks if the two objects share the same map
+#define ANY_GIS ( p->position != NULL ? true : false  )
+#define ANY_GISS(PTR) (CHK_PTR_BOOL( PTR )  PTR->position != NULL ? true : false )
+
+#define SAME_GIS_WHERE(WHERE) ( p->ptr_map() == WHERE->ptr_map() )
+#define SAME_GISS_WHERE(PTR,WHERE) (CHK_PTR_BOOL( PTR )  PTR->ptr_map() == WHERE->ptr_map() )
+
+#define GIS_INFOS( PTR ) ( ( CHK_PTR_CHR(PTR) PTR->gis_info().c_str()) )
+#define GIS_INFO ( (p->gis_info().c_str()) )
+
+// GIS Lattice utilities
+
+
+#ifndef NO_WINDOW
+
+#define INIT_LAT_GIS( ... )         ( p->init_lattice_gis( __VA_ARGS__ ) )
+#define INIT_LAT_GISS( PTR, ... )   ( CHK_PTR_DBL( PTR )  PTR->init_lattice_gis( __VA_ARGS__ ) )
+#define DELETE_LAT_GIS              ( close_lattice_gis( ) ) // convenient
+#define SAVE_LAT_GIS( ... )         ( save_lattice( __VA_ARGS__ ) ) //convenient
+
+#define V_LAT_GIS                   ( p->read_lattice_gis( ) )
+#define V_LAT_GISS( PTR )           ( CHK_PTR_DBL( PTR )  PTR->read_lattice_gis( ) )
+#define WRITE_LAT_GIS( VAL )        ( p->write_lattice_gis( VAL ) )
+#define WRITE_LAT_GISS( PTR, VAL )  ( CHK_PTR_DBL( PTR )  PTR->write_lattice_gis( VAL ) )
+
+#define V_LAT_GIS_XY( X, Y )                    ( p->read_lattice_gis( X, Y, true ) )
+#define V_LAT_GIS_XYS( PTR, X, Y )              ( CHK_PTR_DBL( PTR )  PTR->read_lattice_gis( X, Y, true ) )
+#define WRITE_LAT_GIS_XY( X, Y, VAL )           ( p->write_lattice_gis( X, Y, VAL, true ) )
+#define WRITE_LAT_GIS_XYS( PTR, X, Y, VAL )     ( CHK_PTR_DBL( PTR )  PTR->write_lattice_gis( X, Y, VAL, true ) )
+
+#define V_LAT_GIS_ADJUST_XY( X, Y )                 ( p->read_lattice_gis( X, Y, false ) )
+#define V_LAT_GIS_ADJUST_XYS( PTR, X, Y )           ( CHK_PTR_DBL( PTR )  PTR->read_lattice_gis( X, Y, false ) )
+#define WRITE_LAT_GIS_ADJUST_XY( X, Y, VAL )        ( p->write_lattice_gis( X, Y, VAL, false ) )
+#define WRITE_LAT_GIS_ADJUST_XYS( PTR, X, Y, VAL )  ( CHK_PTR_DBL( PTR )  PTR->write_lattice_gis( X, Y, VAL, false ) )
+
+#define SET_LAT_PRIORITY( VAL ) ( p->set_lattice_priority( ( VAL ) ) )
+#define SET_LAT_PRIORITYS( PTR, VAL ) ( CHK_PTR_VOID( PTR )  PTR->set_lattice_priority( ( VAL ) ) )
+#define SET_LAT_COLOR( VAL ) ( p->set_lattice_color( ( VAL ) ) )
+#define SET_LAT_COLORS( PTR, VAL ) ( CHK_PTR_VOID( PTR )  PTR->set_lattice_color( ( VAL ) ) )
+
+#define RETRIVE_LAT_COLOR           ( p->read_lattice_color( ) )
+#define RETRIVE_LAT_COLORS( PTR )   ( CHK_PTR_DBL( PTR )  PTR->read_lattice_color( ) )
+
+#else
+
+#define INIT_LAT_GIS( ... )         ( void( ) )
+#define INIT_LAT_GISS( PTR, ... )   ( void( ) )
+#define DELETE_LAT_GIS              ( void( ) ) // convenient
+#define SAVE_LAT_GIS( ... )         ( void( ) ) //convenient
+
+#define V_LAT_GIS                   ( void( ) )
+#define V_LAT_GISS( PTR )           ( void( ) )
+#define WRITE_LAT_GIS( VAL )        ( void( ) )
+#define WRITE_LAT_GISS( PTR, VAL )  ( void( ) )
+
+#define V_LAT_GIS_XY( X, Y )                    ( void( ) )
+#define V_LAT_GIS_XYS( PTR, X, Y )              ( void( ) )
+#define WRITE_LAT_GIS_XY( X, Y, VAL )           ( void( ) )
+#define WRITE_LAT_GIS_XYS( PTR, X, Y, VAL )     ( void( ) )
+
+#define V_LAT_GIS_ADJUST_XY( X, Y )                 ( void( ) )
+#define V_LAT_GIS_ADJUST_XYS( PTR, X, Y )           ( void( ) )
+#define WRITE_LAT_GIS_ADJUST_XY( X, Y, VAL )        ( void( ) )
+#define WRITE_LAT_GIS_ADJUST_XYS( PTR, X, Y, VAL )  ( void( ) )
+
+#define SET_LAT_PRIORITY( VAL )         ( void( ) )
+#define SET_LAT_PRIORITYS( PTR, VAL )   ( void( ) )
+#define SET_LAT_COLOR( VAL )            ( void( ) )
+#define SET_LAT_COLORS( PTR, VAL )      ( void( ) )
+#endif
+
+//And some new macros to load data from txt files.
+//The txt file is in the format x \t y \t value \n
+#define LOAD_DATA_GIS(inputfile, obj_lab, var_lab ) p->load_data_gis( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t )
+#define LOAD_DATA_GISL(inputfile, obj_lab, var_lab, t_update ) p->load_data_gis( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t_update )
+#define LOAD_DATA_GIS_WHERE(inputfile, obj_lab, var_lab, WHERE ) WHERE->load_data_gis( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t )
+#define LOAD_DATA_GISL_WHERE(inputfile, obj_lab, var_lab, t_update, WHERE ) WHERE->load_data_gis( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t_update )
+
+//The txt file is in gridded format with row and colum headers. In the grid single values are stored. (0,0) is bottom left.
+#define LOAD_DATA_GIS_MAT(inputfile, obj_lab, var_lab ) p->load_data_gis_mat( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t )
+#define LOAD_DATA_GIS_MATL(inputfile, obj_lab, var_lab, t_update ) p->load_data_gis_mat( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t_update )
+#define LOAD_DATA_GIS_MAT_WHERE(inputfile, obj_lab, var_lab, WHERE ) WHERE->load_data_gis_mat( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t )
+#define LOAD_DATA_GIS_MATL_WHERE(inputfile, obj_lab, var_lab, t_update, WHERE ) WHERE->load_data_gis_mat( (const char *) inputfile, (const char *) obj_lab, (const char *) var_lab, t_update )
+
+
+// Some simple functions to load data to rapidscv::Document type
+// #define LOAD_DATA_CSV(doc_name, inputfile) rapidcsv::Document doc_name(inputfile, rapidcsv::LabelParams( -1, -1), ',' );
+// #define LOAD_DATA_S(doc_name, inputfile, separator) rapidcsv::Document doc_name(inputfile, rapidcsv::LabelParams( -1, -1), rapidcsv::SeparatorParams(separator) );
+// #define LOAD_DATA_SC(doc_name, inputfile, separator) rapidcsv::Document doc_name(inputfile, rapidcsv::LabelParams( 0, -1), rapidcsv::SeparatorParams(separator) );
+// #define LOAD_DATA_SR(doc_name, inputfile, separator) rapidcsv::Document doc_name(inputfile, rapidcsv::LabelParams( -1, 0), rapidcsv::SeparatorParams(separator) );
+// #define LOAD_DATA_SCR(doc_name, inputfile, separator) rapidcsv::Document doc_name(inputfile, rapidcsv::LabelParams( 0, 0), rapidcsv::SeparatorParams(separator) );
+
+//Simple function to cycle through x,y from csv loadet before.
+// #define CYCLE_DATA_ROWS(doc_name,)
+// for (int row = 0; row< f_in.GetRowCount(); ++row) {
+//   for (int col = 0; col< f_in.GetColumnCount(); ++col) {
+//
+//   }
+// }
+
+#define ABMAT_USE_LONG_NAMES { abmat_use_long_names(); } //TODO ENSURE CALLED FIRST!
+#define ABMAT_DYNAMIC_FACTORS { abmat_allow_dynamic_factors(); }
+#define ABMAT_ADD_MICRO( lab1 ) { abmat_add_micro( lab1 ); }
+#define ABMAT_ADD_MACRO( lab1 ) { abmat_add_macro( lab1 ); }
+#define ABMAT_ADD_FACT( lab1, factList ) { abmat_add_fact( lab1, factList ); }
+#define ABMAT_ADD_COMP( lab1, lab2 ) { abmat_add_comp( lab1, lab2 ); }
+#define ABMAT_ADD_COND( lab1, lab2 ) { abmat_add_cond( lab1, lab2 ); }
+
+#define ABMAT_ADD_PSTATIC( lab1 ) { abmat_add_par_static( lab1 ); }
+#define ABMAT_ADD_PMACRO( lab1 ) { abmat_add_par_macro( lab1 ); }
+#define ABMAT_ADD_PMICRO( lab1 ) { abmat_add_par_micro( lab1 ); }
+
+#define ABMAT_ADD_FMACRO( lab1 ) { abmat_add_final_macro( lab1 ); }
+#define ABMAT_ADD_FMICRO( lab1 ) { abmat_add_final_micro( lab1 ); }
+
+#define ABMAT_ADD_INTERVAL( start, end ) { abmat_add_interval(start, end); }
+
 #endif //#ifdef CPP11
 
 // DEPRECATED MACRO COMPATIBILITY DEFINITIONS
@@ -1140,8 +1140,8 @@ bool no_ptr_chk = true;
 #ifndef FAST_LOOKUP
 
 double init_lattice( double pixW = 0, double pixH = 0, double nrow = 100, double ncol = 100,
-                     char const lrow[ ] = "y", char const lcol[ ] = "x", char const lvar[ ] = "",
-                     object* p = NULL, int init_color = -0xffffff );
+										 char const lrow[ ] = "y", char const lcol[ ] = "x", char const lvar[ ] = "",
+										 object* p = NULL, int init_color = -0xffffff );
 double poidev( double xm, long* idum_loc = NULL );
 int deb( object* r, object* c, char const* lab, double* res, bool interact = false );
 object* go_brother( object* c );
@@ -1223,6 +1223,6 @@ void cmd( const char* cm, ... );
 #endif
 
 #ifndef NO_WINDOW //these macros only exist in windowed mode.
-  //A helper macro that can be used together with others to pass a file-name
-  #define SELECT_FILE( _message ) p->grab_filename_interactive( _message )
+//A helper macro that can be used together with others to pass a file-name
+#define SELECT_FILE( _message ) p->grab_filename_interactive( _message )
 #endif
