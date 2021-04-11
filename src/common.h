@@ -6,18 +6,18 @@
 
 	Copyright Marco Valente and Marcelo Pereira
 	LSD is distributed under the GNU General Public License
-	
+
 	See Readme.txt for copyright information of
 	third parties' code used in LSD
-	
+
  *************************************************************/
 
 /*************************************************************
  COMMON.H
  Global definitions common between LMM and LSD Browser
- 
+
  Relevant flags (when defined):
- 
+
  - LMM: Model Manager executable
  - FUN: user model equation file
  - NW: No Window executable
@@ -57,7 +57,7 @@
 #undef DELETE
 #undef THIS
 #else
-#include <unistd.h>	
+#include <unistd.h>
 #endif
 
 // global constants
@@ -140,7 +140,7 @@
 using namespace std;
 
 // classes pre-definitions
-struct object; 
+struct object;
 struct variable;
 struct bridge;
 struct mnode;
@@ -176,7 +176,7 @@ struct object
 	netNode *node;						// pointer to network node data structure
 	void *cext;							// pointer to a C++ object extension to the LSD object
 	bool *del_flag;						// address of flag to signal deletion
-	
+
 	o_vecT hooks;
 	b_mapT b_map;						// fast lookup map to object bridges
 	v_mapT v_map;						// fast lookup map to variables
@@ -201,10 +201,10 @@ struct object
 	double initturbo_cond( char const *label );
 	double init_stub_net( char const *lab, const char* gen, long numNodes = 0, long par1 = 0, double par2 = 0.0 );
 	double interact( char const *text, double v, double *tv, int i, int j, int h, int k,
-		object *cur, object *cur1, object *cur2, object *cur3, object *cur4, object *cur5,
-		object *cur6, object *cur7, object *cur8, object *cur9, netLink *curl, netLink *curl1,
-		netLink *curl2, netLink *curl3, netLink *curl4, netLink *curl5, netLink *curl6, 
-		netLink *curl7, netLink *curl8, netLink *curl9 );
+									 object *cur, object *cur1, object *cur2, object *cur3, object *cur4, object *cur5,
+									 object *cur6, object *cur7, object *cur8, object *cur9, netLink *curl, netLink *curl1,
+									 netLink *curl2, netLink *curl3, netLink *curl4, netLink *curl5, netLink *curl6,
+									 netLink *curl7, netLink *curl8, netLink *curl9 );
 	double last_cal( char const *lab );
 	double med( char const *lab1, int lag = 0, bool cond = false, char const *lab2 = "", char const *lop = "", double value = NAN );
 	double multiply( char const *lab, double value );
@@ -234,12 +234,12 @@ struct object
 	long init_star_net( char const *lab, long numNodes );
 	long init_uniform_net( char const *lab, long numNodes, long outDeg );
 	netLink *add_link_net( object *destPtr, double weight = 0, double probTo = 1 );
-	netLink *draw_link_net( void ); 
-	netLink *search_link_net( long id ); 
+	netLink *draw_link_net( void );
+	netLink *search_link_net( long id );
 	object *add_n_objects2( char const *lab, int n, int t_update = -1 );
 	object *add_n_objects2( char const *lab, int n, object *ex, int t_update = -1 );
 	object *add_node_net( long id = -1, char const *nodeName = "", bool silent = false );
-	object *draw_node_net( char const *lab ); 
+	object *draw_node_net( char const *lab );
 	object *draw_rnd( char const *lo );
 	object *draw_rnd( char const *lo, char const *lv, int lag = 0 );
 	object *draw_rnd( char const *lo, char const *lv, int lag, double tot );
@@ -253,7 +253,7 @@ struct object
 	object *lsdqsort( char const *obj, char const *var1, char const *var2, char const *direction );
 	object *search( char const *lab, bool no_search = false );
 	object *search_err( char const *lab, bool no_search, char const *errmsg );
-	object *search_node_net( char const *lab, long id ); 
+	object *search_node_net( char const *lab, long id );
 	object *search_var_cond( char const *lab, double value, int lag = 0 );
 	object *shuffle_nodes_net( char const *lab );
 	object *turbosearch( char const *label, double tot, double num );
@@ -314,7 +314,7 @@ struct variable
 	double deb_cnd_val;
 	object *up;
 	variable *next;
-	
+
 #ifndef NP
 	mutex parallel_comp;				// mutex lock for parallel computation
 #endif
@@ -338,10 +338,10 @@ struct bridge
 	bridge *next;
 	mnode *mn;
 	object *head;
-	char *search_var;					// current initialized search variable 
-	
+	char *search_var;					// current initialized search variable
+
 	o_mapT o_map;						// fast lookup map to objects
-	
+
 	bridge( const char *lab );			// constructor
 	bridge( const bridge &b );			// copy constructor
 	~bridge( void );					// destructor
@@ -368,9 +368,9 @@ struct netNode							// network node data
 	long serNum;						// node serial number (initial order, fixed )
 	netLink *first;						// first link in the linked list of links
 	netLink *last;						// last link in the linked list of links
-	
+
 	netNode( long nodeId = -1, char const nodeName[ ] = "", double nodeProb = 1 );
-										// constructor
+	// constructor
 	~netNode( void );					// destructor
 };
 
@@ -384,9 +384,9 @@ struct netLink							// individual outgoing link
 	netLink *prev;						// pointer to previous link (NULL if first )
 	object *ptrFrom;					// network node containing the link
 	object *ptrTo;						// pointer to destination number
-	
-	netLink( object *origNode, object *destNode, double linkWeight = 0, double destProb = 1 ); 
-										// constructor
+
+	netLink( object *origNode, object *destNode, double linkWeight = 0, double destProb = 1 );
+	// constructor
 	~netLink( void ); 					// destructor
 };
 
@@ -425,15 +425,15 @@ struct sense
 };
 
 struct design 							// design of experiment object
-{ 
+{
 	int typ, tab, n, k, *par, *lag;		// experiment parameters
-	double *hi, *lo, **ptr; 
+	double *hi, *lo, **ptr;
 	char **lab;
 	bool *intg;
 
-	design( sense *rsens, int typ = 1, char const *fname = "", int findex = 1, 
-			int samples = 0, int factors = 0, int jump = 2, int trajs = 4 );	
-										// constructor
+	design( sense *rsens, int typ = 1, char const *fname = "", int findex = 1,
+					int samples = 0, int factors = 0, int jump = 2, int trajs = 4 );
+	// constructor
 	~design( void );					// destructor
 };
 
@@ -457,13 +457,13 @@ class result							// results file object
 
 	void title_recursive( object *r, int i );	// write file header (recursively)
 	void data_recursive( object *r, int i );	// save a single time step (recursively)
-	
-	public:
-	
+
+public:
+
 	result( char const *fname, char const *fmode, bool dozip = false, bool docsv = false );
-										// constructor
+	// constructor
 	~result( void );					// destructor
-	
+
 	void data( object *root, int initstep, int endtstep = 0 );	// write data
 	void title( object *root, int flag );	// write file header
 };
@@ -472,8 +472,11 @@ struct profile							// profiled variable object
 {
 	unsigned int comp;
 	unsigned long long ticks;
-	
-	profile( ) { ticks = 0; comp = 0; };	// constructor
+
+	profile( ) {
+		ticks = 0;
+		comp = 0;
+	};	// constructor
 };
 
 #ifndef NP
@@ -493,10 +496,10 @@ struct worker							// multi-thread parallel worker data structure
 	thread thr;
 	thread::id thr_id;
 	variable *var;
-	
+
 	worker( void );						// constructor
 	~worker( void );					// destructor
-	
+
 	bool check( void );					// handle worker problems
 	static void signal_wrapper( int signun );	// wrapper for signal_handler
 	void cal( variable *var );			// start worker calculation
@@ -579,7 +582,7 @@ extern const char *signal_names[ ];
 extern const char *wnd_names[ ];		// LSD main windows' names
 extern const int signals[ ];			// handled system signal numbers
 
-// multi-threading control 
+// multi-threading control
 #ifndef NP
 extern thread::id main_thread;			// LSD main thread ID
 extern worker *workers;					// multi-thread parallel worker data

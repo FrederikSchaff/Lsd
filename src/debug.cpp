@@ -6,15 +6,15 @@
 
 	Copyright Marco Valente and Marcelo Pereira
 	LSD is distributed under the GNU General Public License
-	
+
 	See Readme.txt for copyright information of
 	third parties' code used in LSD
-	
+
  *************************************************************/
 
 /*************************************************************
 DEBUG.CPP
-Builds and manages the debug window. 
+Builds and manages the debug window.
 
 This window appears under two conditions:
 - Simulation running in debug mode AND an equation for one of the variables
@@ -74,7 +74,7 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 	variable *cv, *cv1;
 
 	// define the presentation mode ( 1 = normal debug, 2 = data browse, 3 = pause debug, 4 = error )
-	int mode = ( lab == NULL ) ? 2 : ( ! strcmp( lab, "Paused by User" ) ) ? 3 : ( strstr( lab, "(ERROR)" ) != NULL ) ? 4 : 1; 
+	int mode = ( lab == NULL ) ? 2 : ( ! strcmp( lab, "Paused by User" ) ) ? 3 : ( strstr( lab, "(ERROR)" ) != NULL ) ? 4 : 1;
 	Tcl_SetVar( inter, "lab", lab, 0 );
 
 	if ( mode == 2 )
@@ -97,7 +97,7 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 	cmd( "set existMenu [ winfo exists .deb.m ]" );
 	cmd( "set confMenu [ .deb cget -menu ]" );
 	if ( ! strcmp( Tcl_GetVar( inter, "existMenu", 0 ), "0" ) ||
-		 strcmp( Tcl_GetVar( inter, "confMenu", 0 ), ".deb.m" ) )
+			 strcmp( Tcl_GetVar( inter, "confMenu", 0 ), ".deb.m" ) )
 	{
 		cmd( "destroy .deb.m" );
 		cmd( "ttk::menu .deb.m -tearoff 0" );
@@ -128,9 +128,9 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 		cmd( "$w add separator" );
 		cmd( "$w add command -label \"Model Report\" -underline 0 -command { set choice 44 }" );
 		cmd( "$w add separator" );
-		cmd( "$w add command -label \"About LSD...\" -underline 0 -command { LsdAbout {%s} {%s} .deb }", _LSD_VERSION_, _LSD_DATE_ ); 
+		cmd( "$w add command -label \"About LSD...\" -underline 0 -command { LsdAbout {%s} {%s} .deb }", _LSD_VERSION_, _LSD_DATE_ );
 		cmd( ".deb configure -menu .deb.m" );
-		
+
 		cmd( "bind .deb <Control-f> { set choice 10 }; bind .deb <Control-F> { set choice 10 }" );
 		cmd( "bind .deb <Delete> { set choice 19 }" );
 		cmd( "bind .deb <F1> { .deb.m.help invoke 0; break }" );
@@ -139,7 +139,7 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 	// avoid redrawing the buttons if they already exist
 	cmd( "set existButtons [ expr [ winfo exists .deb.b ] ]" );
 	if ( ! strcmp( Tcl_GetVar( inter, "existButtons", 0 ), "0" ) )
-	{ 
+	{
 		cmd( "if [ string equal $CurPlatform mac ] { \
 				set butWidD [ expr $butWid - 1 ] \
 			} { \
@@ -148,7 +148,7 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 		cmd( "destroy .deb.b" );
 
 		cmd( "ttk::frame .deb.b" );
-		
+
 		// first row of buttons (always shown)
 		cmd( "ttk::frame .deb.b.move" );
 
@@ -161,9 +161,9 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 		cmd( "ttk::button .deb.b.move.search -width $butWidD -text Find -command { set choice 18 } -underline 0" );
 		cmd( "ttk::button .deb.b.move.hook -width $butWidD -text Hooks -command { set choice 21 } -underline 0" );
 		cmd( "ttk::button .deb.b.move.net -width $butWidD -text Network -command { set choice 22 } -underline 3" );
-		
+
 		cmd( "pack .deb.b.move.up .deb.b.move.down .deb.b.move.prev .deb.b.move.broth .deb.b.move.hypern .deb.b.move.last .deb.b.move.search .deb.b.move.hook .deb.b.move.net -padx $butSpc -side left" );
-		
+
 		cmd( "bind .deb <KeyPress-u> { .deb.b.move.up invoke }; bind .deb <KeyPress-U> { .deb.b.move.up invoke }" );
 		cmd( "bind .deb <Up> { .deb.b.move.up invoke }" );
 		cmd( "bind .deb <KeyPress-n> { .deb.b.move.broth invoke }; bind .deb <KeyPress-N> { .deb.b.move.broth invoke }" );
@@ -183,9 +183,9 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 		if ( mode == 1 || mode == 3 )
 		{
 			cmd( "set stack_flag %d", stack_info );
-			
+
 			cmd( "ttk::frame .deb.b.act" );
-			
+
 			if ( mode == 1 )
 			{
 				cmd( "ttk::button .deb.b.act.run -width $butWidD -text Run -command { set choice 2; set_c_var done_in 0 } -underline 0" );
@@ -193,40 +193,40 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 				cmd( "ttk::button .deb.b.act.ok -width $butWidD -text Step -command { set choice 1; set_c_var done_in 3 } -underline 0" );
 				cmd( "ttk::button .deb.b.act.call -width $butWidD -text Caller -command { set choice 9 } -underline 0" );
 				cmd( "ttk::button .deb.b.act.prn_v -width $butWidD -text \"v\\\[...\\]\" -command { set choice 15 } -underline 0" );
-				
+
 				cmd( "bind .deb <KeyPress-r> { .deb.b.act.run invoke }; bind .deb <KeyPress-R> { .deb.b.act.run invoke }; bind .deb <F5> { .deb.b.act.run invoke }" );
 				cmd( "bind .deb <KeyPress-i> { .deb.b.act.until invoke }; bind .deb <KeyPress-I> { .deb.b.act.until invoke }; bind .deb <F7> { .deb.b.act.until invoke }" );
 				cmd( "bind .deb <KeyPress-s> { .deb.b.act.ok invoke }; bind .deb <KeyPress-S> { .deb.b.act.ok invoke }; bind .deb <F8> { .deb.b.act.ok invoke }" );
 				cmd( "bind .deb <KeyPress-c> { .deb.b.act.call invoke }; bind .deb <KeyPress-C> { .deb.b.act.call invoke }; bind .deb <F6> { .deb.b.act.call invoke }" );
 				cmd( "bind .deb <KeyPress-v> { .deb.b.act.prn_v invoke }; bind .deb <KeyPress-V> { .deb.b.act.prn_v invoke }" );
 			}
-			
+
 			cmd( "ttk::button .deb.b.act.an -width $butWidD -text Analysis -command { set choice 11 } -underline 0" );
 			cmd( "ttk::button .deb.b.act.prn_stck -width $butWidD -text Stack -command { set choice 13 } -underline 4" );
-			
+
 			cmd( "bind .deb <KeyPress-a> { .deb.b.act.an invoke }; bind .deb <KeyPress-A> { .deb.b.act.an invoke }" );
 			cmd( "bind .deb <KeyPress-k> { .deb.b.act.prn_stck invoke }; bind .deb <KeyPress-K> { .deb.b.act.prn_stck invoke }" );
-			
+
 			cmd( "ttk::frame .deb.b.act.stack" );
 			cmd( "ttk::label .deb.b.act.stack.l -text \"Stack level\"" );
 			cmd( "ttk::spinbox .deb.b.act.stack.e -width 3 -from 0 -to 99 -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 0 && $n <= 99 } { set stack_flag %%P; return 1 } { %%W delete 0 end; %%W insert 0 $stack_flag; return 0 } } -invalidcommand { bell } -justify center" );
-			cmd( ".deb.b.act.stack.e insert 0 $stack_flag" ); 
+			cmd( ".deb.b.act.stack.e insert 0 $stack_flag" );
 			cmd( "pack .deb.b.act.stack.l .deb.b.act.stack.e -padx 2 -side left" );
-			
+
 			if ( mode == 1 )
 				cmd( "pack .deb.b.act.run .deb.b.act.until .deb.b.act.ok .deb.b.act.call .deb.b.act.prn_v .deb.b.act.an .deb.b.act.prn_stck .deb.b.act.stack -padx $butSpc -side left" );
 			else
 				cmd( "pack .deb.b.act.an .deb.b.act.prn_stck .deb.b.act.stack -padx $butSpc -side left" );
-		
+
 
 			cmd( "ttk::frame .deb.b.pad" );
-			
+
 			cmd( "pack .deb.b.move -anchor e" );
 			cmd( "pack .deb.b.pad -pady $butSpc -anchor e" );
 			cmd( "pack .deb.b.act -anchor e" );
 		}
 		else
-			cmd( "pack .deb.b.move -anchor e" );		
+			cmd( "pack .deb.b.move -anchor e" );
 	}
 
 	app_res = *res;
@@ -333,17 +333,17 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 				else
 					cmd( ".deb.b.act.call configure -state normal" );
 			}
-				
+
 			// disable or enable the hook button
 			if( r->hook == NULL && r->hooks.size( ) == 0 )
 				cmd( ".deb.b.move.hook configure -state disabled" );
 			else
 				cmd( ".deb.b.move.hook configure -state normal" );
-				
+
 			// update the temporary variables watch window
 			cmd( "set existVal [ winfo exists .deb.val ]" );
 			if ( ! strcmp( Tcl_GetVar( inter, "existVal", 0 ), "1" ) )
-					show_tmp_vars( r, true );
+				show_tmp_vars( r, true );
 
 			// remove or update the network window
 			if ( r->node == NULL )
@@ -358,7 +358,7 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 					show_neighbors( r, true );
 				cmd( ".deb.b.move.net configure -state normal" );
 			}
-			
+
 			ch[ 0 ] = '\0';
 			attach_instance_number( ch, r );
 
@@ -366,8 +366,8 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 
 			if ( mode == 1 )
 			{
-				cmd( "write_any .deb.b.act.stack.e $stack_flag" ); 
-				
+				cmd( "write_any .deb.b.act.stack.e $stack_flag" );
+
 				if ( interact )
 					cmd( "if { ! $value_change } { \
 							.deb.v.v1.val2 configure -state normal; \
@@ -376,7 +376,7 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 							bind .deb.v.v1.val2 <Return> { .deb.b.act.run invoke } \
 						}" );
 				else
-					cmd( "catch { write_any .deb.v.v1.val2 [ format %%g $value ] }" ); 
+					cmd( "catch { write_any .deb.v.v1.val2 [ format %%g $value ] }" );
 			}
 
 			// resize the scrollbar if needed and ajust position
@@ -391,9 +391,9 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 				}" );
 			cmd( "unset -nocomplain lstDebPos" );
 		}
-		
+
 		redraw = true;
-		
+
 		// debug command loop
 		while ( ! choice )
 			Tcl_DoOneEvent( 0 );
@@ -401,9 +401,9 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 		if ( mode == 1 )
 		{
 			cmd( "bind .deb <KeyPress-g> { }; bind .deb <KeyPress-G> { }" );
-			cmd( "set stack_flag [ .deb.b.act.stack.e get ]" ); 
+			cmd( "set stack_flag [ .deb.b.act.stack.e get ]" );
 			stack_info = get_int( "stack_flag" );
-			
+
 			cmd( "if { $value_change } { \
 					if [ string is double -strict [ .deb.v.v1.val2 get ] ] { \
 						set value [ .deb.v.v1.val2 get ] \
@@ -413,403 +413,403 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 					}; \
 					set value_change 0 \
 				}" );
-		} 
+		}
 
 		switch ( choice )
 		{
-			// Step
-			case 1:
-				if ( t >= max_step )
-				{
-					cmd( "destroytop .deb" );
-					set_buttons_run( true );
-					debug_flag = false;
-				}
-				break;
-
-			// Run
-			case 2:
+		// Step
+		case 1:
+			if ( t >= max_step )
+			{
 				cmd( "destroytop .deb" );
 				set_buttons_run( true );
-				if ( ! non_var )
-					debug_flag = false;
+				debug_flag = false;
+			}
+			break;
 
-				break;
+		// Run
+		case 2:
+			cmd( "destroytop .deb" );
+			set_buttons_run( true );
+			if ( ! non_var )
+				debug_flag = false;
 
-			// Up
-			case 3: 
-				if ( r->up != NULL )
-					choice = deb( r->up, c, lab, res, interact );
-				else
-					choice = 0;
-				break;
+			break;
 
-			// Next
-			case 4: 
-				if ( r->next != NULL )
-					choice = deb( r->next, c, lab, res, interact );
-				else
-				{
-					cur = skip_next_obj( r );
-					if ( cur != NULL )
-						choice = deb( cur, c, lab, res, interact );
-					else 
-						choice = 0;
-				} 
-				break;
+		// Up
+		case 3:
+			if ( r->up != NULL )
+				choice = deb( r->up, c, lab, res, interact );
+			else
+				choice = 0;
+			break;
 
-			// Next Type
-			case 5:
-				cur = skip_next_obj( r, &count );
+		// Next
+		case 4:
+			if ( r->next != NULL )
+				choice = deb( r->next, c, lab, res, interact );
+			else
+			{
+				cur = skip_next_obj( r );
 				if ( cur != NULL )
 					choice = deb( cur, c, lab, res, interact );
 				else
 					choice = 0;
+			}
+			break;
 
-				break;
-				
-			// Down
-			case 6:
-				// handle zero instanced objects
-				for ( cb = r->b; cb != NULL; cb = cb->next )
-					if ( cb->head != NULL )
-					{
-						choice = deb( cb->head, c, lab, res, interact );
-						break;
-					}
-					
-				if ( cb == NULL )
-					choice = 0;
-				
-				break;
-				
-			// Quit
-			case 7:
-				if ( mode == 1 )
-				{
-					cmd( "set answer [ ttk::messageBox -parent .deb -type okcancel -default cancel -icon warning -title Warning -message \"Stop simulation\" -detail \"Quitting the simulation run.\nPress 'OK' to confirm.\" ]; if [ string equal $answer ok ] { set choice 0 } { set choice 1 }" );
-				} 
-				else
-					choice = 0; 
+		// Next Type
+		case 5:
+			cur = skip_next_obj( r, &count );
+			if ( cur != NULL )
+				choice = deb( cur, c, lab, res, interact );
+			else
+				choice = 0;
 
-				if ( choice == 1 ) 
+			break;
+
+		// Down
+		case 6:
+			// handle zero instanced objects
+			for ( cb = r->b; cb != NULL; cb = cb->next )
+				if ( cb->head != NULL )
 				{
-					choice = deb( r, c, lab, res, interact );
+					choice = deb( cb->head, c, lab, res, interact );
 					break;
 				}
 
-				cmd( "destroytop .deb" );
-				set_buttons_run( true );
-				choice = 1;
-				
-				switch ( mode )
-				{
-					case 1:		// prevent changing run parameters when only data browse was called
-						quit = 1;
-						debug_flag = false;
-						break;
-						
-					case 2:
-						uncover_browser( );
-						break;
+			if ( cb == NULL )
+				choice = 0;
 
-					case 3:
-						cmd( "focustop ." );
-				}
+			break;
 
+		// Quit
+		case 7:
+			if ( mode == 1 )
+			{
+				cmd( "set answer [ ttk::messageBox -parent .deb -type okcancel -default cancel -icon warning -title Warning -message \"Stop simulation\" -detail \"Quitting the simulation run.\nPress 'OK' to confirm.\" ]; if [ string equal $answer ok ] { set choice 0 } { set choice 1 }" );
+			}
+			else
+				choice = 0;
+
+			if ( choice == 1 )
+			{
+				choice = deb( r, c, lab, res, interact );
 				break;
-				
-			// element change (click on parameter/variable)
-			case 8:
-				ch1 = ( char * ) Tcl_GetVar( inter, "res", 0 );
-				Tcl_LinkVar( inter, "debug", ( char * ) &count, TCL_LINK_INT );
-				Tcl_LinkVar( inter, "time", ( char * ) &t, TCL_LINK_INT );
-				Tcl_LinkVar( inter, "i", ( char * ) &i, TCL_LINK_INT );
+			}
 
-				cv = r->search_var( NULL, ch1 );
-				i = cv->last_update;
-				count = ( cv->debug == 'd' ) ? 1 : 0;
-				eff_lags = ( cv->last_update >= cv->num_lag ) ? cv->num_lag : cv->num_lag - 1;
-				app_values = new double[ eff_lags + 1 ];
-				cmd( "set debugall 0" );
-				cmd( "set undebugall 0" );
+			cmd( "destroytop .deb" );
+			set_buttons_run( true );
+			choice = 1;
 
-				cmd( "set e .deb.stat" );
-				cmd( "newtop $e \"Element Status\" { set choice 1 } .deb" );
+			switch ( mode )
+			{
+			case 1:		// prevent changing run parameters when only data browse was called
+				quit = 1;
+				debug_flag = false;
+				break;
 
-				cmd( "ttk::frame $e.n" );
-				switch ( cv->param )
-				{
-					case 1:
-						cmd( "ttk::label $e.n.l -text \"Parameter:\"" );
-						break;
+			case 2:
+				uncover_browser( );
+				break;
 
-					case 2:
-						cmd( "ttk::label $e.n.l -text \"Function:\"" );
-						break;
-						
-					case 0:
-						cmd( "ttk::label $e.n.l -text \"Variable:\"" );
-						break;
-				}
-				cmd( "ttk::label $e.n.v -style hl.TLabel -text $res" );
-				cmd( "pack $e.n.l $e.n.v -side left -padx 2" );
+			case 3:
+				cmd( "focustop ." );
+			}
 
-				cmd( "ttk::frame $e.t" );
-				cmd( "ttk::label $e.t.l -text \"Current time:\"" );
-				cmd( "ttk::label $e.t.v -style hl.TLabel -text $time" );
-				cmd( "pack $e.t.l $e.t.v -side left -padx 2" );
+			break;
 
-				cmd( "ttk::frame $e.u" );
-				cmd( "ttk::label $e.u.l -text \"Last update time:\"" );
-				cmd( "ttk::label $e.u.v -style hl.TLabel -text %d", cv->last_update );
-				cmd( "pack $e.u.l $e.u.v -side left -padx 2" );
+		// element change (click on parameter/variable)
+		case 8:
+			ch1 = ( char * ) Tcl_GetVar( inter, "res", 0 );
+			Tcl_LinkVar( inter, "debug", ( char * ) &count, TCL_LINK_INT );
+			Tcl_LinkVar( inter, "time", ( char * ) &t, TCL_LINK_INT );
+			Tcl_LinkVar( inter, "i", ( char * ) &i, TCL_LINK_INT );
 
-				cmd( "ttk::frame $e.x" );
-				cmd( "ttk::label $e.x.l -text \"Next update time:\"" );
-				cmd( "ttk::label $e.x.v -style hl.TLabel -text %d", cv->next_update > 0 ? cv->next_update : cv->last_update < t ? t : t + 1 );
-				cmd( "pack $e.x.l $e.x.v -side left -padx 2" );
+			cv = r->search_var( NULL, ch1 );
+			i = cv->last_update;
+			count = ( cv->debug == 'd' ) ? 1 : 0;
+			eff_lags = ( cv->last_update >= cv->num_lag ) ? cv->num_lag : cv->num_lag - 1;
+			app_values = new double[ eff_lags + 1 ];
+			cmd( "set debugall 0" );
+			cmd( "set undebugall 0" );
 
-				cmd( "ttk::frame $e.v" );
-				for ( i = 0; i <= eff_lags; ++i )
-				{
-					cmd( "set val%d %g", i, cv->val[ i ] );
-					app_values[ i ] = cv->val[ i ];
-					sprintf( ch, "val%d", i );
-					Tcl_LinkVar( inter, ch, ( char * ) &( app_values[ i ] ), TCL_LINK_DOUBLE );
+			cmd( "set e .deb.stat" );
+			cmd( "newtop $e \"Element Status\" { set choice 1 } .deb" );
 
-					cmd( "ttk::frame $e.v.l$i" );
+			cmd( "ttk::frame $e.n" );
+			switch ( cv->param )
+			{
+			case 1:
+				cmd( "ttk::label $e.n.l -text \"Parameter:\"" );
+				break;
 
-					if ( i == 0 )
-						cmd( "ttk::label $e.v.l$i.l -text \"Value:\"" );
-					else
-						cmd( "ttk::label $e.v.l$i.l -text \"Lag $i:\"" );
+			case 2:
+				cmd( "ttk::label $e.n.l -text \"Function:\"" );
+				break;
 
-					cmd( "ttk::entry $e.v.l%d.e -width 15 -validate focusout -validatecommand { set n %%P; if { [ string is double -strict $n ] } { set val%d %%P; return 1 } { %%W delete 0 end; %%W insert 0 $val%d; return 0 } } -invalidcommand { bell } -justify center", i, i, i );
-					cmd( "$e.v.l%d.e insert 0 $val%d", i, i ); 
+			case 0:
+				cmd( "ttk::label $e.n.l -text \"Variable:\"" );
+				break;
+			}
+			cmd( "ttk::label $e.n.v -style hl.TLabel -text $res" );
+			cmd( "pack $e.n.l $e.n.v -side left -padx 2" );
 
-					cmd( "ttk::button $e.v.l$i.sa -width 5 -text \"Set All\" -command { set sa %i; set choice 10 }", i );
-					cmd( "pack $e.v.l$i.l $e.v.l$i.e $e.v.l$i.sa -side left -padx 2" );
-					cmd( "pack $e.v.l$i" );
-				}
+			cmd( "ttk::frame $e.t" );
+			cmd( "ttk::label $e.t.l -text \"Current time:\"" );
+			cmd( "ttk::label $e.t.v -style hl.TLabel -text $time" );
+			cmd( "pack $e.t.l $e.t.v -side left -padx 2" );
 
-				if ( cv->param == 1 )
-				{
-					cmd( "pack $e.n $e.t" );
-					cmd( "pack $e.v -pady 5 -padx 5" );
-				}
+			cmd( "ttk::frame $e.u" );
+			cmd( "ttk::label $e.u.l -text \"Last update time:\"" );
+			cmd( "ttk::label $e.u.v -style hl.TLabel -text %d", cv->last_update );
+			cmd( "pack $e.u.l $e.u.v -side left -padx 2" );
+
+			cmd( "ttk::frame $e.x" );
+			cmd( "ttk::label $e.x.l -text \"Next update time:\"" );
+			cmd( "ttk::label $e.x.v -style hl.TLabel -text %d", cv->next_update > 0 ? cv->next_update : cv->last_update < t ? t : t + 1 );
+			cmd( "pack $e.x.l $e.x.v -side left -padx 2" );
+
+			cmd( "ttk::frame $e.v" );
+			for ( i = 0; i <= eff_lags; ++i )
+			{
+				cmd( "set val%d %g", i, cv->val[ i ] );
+				app_values[ i ] = cv->val[ i ];
+				sprintf( ch, "val%d", i );
+				Tcl_LinkVar( inter, ch, ( char * ) &( app_values[ i ] ), TCL_LINK_DOUBLE );
+
+				cmd( "ttk::frame $e.v.l$i" );
+
+				if ( i == 0 )
+					cmd( "ttk::label $e.v.l$i.l -text \"Value:\"" );
 				else
+					cmd( "ttk::label $e.v.l$i.l -text \"Lag $i:\"" );
+
+				cmd( "ttk::entry $e.v.l%d.e -width 15 -validate focusout -validatecommand { set n %%P; if { [ string is double -strict $n ] } { set val%d %%P; return 1 } { %%W delete 0 end; %%W insert 0 $val%d; return 0 } } -invalidcommand { bell } -justify center", i, i, i );
+				cmd( "$e.v.l%d.e insert 0 $val%d", i, i );
+
+				cmd( "ttk::button $e.v.l$i.sa -width 5 -text \"Set All\" -command { set sa %i; set choice 10 }", i );
+				cmd( "pack $e.v.l$i.l $e.v.l$i.e $e.v.l$i.sa -side left -padx 2" );
+				cmd( "pack $e.v.l$i" );
+			}
+
+			if ( cv->param == 1 )
+			{
+				cmd( "pack $e.n $e.t" );
+				cmd( "pack $e.v -pady 5 -padx 5" );
+			}
+			else
+			{
+				if ( cv->param == 0 )
+					cmd( "pack $e.n $e.t $e.u $e.x" );
+				else
+					cmd( "pack $e.n $e.t $e.u" );
+
+				cmd( "ttk::frame $e.d" );
+				cmd( "ttk::checkbutton $e.d.deb -text \"Debug this instance only\" -variable debug" );
+				cmd( "ttk::checkbutton $e.d.deball -text \"Debug all instances\" -variable debugall -command { if { $debugall == 1 } { set debug 1; set undebugall 0; .deb.stat.d.deb configure -state disabled } { set debug 0; set undebugall 1; .deb.stat.d.deb configure -state normal } }" );
+				cmd( "pack $e.d.deb $e.d.deball" );
+
+				cmd( "pack $e.v $e.d -pady 5 -padx 5" );
+
+				cmd( "ttk::frame $e.b1" );
+				cmd( "ttk::button $e.b1.eq -width $butWid -text Equation -command { set choice 8 }" );
+				cmd( "ttk::button $e.b1.cond -width $butWid -text \"Set Break\" -command { set choice 7 }" );
+				cmd( "ttk::button $e.b1.exec -width $butWid -text Update -command { set choice 9 }" );
+				cmd( "pack $e.b1.eq $e.b1.cond $e.b1.exec -padx $butSpc -side left" );
+				cmd( "pack $e.b1 -padx $butPad" );
+			}
+
+			cmd( "donehelp $e b { set choice 1 } { LsdHelp debug.html#content }" );
+			cmd( "bind $e.v.l0.e <Return> { set choice 1 }" );
+
+			cmd( "showtop $e" );
+			cmd( "focus $e.v.l0.e" );
+			cmd( "$e.v.l0.e selection range 0 end" );
+			cmd( "mousewarpto $e.b.ok" );
+
+			choice = 0;
+			while ( choice == 0 )
+				Tcl_DoOneEvent( 0 );
+
+			cv->data_loaded='+';
+
+			for ( i = 0; i <= eff_lags; ++i )
+			{
+				cmd( "set val%d [ $e.v.l%d.e get ]", i, i );
+
+				cv->val[ i ] = app_values[ i ];
+				sprintf( ch, "val%d",i);
+
+				Tcl_UnlinkVar( inter, ch);
+				cmd( "unset val$i" );
+			}
+			delete [ ] app_values;
+			Tcl_UnlinkVar( inter, "i");
+
+			cmd( "destroytop $e" );
+
+			cv->debug = ( count == 1 ) ? 'd' : 'n';
+			Tcl_UnlinkVar( inter, "debug" );
+			count = choice;
+
+			cmd( "if { $debugall || $undebugall } { set choice 1 } { set choice 0 }" );
+			if ( choice == 1 )
+				for ( cur = r; cur != NULL; cur = cur->hyper_next( cur->label ) )
 				{
-					if ( cv->param == 0 )
-						cmd( "pack $e.n $e.t $e.u $e.x" );
-					else
-						cmd( "pack $e.n $e.t $e.u" );
-					
-					cmd( "ttk::frame $e.d" );
-					cmd( "ttk::checkbutton $e.d.deb -text \"Debug this instance only\" -variable debug" );
-					cmd( "ttk::checkbutton $e.d.deball -text \"Debug all instances\" -variable debugall -command { if { $debugall == 1 } { set debug 1; set undebugall 0; .deb.stat.d.deb configure -state disabled } { set debug 0; set undebugall 1; .deb.stat.d.deb configure -state normal } }" );
-					cmd( "pack $e.d.deb $e.d.deball" );
-
-					cmd( "pack $e.v $e.d -pady 5 -padx 5" );	
-
-					cmd( "ttk::frame $e.b1" );
-					cmd( "ttk::button $e.b1.eq -width $butWid -text Equation -command { set choice 8 }" );
-					cmd( "ttk::button $e.b1.cond -width $butWid -text \"Set Break\" -command { set choice 7 }" );
-					cmd( "ttk::button $e.b1.exec -width $butWid -text Update -command { set choice 9 }" );
-					cmd( "pack $e.b1.eq $e.b1.cond $e.b1.exec -padx $butSpc -side left" );
-					cmd( "pack $e.b1 -padx $butPad" );	
+					cv1 = cur->search_var( cur, cv->label );
+					cv1->debug = cv->debug;
 				}
 
-				cmd( "donehelp $e b { set choice 1 } { LsdHelp debug.html#content }" );
-				cmd( "bind $e.v.l0.e <Return> { set choice 1 }" );
+			choice = count;
+			if ( choice == 7 )
+			{
+				cmd( "set cond %d", cv->deb_cond );
+				cmd( "set cond_val %4g", cv->deb_cnd_val );
 
-				cmd( "showtop $e" );
-				cmd( "focus $e.v.l0.e" );
-				cmd( "$e.v.l0.e selection range 0 end" );
-				cmd( "mousewarpto $e.b.ok" );
+				cmd( "set cb .deb.cbrk" );
+
+				cmd( "newtop $cb \"Conditional Break\" { set choice 2 } .deb" );
+
+				cmd( "ttk::frame $cb.l" );
+				cmd( "ttk::label $cb.l.l -text \"Variable:\"" );
+				cmd( "ttk::label $cb.l.n -style hl.TLabel -text %s", cv->label );
+				cmd( "pack $cb.l.l $cb.l.n -side left -padx 2" );
+
+				cmd( "ttk::frame $cb.t" );
+				cmd( "ttk::label $cb.t.l -text \"Type of break\"" );
+
+				cmd( "ttk::frame $cb.t.t -relief solid -borderwidth 1 -padding [ list $frPadX $frPadY ]" );
+				cmd( "ttk::radiobutton $cb.t.t.none -text \"None\" -variable cond -value 0 -command { .deb.cbrk.v.e configure -state disabled }" );
+				cmd( "ttk::radiobutton $cb.t.t.eq -text \"=\" -variable cond -value 1 -command { .deb.cbrk.v.e configure -state normal; .deb.cbrk.v.e selection range 0 end; focus .deb.cbrk.v.e }" );
+				cmd( "ttk::radiobutton $cb.t.t.gr -text \">\" -variable cond -value 2 -command { .deb.cbrk.v.e configure -state normal; .deb.cbrk.v.e selection range 0 end; focus .deb.cbrk.v.e }" );
+				cmd( "ttk::radiobutton $cb.t.t.le -text \"<\" -variable cond -value 3 -command { .deb.cbrk.v.e configure -state normal; .deb.cbrk.v.e selection range 0 end; focus .deb.cbrk.v.e }" );
+				cmd( "pack $cb.t.t.none $cb.t.t.eq $cb.t.t.gr $cb.t.t.le -anchor w" );
+
+				cmd( "pack $cb.t.l $cb.t.t" );
+
+				cmd( "ttk::frame $cb.v" );
+				cmd( "ttk::label $cb.v.l -text Value" );
+				cmd( "ttk::entry $cb.v.e -width 10 -validate focusout -validatecommand { set n %%P; if { [ string is double -strict $n ] } { set cond_val %%P; return 1 } { %%W delete 0 end; %%W insert 0 $cond_val; return 0 } } -invalidcommand { bell } -justify center -state disabled" );
+				cmd( "write_any $cb.v.e $cond_val" );
+				cmd( "if { $cond != 0 } { $cb.v.e configure -state normal; $cb.v.e selection range 0 end; focus $cb.v.e }" );
+				cmd( "pack $cb.v.l $cb.v.e" );
+
+				cmd( "pack $cb.l $cb.t $cb.v -padx 5 -pady 5" );
+
+				cmd( "okhelpcancel $cb b { set choice 1 } { LsdHelp debug.html#cond } { set choice 2 }" );
+				cmd( "bind $cb.v.e <Return> { set choice 1 }" );
+
+				cmd( "showtop $cb" );
+				cmd( "mousewarpto $cb.b.ok" );
 
 				choice = 0;
 				while ( choice == 0 )
 					Tcl_DoOneEvent( 0 );
 
-				cv->data_loaded='+';
+				cmd( "set cond_val [ $cb.v.e get ]" );
 
-				for ( i = 0; i <= eff_lags; ++i )
-				{
-					cmd( "set val%d [ $e.v.l%d.e get ]", i, i ); 
+				cmd( "destroytop $cb" );
 
-					cv->val[ i ] = app_values[ i ];
-					sprintf( ch, "val%d",i);
-
-					Tcl_UnlinkVar( inter, ch);
-					cmd( "unset val$i" );
-				}
-				delete [ ] app_values;
-				Tcl_UnlinkVar( inter, "i");
-
-				cmd( "destroytop $e" );
-
-				cv->debug = ( count == 1 ) ? 'd' : 'n';
-				Tcl_UnlinkVar( inter, "debug" );
-				count = choice;
-
-				cmd( "if { $debugall || $undebugall } { set choice 1 } { set choice 0 }" );
 				if ( choice == 1 )
-					for ( cur = r; cur != NULL; cur = cur->hyper_next( cur->label ) )
-					{
-						cv1 = cur->search_var( cur, cv->label );
-						cv1->debug = cv->debug;
-					}
-				 
-				choice = count;
-				if ( choice == 7 )
 				{
-					cmd( "set cond %d", cv->deb_cond );
-					cmd( "set cond_val %4g", cv->deb_cnd_val );
-
-					cmd( "set cb .deb.cbrk" );
-
-					cmd( "newtop $cb \"Conditional Break\" { set choice 2 } .deb" );
-
-					cmd( "ttk::frame $cb.l" );
-					cmd( "ttk::label $cb.l.l -text \"Variable:\"" );
-					cmd( "ttk::label $cb.l.n -style hl.TLabel -text %s", cv->label );
-					cmd( "pack $cb.l.l $cb.l.n -side left -padx 2" );
-
-					cmd( "ttk::frame $cb.t" );
-					cmd( "ttk::label $cb.t.l -text \"Type of break\"" );
-
-					cmd( "ttk::frame $cb.t.t -relief solid -borderwidth 1 -padding [ list $frPadX $frPadY ]" );
-					cmd( "ttk::radiobutton $cb.t.t.none -text \"None\" -variable cond -value 0 -command { .deb.cbrk.v.e configure -state disabled }" );
-					cmd( "ttk::radiobutton $cb.t.t.eq -text \"=\" -variable cond -value 1 -command { .deb.cbrk.v.e configure -state normal; .deb.cbrk.v.e selection range 0 end; focus .deb.cbrk.v.e }" );
-					cmd( "ttk::radiobutton $cb.t.t.gr -text \">\" -variable cond -value 2 -command { .deb.cbrk.v.e configure -state normal; .deb.cbrk.v.e selection range 0 end; focus .deb.cbrk.v.e }" );
-					cmd( "ttk::radiobutton $cb.t.t.le -text \"<\" -variable cond -value 3 -command { .deb.cbrk.v.e configure -state normal; .deb.cbrk.v.e selection range 0 end; focus .deb.cbrk.v.e }" );
-					cmd( "pack $cb.t.t.none $cb.t.t.eq $cb.t.t.gr $cb.t.t.le -anchor w" );
-
-					cmd( "pack $cb.t.l $cb.t.t" );
-
-					cmd( "ttk::frame $cb.v" );
-					cmd( "ttk::label $cb.v.l -text Value" );
-					cmd( "ttk::entry $cb.v.e -width 10 -validate focusout -validatecommand { set n %%P; if { [ string is double -strict $n ] } { set cond_val %%P; return 1 } { %%W delete 0 end; %%W insert 0 $cond_val; return 0 } } -invalidcommand { bell } -justify center -state disabled" );
-					cmd( "write_any $cb.v.e $cond_val" ); 
-					cmd( "if { $cond != 0 } { $cb.v.e configure -state normal; $cb.v.e selection range 0 end; focus $cb.v.e }" );
-					cmd( "pack $cb.v.l $cb.v.e" );
-
-					cmd( "pack $cb.l $cb.t $cb.v -padx 5 -pady 5" );
-
-					cmd( "okhelpcancel $cb b { set choice 1 } { LsdHelp debug.html#cond } { set choice 2 }" );
-					cmd( "bind $cb.v.e <Return> { set choice 1 }" );
-
-					cmd( "showtop $cb" );
-					cmd( "mousewarpto $cb.b.ok" );
-
-					choice = 0;
-					while ( choice == 0 )
-						Tcl_DoOneEvent( 0 );
-
-					cmd( "set cond_val [ $cb.v.e get ]" ); 
-
-					cmd( "destroytop $cb" );
-
-					if ( choice == 1 )
-					{
-						cv->deb_cond = get_int( "cond" );
-						cv->deb_cnd_val = get_double( "cond_val" );
-					}
+					cv->deb_cond = get_int( "cond" );
+					cv->deb_cnd_val = get_double( "cond_val" );
 				}
+			}
 
-				if ( choice == 8 )
-				{
-					choice = 3;	// point .deb window as parent for the following window
-					show_eq( cv->label, &choice );
-					choice = 8;
-				}
+			if ( choice == 8 )
+			{
+				choice = 3;	// point .deb window as parent for the following window
+				show_eq( cv->label, &choice );
+				choice = 8;
+			}
 
-				if ( choice == 9 )
-				{
-					cur = cv->up;
-					cur->cal( cv->label, 0 );
-				}
+			if ( choice == 9 )
+			{
+				cur = cv->up;
+				cur->cal( cv->label, 0 );
+			}
 
-				if ( choice == 10 )
-				{
-					ch1=( char * ) Tcl_GetVar( inter, "res", 0 );
-					strcpy( ch, ch1 );
+			if ( choice == 10 )
+			{
+				ch1=( char * ) Tcl_GetVar( inter, "res", 0 );
+				strcpy( ch, ch1 );
 
-					cmd( "set choice $sa" );
-					i = choice;
-					choice = 0;
-
-					set_all( &choice, r, ch, i );
-				} 
-
+				cmd( "set choice $sa" );
+				i = choice;
 				choice = 0;
-				break;
 
-			// Caller
-			case 9:
-				if ( c != NULL )
-					choice = deb( c, r, lab, res, interact );
-				else
-					choice = 0;
-				break;
-				
-			// Search
-			case 10:
-				cmd( "if { ! [ info exists modElem ] || [ llength $modElem ] == 0 } { \
+				set_all( &choice, r, ch, i );
+			}
+
+			choice = 0;
+			break;
+
+		// Caller
+		case 9:
+			if ( c != NULL )
+				choice = deb( c, r, lab, res, interact );
+			else
+				choice = 0;
+			break;
+
+		// Search
+		case 10:
+			cmd( "if { ! [ info exists modElem ] || [ llength $modElem ] == 0 } { \
 						ttk::messageBox -parent .deb -type ok -icon warning -title Warning -message \"No configuration loaded\" -detail \"Please load or create one before trying to find elements.\"; \
 						set choice 0 \
 					}" );
-					
-				if ( choice == 0 )
-					break;
-			
-				Tcl_LinkVar( inter, "value_search", ( char * ) &value_search, TCL_LINK_DOUBLE );
-				Tcl_LinkVar( inter, "condition", ( char * ) &cond, TCL_LINK_INT );
-				cond = 0;
-				choice = 0;
-				value_search = 0;
-				i = 1;
 
-				cmd( "set bidi \"\"" );
+			if ( choice == 0 )
+				break;
 
-				cmd( "set s .deb.so" );
-				cmd( "newtop $s \"Find Object\" { set choice 2 } .deb" );
+			Tcl_LinkVar( inter, "value_search", ( char * ) &value_search, TCL_LINK_DOUBLE );
+			Tcl_LinkVar( inter, "condition", ( char * ) &cond, TCL_LINK_INT );
+			cond = 0;
+			choice = 0;
+			value_search = 0;
+			i = 1;
 
-				cmd( "ttk::frame $s.l" );
-				cmd( "ttk::label $s.l.l -text \"Contained element\"" );
-				cmd( "ttk::combobox $s.l.e -width 20 -textvariable bidi -justify center -values $modElem" );
-				cmd( "ttk::label $s.l.o -justify center -text \"(type the initial letters of the\nname, LSD will complete it)\"" );
-				cmd( "pack $s.l.l $s.l.e $s.l.o" );
+			cmd( "set bidi \"\"" );
 
-				cmd( "ttk::frame $s.c" );
-				cmd( "ttk::label $s.c.l -text \"Element value\"" );
+			cmd( "set s .deb.so" );
+			cmd( "newtop $s \"Find Object\" { set choice 2 } .deb" );
 
-				cmd( "ttk::frame $s.c.cond -relief solid -borderwidth 1 -padding [ list $frPadX $frPadY ]" );
-				cmd( "ttk::radiobutton $s.c.cond.any -text \"Any\" -variable condition -value 0 -command { .deb.so.v.e configure -state disabled }" );
-				cmd( "ttk::radiobutton $s.c.cond.eq -text \"=\" -variable condition -value 1 -command { .deb.so.v.e configure -state normal }" );
-				cmd( "ttk::radiobutton $s.c.cond.geq -text \u2265 -variable condition -value 2 -command { .deb.so.v.e configure -state normal }" );
-				cmd( "ttk::radiobutton $s.c.cond.leq -text \u2264 -variable condition -value 3 -command { .deb.so.v.e configure -state normal }" );
-				cmd( "ttk::radiobutton $s.c.cond.gr -text \">\" -variable condition -value 4 -command { .deb.so.v.e configure -state normal }" );
-				cmd( "ttk::radiobutton $s.c.cond.le -text \"<\" -variable condition -value 5 -command { .deb.so.v.e configure -state normal }" );
-				cmd( "ttk::radiobutton $s.c.cond.not -text \u2260 -variable condition -value 6 -command { .deb.so.v.e configure -state normal }" );
-				cmd( "pack $s.c.cond.any $s.c.cond.eq $s.c.cond.geq $s.c.cond.leq $s.c.cond.gr $s.c.cond.le $s.c.cond.not -anchor w" );
+			cmd( "ttk::frame $s.l" );
+			cmd( "ttk::label $s.l.l -text \"Contained element\"" );
+			cmd( "ttk::combobox $s.l.e -width 20 -textvariable bidi -justify center -values $modElem" );
+			cmd( "ttk::label $s.l.o -justify center -text \"(type the initial letters of the\nname, LSD will complete it)\"" );
+			cmd( "pack $s.l.l $s.l.e $s.l.o" );
 
-				cmd( "pack $s.c.l $s.c.cond" );
+			cmd( "ttk::frame $s.c" );
+			cmd( "ttk::label $s.c.l -text \"Element value\"" );
 
-				cmd( "ttk::frame $s.v" );
-				cmd( "ttk::label $s.v.l -text Value" );
-				cmd( "ttk::entry $s.v.e -width 10 -validate focusout -validatecommand { set n %%P; if { [ string is double -strict $n ] } { set value_search %%P; return 1 } { %%W delete 0 end; %%W insert 0 $value_search; return 0 } } -invalidcommand { bell } -justify center -state disabled" );
-				cmd( "write_any $s.v.e $value_search" ); 
-				cmd( "pack $s.v.l $s.v.e" );
+			cmd( "ttk::frame $s.c.cond -relief solid -borderwidth 1 -padding [ list $frPadX $frPadY ]" );
+			cmd( "ttk::radiobutton $s.c.cond.any -text \"Any\" -variable condition -value 0 -command { .deb.so.v.e configure -state disabled }" );
+			cmd( "ttk::radiobutton $s.c.cond.eq -text \"=\" -variable condition -value 1 -command { .deb.so.v.e configure -state normal }" );
+			cmd( "ttk::radiobutton $s.c.cond.geq -text \u2265 -variable condition -value 2 -command { .deb.so.v.e configure -state normal }" );
+			cmd( "ttk::radiobutton $s.c.cond.leq -text \u2264 -variable condition -value 3 -command { .deb.so.v.e configure -state normal }" );
+			cmd( "ttk::radiobutton $s.c.cond.gr -text \">\" -variable condition -value 4 -command { .deb.so.v.e configure -state normal }" );
+			cmd( "ttk::radiobutton $s.c.cond.le -text \"<\" -variable condition -value 5 -command { .deb.so.v.e configure -state normal }" );
+			cmd( "ttk::radiobutton $s.c.cond.not -text \u2260 -variable condition -value 6 -command { .deb.so.v.e configure -state normal }" );
+			cmd( "pack $s.c.cond.any $s.c.cond.eq $s.c.cond.geq $s.c.cond.leq $s.c.cond.gr $s.c.cond.le $s.c.cond.not -anchor w" );
 
-				cmd( "pack $s.l $s.c $s.v -padx 5 -pady 5" );
+			cmd( "pack $s.c.l $s.c.cond" );
 
-				cmd( "okhelpcancel $s b { set choice 1 } { LsdHelp debug.html#find } { set choice 2 }" );
+			cmd( "ttk::frame $s.v" );
+			cmd( "ttk::label $s.v.l -text Value" );
+			cmd( "ttk::entry $s.v.e -width 10 -validate focusout -validatecommand { set n %%P; if { [ string is double -strict $n ] } { set value_search %%P; return 1 } { %%W delete 0 end; %%W insert 0 $value_search; return 0 } } -invalidcommand { bell } -justify center -state disabled" );
+			cmd( "write_any $s.v.e $value_search" );
+			cmd( "pack $s.v.l $s.v.e" );
 
-				cmd( "bind $s.v.e <KeyPress-Return> { focus .deb.so.b.ok }" );
-				cmd( "bind $s.l.e <KeyPress-Return> { focus .deb.so.b.ok; break }" );
-				cmd( "bind $s.l.e <KeyRelease> { \
+			cmd( "pack $s.l $s.c $s.v -padx 5 -pady 5" );
+
+			cmd( "okhelpcancel $s b { set choice 1 } { LsdHelp debug.html#find } { set choice 2 }" );
+
+			cmd( "bind $s.v.e <KeyPress-Return> { focus .deb.so.b.ok }" );
+			cmd( "bind $s.l.e <KeyPress-Return> { focus .deb.so.b.ok; break }" );
+			cmd( "bind $s.l.e <KeyRelease> { \
 						if { %%N < 256 && [ info exists modElem ] } { \
 							set b [ .deb.so.l.e index insert ]; \
 							set a [ .deb.so.l.e get ]; \
@@ -824,284 +824,284 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 						} \
 					}" );
 
-				cmd( "showtop $s" );
-				cmd( "focus $s.l.e" );
-				cmd( "$s.l.e selection range 0 end" );
+			cmd( "showtop $s" );
+			cmd( "focus $s.l.e" );
+			cmd( "$s.l.e selection range 0 end" );
 
-				while ( choice == 0 )
-					Tcl_DoOneEvent( 0 );
+			while ( choice == 0 )
+				Tcl_DoOneEvent( 0 );
 
-				if ( choice == 1 )
-					cmd( "if { [ lsearch -exact $modElem $bidi ] < 0 } { \
+			if ( choice == 1 )
+				cmd( "if { [ lsearch -exact $modElem $bidi ] < 0 } { \
 							ttk::messageBox -parent .deb.so -type ok -icon error -title Error -message \"Variable or parameter not found\" -detail \"No element in any object with the name provided was found. Check the spelling of the element name.\"; \
 							set choice 2 \
 						}" );
-					
-				if ( choice == 2 )
-				{
-					cmd( "destroytop .deb.so" );
-					Tcl_UnlinkVar( inter, "value_search" );
-					Tcl_UnlinkVar( inter, "condition" );
-					
-					choice = 0;
-					redraw = false;
-					break;
-				}
-				 
-				pre_running = running;
-				running = false;
 
-				cmd( "set value_search [ .deb.so.v.e get ]" ); 
-				ch1 = ( char * ) Tcl_GetVar( inter, "bidi", 0 );
-				strcpy( ch, ch1);
-
-				cur = NULL;
-				switch ( cond )
-				{
-					case 0:
-						cv = r->search_var( r, ch, true );
-						if ( cv != NULL )
-							cur = cv->up;
-						break;
-					 
-					case 1:
-						i = 0;
-						cur2 = NULL;
-						for ( cur1 = r; cur1 != NULL && i == 0; cur1 = cur1->up )
-						{
-							cv = cur1->search_var( r, ch, true );
-							if ( cv == NULL )
-								break;
-						 
-							cur = cv->up;
-
-							for ( ; cur != NULL && i == 0; cur = cur->hyper_next( cur->label ) )
-							{
-								app_res = cur->search_var( cur, ch, true )->val[ 0 ];
-								if ( app_res == value_search )
-								{
-									cur2 = cur;
-									i = 1;
-								} 
-							}
-						}
-						cur = cur2;
-						break;
-
-					case 2:
-						cv = r->search_var( r, ch, true );
-						if ( cv != NULL )
-							cur = cv->up;
-						while ( cur != NULL && cur->cal( ch, 0 ) < value_search )
-							cur = cur->hyper_next( cur->label );
-						break;
-
-					case 3:
-						cv = r->search_var( r, ch, true );
-						if ( cv != NULL )
-							cur = cv->up;
-						while ( cur != NULL && cur->cal( ch, 0 ) > value_search )
-							cur = cur->hyper_next( cur->label );
-						break;
-
-					case 4:
-						cv = r->search_var( r, ch, true );
-						if ( cv != NULL )
-							cur = cv->up;
-						while ( cur != NULL && cur->cal( ch, 0 ) <= value_search )
-							cur = cur->hyper_next( cur->label );
-						break;
-
-					case 5:
-						cv = r->search_var( r, ch, true );
-						if ( cv != NULL )
-							cur = cv->up;
-						while ( cur != NULL && cur->cal( ch, 0 ) >= value_search )
-							cur = cur->hyper_next( cur->label );
-						break;
-
-					case 6:
-						cv = r->search_var( r, ch, true );
-						if ( cv != NULL )
-							cur = cv->up;
-						while ( cur != NULL && cur->cal( ch, 0 ) == value_search )
-							cur = cur->hyper_next( cur->label );
-						break;
-
-					default:
-						cur = NULL;
-				}
-
-				quit = 0;	// if name is mispelled don't stop the simulation!
+			if ( choice == 2 )
+			{
 				cmd( "destroytop .deb.so" );
 				Tcl_UnlinkVar( inter, "value_search" );
 				Tcl_UnlinkVar( inter, "condition" );
 
-				if ( cur != NULL )
-					choice = deb( cur, r, lab, res, interact, ch );
-				else
-				{
-					cmd( "ttk::messageBox -parent .deb -type ok -icon error -title Error -message \"Variable or parameter not found\" -detail \"No object containing an element satisfying the condition provided could be found.\"" );
-
-					choice = 0;
-					redraw = false;
-					break;
-				}
-
-				running = pre_running;
-				break;
-
-			// Analysis
-			case 11:
-				for ( cur = r; cur->up != NULL; cur = cur->up );
-				reset_end( cur );
-				analysis( &choice );
-				cmd( "focustop .deb" );
-				
 				choice = 0;
 				redraw = false;
 				break;
+			}
 
-			// Previous
-			case 12:
-				if ( r->up == NULL )
+			pre_running = running;
+			running = false;
+
+			cmd( "set value_search [ .deb.so.v.e get ]" );
+			ch1 = ( char * ) Tcl_GetVar( inter, "bidi", 0 );
+			strcpy( ch, ch1);
+
+			cur = NULL;
+			switch ( cond )
+			{
+			case 0:
+				cv = r->search_var( r, ch, true );
+				if ( cv != NULL )
+					cur = cv->up;
+				break;
+
+			case 1:
+				i = 0;
+				cur2 = NULL;
+				for ( cur1 = r; cur1 != NULL && i == 0; cur1 = cur1->up )
 				{
-					choice = 0;
-					break;
-				}
-				
-				for ( cb1 = NULL, cb = r->up->b; strcmp( r->label, cb->blabel ); cb1 = cb, cb = cb->next );
-				
-				if ( cb->head != NULL )
-				{
-					cur = cb->head;
-					
-					if ( cur == r )
+					cv = cur1->search_var( r, ch, true );
+					if ( cv == NULL )
+						break;
+
+					cur = cv->up;
+
+					for ( ; cur != NULL && i == 0; cur = cur->hyper_next( cur->label ) )
 					{
-						if ( cb1 != NULL && cb1->head != NULL )
+						app_res = cur->search_var( cur, ch, true )->val[ 0 ];
+						if ( app_res == value_search )
 						{
-							for ( cur = cb1->head; cur->next != NULL; cur = cur->next );
-							choice = deb( cur, c, lab, res, interact );
-							break;
+							cur2 = cur;
+							i = 1;
 						}
-						else 
-							choice = 0;
+					}
+				}
+				cur = cur2;
+				break;
+
+			case 2:
+				cv = r->search_var( r, ch, true );
+				if ( cv != NULL )
+					cur = cv->up;
+				while ( cur != NULL && cur->cal( ch, 0 ) < value_search )
+					cur = cur->hyper_next( cur->label );
+				break;
+
+			case 3:
+				cv = r->search_var( r, ch, true );
+				if ( cv != NULL )
+					cur = cv->up;
+				while ( cur != NULL && cur->cal( ch, 0 ) > value_search )
+					cur = cur->hyper_next( cur->label );
+				break;
+
+			case 4:
+				cv = r->search_var( r, ch, true );
+				if ( cv != NULL )
+					cur = cv->up;
+				while ( cur != NULL && cur->cal( ch, 0 ) <= value_search )
+					cur = cur->hyper_next( cur->label );
+				break;
+
+			case 5:
+				cv = r->search_var( r, ch, true );
+				if ( cv != NULL )
+					cur = cv->up;
+				while ( cur != NULL && cur->cal( ch, 0 ) >= value_search )
+					cur = cur->hyper_next( cur->label );
+				break;
+
+			case 6:
+				cv = r->search_var( r, ch, true );
+				if ( cv != NULL )
+					cur = cv->up;
+				while ( cur != NULL && cur->cal( ch, 0 ) == value_search )
+					cur = cur->hyper_next( cur->label );
+				break;
+
+			default:
+				cur = NULL;
+			}
+
+			quit = 0;	// if name is mispelled don't stop the simulation!
+			cmd( "destroytop .deb.so" );
+			Tcl_UnlinkVar( inter, "value_search" );
+			Tcl_UnlinkVar( inter, "condition" );
+
+			if ( cur != NULL )
+				choice = deb( cur, r, lab, res, interact, ch );
+			else
+			{
+				cmd( "ttk::messageBox -parent .deb -type ok -icon error -title Error -message \"Variable or parameter not found\" -detail \"No object containing an element satisfying the condition provided could be found.\"" );
+
+				choice = 0;
+				redraw = false;
+				break;
+			}
+
+			running = pre_running;
+			break;
+
+		// Analysis
+		case 11:
+			for ( cur = r; cur->up != NULL; cur = cur->up );
+			reset_end( cur );
+			analysis( &choice );
+			cmd( "focustop .deb" );
+
+			choice = 0;
+			redraw = false;
+			break;
+
+		// Previous
+		case 12:
+			if ( r->up == NULL )
+			{
+				choice = 0;
+				break;
+			}
+
+			for ( cb1 = NULL, cb = r->up->b; strcmp( r->label, cb->blabel ); cb1 = cb, cb = cb->next );
+
+			if ( cb->head != NULL )
+			{
+				cur = cb->head;
+
+				if ( cur == r )
+				{
+					if ( cb1 != NULL && cb1->head != NULL )
+					{
+						for ( cur = cb1->head; cur->next != NULL; cur = cur->next );
+						choice = deb( cur, c, lab, res, interact );
 						break;
 					}
-					  
-					for ( ; cur->next != r; cur = cur->next );
-					choice = deb( cur, c, lab, res, interact );
+					else
+						choice = 0;
+					break;
 				}
-				
-				break;
-				
-				
-			// Print Stack
-			case 13:
-				print_stack( );
-				cmd( "focustop .log" );
-				
+
+				for ( ; cur->next != r; cur = cur->next );
+				choice = deb( cur, c, lab, res, interact );
+			}
+
+			break;
+
+
+		// Print Stack
+		case 13:
+			print_stack( );
+			cmd( "focustop .log" );
+
+			choice = 0;
+			redraw = false;
+			break;
+
+		// Last
+		case 14:
+			for ( cur = r, cur1 = NULL; cur != NULL; cur = cur->next )
+				cur1 = cur;
+			choice = deb( cur1, c, lab, res, interact );
+			break;
+
+		// show v[...] variables
+		case 15:
+			show_tmp_vars( r, false );
+			cmd( "focustop .deb" );
+
+			choice = 0;
+			redraw = false;
+			break;
+
+		// Until
+		case 16:
+			cmd( "set tdebug %d", t + 1 );
+
+			cmd( "set t .deb.tdeb" );
+			cmd( "newtop $t \"Run Until\" { set choice 2 } .deb" );
+
+			cmd( "ttk::frame $t.t" );
+			cmd( "ttk::label $t.t.l -text \"Run until time step\"" );
+			cmd( "ttk::entry $t.t.val -width 5 -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 1 } { set tdebug %%P; return 1 } { %%W delete 0 end; %%W insert 0 $tdebug; return 0 } } -invalidcommand { bell } -justify center" );
+			cmd( "$t.t.val insert 0 $tdebug" );
+			cmd( "pack $t.t.l $t.t.val" );
+
+			cmd( "pack $t.t -padx 5 -pady 5" );
+
+			cmd( "okhelpcancel $t b { set choice 1 } { LsdHelp debug.html#until } { set choice 2 }" );
+
+			cmd( "bind $t.t.val <Return> { set choice 1 }" );
+
+			cmd( "showtop $t" );
+			cmd( "$t.t.val selection range 0 end" );
+			cmd( "focus $t.t.val" );
+			cmd( "mousewarpto $t.b.ok" );
+
+			choice = 0;
+			while ( choice == 0 )
+				Tcl_DoOneEvent( 0 );
+
+			cmd( "set tdebug [ $t.t.val get ]" );
+			cmd( "destroytop $t" );
+
+			if ( choice == 1 )
+			{
+				// restart execution
+				choice = 2;
+				debug_flag = false;
+				cmd( "if { $tdebug > %d } { set when_debug $tdebug } { set when_debug %d }", t, t + 1 );
+				cmd( "destroytop .deb" );
+				set_buttons_run( true );
+			}
+			else
 				choice = 0;
-				redraw = false;
-				break;
 
-			// Last
-			case 14: 
-				for ( cur = r, cur1 = NULL; cur != NULL; cur = cur->next )
-					cur1 = cur;
-				choice = deb( cur1, c, lab, res, interact );
-				break;
+			break;
 
-			// show v[...] variables 
-			case 15:
-				show_tmp_vars( r, false );
-				cmd( "focustop .deb" );
+		// change the object number of instances (click on level / object instance)
+		case 17:
+			if ( r->up != NULL )
+				entry_new_objnum( r, "", &choice );
 
-				choice = 0;
-				redraw = false;
-				break;
+			choice = 0;
+			break;
 
-			// Until
-			case 16:
-				cmd( "set tdebug %d", t + 1 );
+		// find element
+		case 18:
 
-				cmd( "set t .deb.tdeb" );
-				cmd( "newtop $t \"Run Until\" { set choice 2 } .deb" );
-
-				cmd( "ttk::frame $t.t" );
-				cmd( "ttk::label $t.t.l -text \"Run until time step\"" );
-				cmd( "ttk::entry $t.t.val -width 5 -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 1 } { set tdebug %%P; return 1 } { %%W delete 0 end; %%W insert 0 $tdebug; return 0 } } -invalidcommand { bell } -justify center" );
-				cmd( "$t.t.val insert 0 $tdebug" ); 
-				cmd( "pack $t.t.l $t.t.val" );
-
-				cmd( "pack $t.t -padx 5 -pady 5" );
-
-				cmd( "okhelpcancel $t b { set choice 1 } { LsdHelp debug.html#until } { set choice 2 }" );
-
-				cmd( "bind $t.t.val <Return> { set choice 1 }" );
-
-				cmd( "showtop $t" );
-				cmd( "$t.t.val selection range 0 end" );
-				cmd( "focus $t.t.val" );
-				cmd( "mousewarpto $t.b.ok" );
-
-				choice = 0;
-				while ( choice == 0 )
-					Tcl_DoOneEvent( 0 );
-
-				cmd( "set tdebug [ $t.t.val get ]" ); 
-				cmd( "destroytop $t" );
-
-				if ( choice == 1 )
-				{
-					// restart execution
-					choice = 2;
-					debug_flag = false;
-					cmd( "if { $tdebug > %d } { set when_debug $tdebug } { set when_debug %d }", t, t + 1 );
-					cmd( "destroytop .deb" );
-					set_buttons_run( true );
-				}
-				else
-					choice = 0;
-
-				break;
-
-			// change the object number of instances (click on level / object instance)
-			case 17:
-				if ( r->up != NULL )
-					entry_new_objnum( r, "", &choice );
-
-				choice = 0;
-				break;
-				
-			// find element
-			case 18:
-			
-				cmd( "if { [ llength $curElem ] == 0 } { \
+			cmd( "if { [ llength $curElem ] == 0 } { \
 						ttk::messageBox -parent .deb -type ok -icon warning -title Warning -message \"Empty object\" -detail \"The current object has no element to be found.\"; \
 						set choice 0 \
 					}" );
-					
-				if ( choice == 0 )
-					break;
-			
-				cmd( "set bidi \"\"" );
 
-				cmd( "newtop .deb.sv \"Find Element\" { set choice 2 }" );
+			if ( choice == 0 )
+				break;
 
-				cmd( "ttk::frame .deb.sv.i" );
-				cmd( "ttk::label .deb.sv.i.l -text \"Element name\"" );
-				cmd( "ttk::combobox .deb.sv.i.e -width 20 -textvariable bidi -justify center -values $curElem" );
-				cmd( "pack .deb.sv.i.l .deb.sv.i.e" );
+			cmd( "set bidi \"\"" );
 
-				cmd( "ttk::label .deb.sv.o -justify center -text \"(type the initial letters of the\nname, LSD will complete it)\"" );
-				cmd( "pack .deb.sv.i .deb.sv.o -padx 5 -pady 5" );
-				cmd( "pack .deb.sv.i" );
+			cmd( "newtop .deb.sv \"Find Element\" { set choice 2 }" );
 
-				cmd( "okcancel .deb.sv b { set choice 1 } { set choice 2 }" );
+			cmd( "ttk::frame .deb.sv.i" );
+			cmd( "ttk::label .deb.sv.i.l -text \"Element name\"" );
+			cmd( "ttk::combobox .deb.sv.i.e -width 20 -textvariable bidi -justify center -values $curElem" );
+			cmd( "pack .deb.sv.i.l .deb.sv.i.e" );
 
-				cmd( "bind .deb.sv.i.e <KeyPress-Return> { set choice 1; break }" );
-				cmd( "bind .deb.sv.i.e <KeyRelease> { \
+			cmd( "ttk::label .deb.sv.o -justify center -text \"(type the initial letters of the\nname, LSD will complete it)\"" );
+			cmd( "pack .deb.sv.i .deb.sv.o -padx 5 -pady 5" );
+			cmd( "pack .deb.sv.i" );
+
+			cmd( "okcancel .deb.sv b { set choice 1 } { set choice 2 }" );
+
+			cmd( "bind .deb.sv.i.e <KeyPress-Return> { set choice 1; break }" );
+			cmd( "bind .deb.sv.i.e <KeyRelease> { \
 						if { %%N < 256 && [ info exists curElem ] } { \
 							set b [ .deb.sv.i.e index insert ]; \
 							set a [ .deb.sv.i.e get ]; \
@@ -1116,258 +1116,273 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 						} \
 					}" );
 
-				cmd( "showtop .deb.sv" );
-				cmd( "focus .deb.sv.i.e" );
+			cmd( "showtop .deb.sv" );
+			cmd( "focus .deb.sv.i.e" );
 
-				choice = 0;
-				while ( choice == 0 )
-					Tcl_DoOneEvent( 0 );
+			choice = 0;
+			while ( choice == 0 )
+				Tcl_DoOneEvent( 0 );
 
-				if ( choice == 1 )
-					cmd( "if { [ lsearch -exact $curElem $bidi ] < 0 } { \
+			if ( choice == 1 )
+				cmd( "if { [ lsearch -exact $curElem $bidi ] < 0 } { \
 							ttk::messageBox -parent .deb.sv -type ok -icon error -title Error -message \"Variable or parameter not found\" -detail \"Check the spelling of the element name.\"; \
 							set choice 2 \
 						}" );
-					
-				cmd( "destroytop .deb.sv" );
 
-				if ( choice == 2 )
-				{
-					choice = 0;
-					redraw = false;
-					break;	
-				}	
+			cmd( "destroytop .deb.sv" );
 
-				pre_running = running;
-				running = false;
+			if ( choice == 2 )
+			{
+				choice = 0;
+				redraw = false;
+				break;
+			}
 
-				ch1 = ( char * ) Tcl_GetVar( inter, "bidi", 0 );
-				choice = deb( r, c, lab, res, interact, ch1 );
+			pre_running = running;
+			running = false;
 
-				running = pre_running;
-				break;			
+			ch1 = ( char * ) Tcl_GetVar( inter, "bidi", 0 );
+			choice = deb( r, c, lab, res, interact, ch1 );
 
-			// clear find selection
-			case 19:
-				cmd( "if [ winfo exists $lastHl ] { \
+			running = pre_running;
+			break;
+
+		// clear find selection
+		case 19:
+			cmd( "if [ winfo exists $lastHl ] { \
 						$lastHl.name configure -style TLabel; \
 						$lastHl.val configure -style hl.TLabel; \
 						$lastHl.last configure -style TLabel; \
 						set lastHl \"\" \
 					}" );
 
-				choice = 0;
-				redraw = false;
-				break;			
+			choice = 0;
+			redraw = false;
+			break;
 
-			// Hooks
-			case 21:
-				j = r->hooks.size( );						// number of dynamic hooks
-				
-				if ( j > 0 )
-				{
-					vector < bool > checked( j + 1, false );
-					
-					cmd( "set hook 0" );
-					
-					cmd( "set hk .deb.hk" );
-					
-					cmd( "newtop $hk \"Choose Hook\" { set choice 2 } .deb" );
-					
-					cmd( "ttk::frame $hk.l" );
-					cmd( "ttk::label $hk.l.l -text \"Object:\"" );
-					cmd( "ttk::label $hk.l.n -style hl.TLabel -text %s", r->label );
-					cmd( "pack $hk.l.l $hk.l.n -side left -padx 2" );
+		// Hooks
+		case 21:
+			j = r->hooks.size( );						// number of dynamic hooks
 
-					cmd( "ttk::frame $hk.t" );
-					cmd( "ttk::label $hk.t.l -text \"Available hooks\"" );
+			if ( j > 0 )
+			{
+				vector < bool > checked( j + 1, false );
 
-					cmd( "ttk::frame $hk.t.t -relief solid -borderwidth 1 -padding [ list $frPadX $frPadY ]" );
-					
-					strcpy( ch, "pack" );
-					
-					for ( i = 0; i < j; ++i )
-						if ( r->hooks[ i ] != NULL )
-						{
-							k = root->search_inst( r->hooks[ i ], false );
-							
-							if ( k != 0 )
-							{
-								if ( k > 0 )
-								{
-									cmd( "ttk::radiobutton $hk.t.t.h%d -text \"Hook %d to %s (%d)\" -variable hook -value %d", i, i, r->hooks[ i ]->label, k, i );
-									checked[ i ] = true;
-								}
-								else
-									cmd( "ttk::radiobutton $hk.t.t.h%d -text \"Hook %d to (unchecked)\" -variable hook -value %d", i, i, i );
-									
-								sprintf( ch2, " $hk.t.t.h%d", i );
-								strncat( ch, ch2, 4 * MAX_ELEM_LENGTH - strlen( ch ) - 1 );
-							}
-						}
-					
-					if ( r->hook != NULL )
+				cmd( "set hook 0" );
+
+				cmd( "set hk .deb.hk" );
+
+				cmd( "newtop $hk \"Choose Hook\" { set choice 2 } .deb" );
+
+				cmd( "ttk::frame $hk.l" );
+				cmd( "ttk::label $hk.l.l -text \"Object:\"" );
+				cmd( "ttk::label $hk.l.n -style hl.TLabel -text %s", r->label );
+				cmd( "pack $hk.l.l $hk.l.n -side left -padx 2" );
+
+				cmd( "ttk::frame $hk.t" );
+				cmd( "ttk::label $hk.t.l -text \"Available hooks\"" );
+
+				cmd( "ttk::frame $hk.t.t -relief solid -borderwidth 1 -padding [ list $frPadX $frPadY ]" );
+
+				strcpy( ch, "pack" );
+
+				for ( i = 0; i < j; ++i )
+					if ( r->hooks[ i ] != NULL )
 					{
-						k = root->search_inst( r->hook, false );
-						
+						k = root->search_inst( r->hooks[ i ], false );
+
 						if ( k != 0 )
 						{
 							if ( k > 0 )
 							{
-								cmd( "ttk::radiobutton $hk.t.t.h%d -text \"Static Hook to %s (%d)\" -variable hook -value %d", i, r->hook->label, k, i );
-									checked[ i ] = true;
+								cmd( "ttk::radiobutton $hk.t.t.h%d -text \"Hook %d to %s (%d)\" -variable hook -value %d", i, i, r->hooks[ i ]->label, k, i );
+								checked[ i ] = true;
 							}
 							else
-								cmd( "ttk::radiobutton $hk.t.t.h%d -text \"Static Hook to (unchecked)\" -variable hook -value %d", i, i );
-							
+								cmd( "ttk::radiobutton $hk.t.t.h%d -text \"Hook %d to (unchecked)\" -variable hook -value %d", i, i, i );
+
 							sprintf( ch2, " $hk.t.t.h%d", i );
 							strncat( ch, ch2, 4 * MAX_ELEM_LENGTH - strlen( ch ) - 1 );
 						}
 					}
-					
-					strcat( ch, " -anchor w" );
-					cmd( ch );
 
-					cmd( "pack $hk.t.l $hk.t.t" );
+				if ( r->hook != NULL )
+				{
+					k = root->search_inst( r->hook, false );
 
-					cmd( "ttk::frame $hk.m" );
-					cmd( "ttk::label $hk.m.l -text \"(invalid and NULL hooks not shown)\"" );
-					cmd( "pack $hk.m.l" );
-					
-					cmd( "pack $hk.l $hk.t $hk.m -padx 5 -pady 5" );
-
-					cmd( "okhelpcancel $hk b { set choice 1 } { LsdHelp debug.html#hooks } { set choice 2 }" );
-
-					cmd( "showtop $hk" );
-					
-					cmd( "mousewarpto $hk.b.ok" );
-
-					choice = 0;
-					while ( choice == 0 )
-						Tcl_DoOneEvent( 0 );
-
-					cmd( "destroytop $hk" );
-
-					if ( choice == 1 )
+					if ( k != 0 )
 					{
-						i = get_int( "hook" );
-						
-						if ( ! checked[ i ] )
+						if ( k > 0 )
 						{
-							cmd( "if [ string equal [ ttk::messageBox -parent .deb -type okcancel -icon warning -title Warning -default cancel -message \"Cannot check hook pointer\" -detail \"Cannot check if hook points to a valid object. LSD may crash if jumping to an invalid hook pointer.\" ] ok ] { set choice 1 } { set choice 0 }" );
-							
-							if ( choice == 0 )
-								break;
-						}						
-						
-						if ( i < j )
-							choice = deb( r->hooks[ i ], c, lab, res, interact );
+							cmd( "ttk::radiobutton $hk.t.t.h%d -text \"Static Hook to %s (%d)\" -variable hook -value %d", i, r->hook->label, k, i );
+							checked[ i ] = true;
+						}
 						else
-							choice = deb( r->hook, c, lab, res, interact );
-					}
-					else
-					{
-						choice = 0;
-						redraw = false;
+							cmd( "ttk::radiobutton $hk.t.t.h%d -text \"Static Hook to (unchecked)\" -variable hook -value %d", i, i );
+
+						sprintf( ch2, " $hk.t.t.h%d", i );
+						strncat( ch, ch2, 4 * MAX_ELEM_LENGTH - strlen( ch ) - 1 );
 					}
 				}
-				else
-					if ( r->hook != NULL )
+
+				strcat( ch, " -anchor w" );
+				cmd( ch );
+
+				cmd( "pack $hk.t.l $hk.t.t" );
+
+				cmd( "ttk::frame $hk.m" );
+				cmd( "ttk::label $hk.m.l -text \"(invalid and NULL hooks not shown)\"" );
+				cmd( "pack $hk.m.l" );
+
+				cmd( "pack $hk.l $hk.t $hk.m -padx 5 -pady 5" );
+
+				cmd( "okhelpcancel $hk b { set choice 1 } { LsdHelp debug.html#hooks } { set choice 2 }" );
+
+				cmd( "showtop $hk" );
+
+				cmd( "mousewarpto $hk.b.ok" );
+
+				choice = 0;
+				while ( choice == 0 )
+					Tcl_DoOneEvent( 0 );
+
+				cmd( "destroytop $hk" );
+
+				if ( choice == 1 )
+				{
+					i = get_int( "hook" );
+
+					if ( ! checked[ i ] )
 					{
-						k = root->search_inst( r->hook, false );
-						
-						if ( k == 0 )
+						cmd( "if [ string equal [ ttk::messageBox -parent .deb -type okcancel -icon warning -title Warning -default cancel -message \"Cannot check hook pointer\" -detail \"Cannot check if hook points to a valid object. LSD may crash if jumping to an invalid hook pointer.\" ] ok ] { set choice 1 } { set choice 0 }" );
+
+						if ( choice == 0 )
+							break;
+					}
+
+					if ( i < j )
+						choice = deb( r->hooks[ i ], c, lab, res, interact );
+					else
+						choice = deb( r->hook, c, lab, res, interact );
+				}
+				else
+				{
+					choice = 0;
+					redraw = false;
+				}
+			}
+			else
+				if ( r->hook != NULL )
+				{
+					k = root->search_inst( r->hook, false );
+
+					if ( k == 0 )
+					{
+						cmd( "ttk::messageBox -parent .deb -type ok -icon error -title Error -message \"Invalid hook pointer\" -detail \"Check if your code is using valid pointers to LSD objects or avoid using this option.\"" );
+
+						choice = 0;
+						redraw = false;
+						break;
+					}
+
+					if ( k < 0 )
+					{
+						cmd( "if [ string equal [ ttk::messageBox -parent .deb -type okcancel -icon warning -title Warning -default cancel -message \"Cannot check hook pointer\" -detail \"Cannot check if hook points to a valid object. LSD may crash if jumping to an invalid hook pointer.\" ] ok ] { set choice 1 } { set choice 0 }" );
+
+						if ( choice == 0 )
 						{
-							cmd( "ttk::messageBox -parent .deb -type ok -icon error -title Error -message \"Invalid hook pointer\" -detail \"Check if your code is using valid pointers to LSD objects or avoid using this option.\"" );
-							
-							choice = 0;
 							redraw = false;
 							break;
 						}
-						
-						if ( k < 0 )
-						{
-							cmd( "if [ string equal [ ttk::messageBox -parent .deb -type okcancel -icon warning -title Warning -default cancel -message \"Cannot check hook pointer\" -detail \"Cannot check if hook points to a valid object. LSD may crash if jumping to an invalid hook pointer.\" ] ok ] { set choice 1 } { set choice 0 }" );
-							
-							if ( choice == 0 )
-							{
-								redraw = false;
-								break;
-							}
-						}
-						
-						choice = deb( r->hook, c, lab, res, interact );
 					}
-					else
-					{
-						choice = 0;
-						redraw = false;
-					}
-					
-				break;
-						
-			// Network
-			case 22:
-				show_neighbors( r, false );
-				cmd( "focustop .deb" );
-				
-				choice = 0;
-				redraw = false;
-				break;
-				
-			// double-click (change to) network node
-			case 23:
-				ch1 = ( char * ) Tcl_GetVar( inter, "nodeLab", 0 );
-				node = get_long( "nodeId" );
-				cur = root->search_node_net( ( const char * ) ch1, node );
-				if ( cur != NULL )
-					choice = deb( cur, c, lab, res, interact );
+
+					choice = deb( r->hook, c, lab, res, interact );
+				}
 				else
 				{
 					choice = 0;
 					redraw = false;
 				}
-				
-				break;
 
-			// double-click (change to) object pointer
-			case 24:
-				ch1 = ( char * ) Tcl_GetVar( inter, "objLab", 0 );
-				i = get_int( "objNum" );
-				cur = root->search( ( const char * ) ch1 );
-				for ( j = 1; j != i && cur != NULL; ++j, cur = cur->hyper_next( ) );
-				if ( cur != NULL )
-					choice = deb( cur, c, lab, res, interact );
+			break;
+
+		// Network
+		case 22:
+			show_neighbors( r, false );
+			cmd( "focustop .deb" );
+
+			choice = 0;
+			redraw = false;
+			break;
+
+		// double-click (change to) network node
+		case 23:
+			ch1 = ( char * ) Tcl_GetVar( inter, "nodeLab", 0 );
+			node = get_long( "nodeId" );
+			cur = root->search_node_net( ( const char * ) ch1, node );
+			if ( cur != NULL )
+				choice = deb( cur, c, lab, res, interact );
+			else
+			{
+				choice = 0;
+				redraw = false;
+			}
+
+			break;
+
+		// double-click (change to) object pointer
+		case 24:
+			ch1 = ( char * ) Tcl_GetVar( inter, "objLab", 0 );
+			i = get_int( "objNum" );
+			cur = root->search( ( const char * ) ch1 );
+			for ( j = 1; j != i && cur != NULL; ++j, cur = cur->hyper_next( ) );
+			if ( cur != NULL )
+				choice = deb( cur, c, lab, res, interact );
+			else
+			{
+				choice = 0;
+				redraw = false;
+			}
+
+			break;
+
+		// right-click (set all) on multi-instanced parameter or variable
+		case 29:
+			ch1 = ( char * )Tcl_GetVar( inter, "res", 0 );
+			strcpy( ch, ch1 );
+			set_all( &choice, r, ch, 0 );
+
+			choice = 0;
+			break;
+
+		// model Report
+		case 44:
+			show_report( &choice, ".deb" );
+
+			choice = 0;
+			redraw = false;
+			break;
+
+		// Debug variable under computation CTRL+G
+		case 77:
+			if ( asl == NULL && stacklog != NULL )
+			{
+				asl = stacklog;
+				plog( "\nVariable: %s", "", asl->label );
+				if ( asl->vs != NULL && asl->vs->up != NULL )
+					choice = deb( asl->vs->up, c, lab, res, interact );
 				else
 				{
 					choice = 0;
 					redraw = false;
 				}
-				
-				break;
-
-			// right-click (set all) on multi-instanced parameter or variable
-			case 29:
-				ch1 = ( char * )Tcl_GetVar( inter, "res", 0 );
-				strcpy( ch, ch1 );
-				set_all( &choice, r, ch, 0 );
-				
-				choice = 0;
-				break;
-					
-			// model Report
-			case 44:
-				show_report( &choice, ".deb" );
-				
-				choice = 0;
-				redraw = false;
-				break;
-
-			// Debug variable under computation CTRL+G
-			case 77: 
-				if ( asl == NULL && stacklog != NULL )
+			}
+			else
+			{
+				if ( asl->next == NULL )
 				{
-					asl = stacklog;
+					while ( asl->prev->prev != NULL )
+						asl = asl->prev;
 					plog( "\nVariable: %s", "", asl->label );
 					if ( asl->vs != NULL && asl->vs->up != NULL )
 						choice = deb( asl->vs->up, c, lab, res, interact );
@@ -1379,37 +1394,22 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 				}
 				else
 				{
-					if ( asl->next == NULL )
-					{
-						while ( asl->prev->prev != NULL )
-							asl = asl->prev;
-						plog( "\nVariable: %s", "", asl->label );
-						if ( asl->vs != NULL && asl->vs->up != NULL )
-							choice = deb( asl->vs->up, c, lab, res, interact );
-						else
-						{
-							choice = 0;
-							redraw = false;
-						}
-					}
+					asl = asl->next;
+					plog( "\nVariable: %s", "", asl->label );
+					if ( asl->vs != NULL && asl->vs->up != NULL )
+						choice = deb( asl->vs->up, c, lab, res, interact );
 					else
 					{
-						asl = asl->next;
-						plog( "\nVariable: %s", "", asl->label );
-						if ( asl->vs != NULL && asl->vs->up != NULL )
-							choice = deb( asl->vs->up, c, lab, res, interact );
-						else
-						{
-							choice = 0;
-							redraw = false;
-						}
+						choice = 0;
+						redraw = false;
 					}
-				}  
-				break;  
-				
-			default:
-				redraw = false;
-				choice = 0;
+				}
+			}
+			break;
+
+		default:
+			redraw = false;
+			choice = 0;
 		}
 	}
 
@@ -1546,7 +1546,7 @@ void deb_show( object *r, const char *hl_var )
 	cmd( "set lastHl \"\"" );
 	cmd( "set curElem [ list ]" );
 	cmd( "array unset debElem" );
-	
+
 	if ( r->v == NULL )
 	{
 		cmd( "$g.can create text 0 0" );	// reference to position message
@@ -1561,7 +1561,7 @@ void deb_show( object *r, const char *hl_var )
 		cmd( "destroy $w" );
 		cmd( "ttk::frame $w" );
 		cmd( "$g.can create window 0 0 -window $w -anchor nw" );
-		
+
 		for ( i = 1, ap_v = r->v; ap_v != NULL; ap_v = ap_v->next, ++i )
 		{
 			cmd( "set debElem(%s) [ list $i $w.e$i ]", ap_v->label );
@@ -1570,29 +1570,29 @@ void deb_show( object *r, const char *hl_var )
 			cmd( "set val %g", ap_v->val[ 0 ] );
 			cmd( "ttk::frame $w.e$i" );
 			cmd( "ttk::label $w.e$i.name -width $hnamszD -anchor w -text %s", ap_v->label );
-			
+
 			if ( is_nan( ap_v->val[ 0 ] ) )
 				cmd( "ttk::label $w.e$i.val -width $hvalszD -style hl.TLabel -text NAN" );
 			else
 				if ( is_inf( ap_v->val[ 0 ] ) )
 					cmd( "ttk::label $w.e$i.val -width $hvalszD -style hl.TLabel -text %sINFINITY", ap_v->val[ 0 ] < 0 ? "-" : "" );
 				else
-					if ( ap_v->val[ 0 ] != 0 && fabs( ap_v->val[ 0 ] ) < SIG_MIN )	// insignificant value?			
+					if ( ap_v->val[ 0 ] != 0 && fabs( ap_v->val[ 0 ] ) < SIG_MIN )	// insignificant value?
 						cmd( "ttk::label $w.e$i.val -width $hvalszD -style hl.TLabel -text ~0" );
 					else
 						cmd( "ttk::label $w.e$i.val -width $hvalszD -style hl.TLabel -text $val" );
-			
+
 			if ( ap_v->param == 0 )
 				cmd( "ttk::label $w.e$i.last -width $hupdszD -text $last" );
 			if ( ap_v->param == 1 )
 				cmd( "ttk::label $w.e$i.last -width $hupdszD -text (P)" );
 			if ( ap_v->param == 2 )
 				cmd( "ttk::label $w.e$i.last -width $hupdszD -text (F)" );
-			
+
 			if ( i % 2 == 0 )
 			{
 				cmd( "ttk::label $w.e$i.pad -width $hpadszD" );
-			
+
 				cmd( "grid $w.e$i.pad $w.e$i.name $w.e$i.val $w.e$i.last" );
 				cmd( "grid $w.e$i -column 1 -row [ expr int( ( $i - 1 ) / 2 ) ]" );
 				cmd( "mouse_wheel $w.e$i.pad" );
@@ -1614,7 +1614,7 @@ void deb_show( object *r, const char *hl_var )
 
 		cmd( "set debConfChg 1" );
 		cmd( "event generate .deb <Configure>" );
-		
+
 		cmd( "set curElem [ lsort [ array names debElem ] ]" );
 		cmd( "if { [ string length \"%s\" ] > 0 && [ lsearch -exact $curElem %s ] >= 0 } { \
 				set lastHl [ lindex $debElem(%s) 1 ]; \
@@ -1625,7 +1625,7 @@ void deb_show( object *r, const char *hl_var )
 			} { \
 				set lastHl \"\"; \
 			}", hl_var, hl_var, hl_var, hl_var );
-		
+
 		Tcl_UnlinkVar( inter, "i" );
 	}
 }
@@ -1640,12 +1640,12 @@ void show_tmp_vars( object *r, bool update )
 	int i, j, m, n;
 	netLink *curLnk = NULL;
 	object *cur;
-	
+
 	cmd( "set in .deb.val" );
 	cmd( "set existVal [ winfo exists $in ]" );
 	if ( ! strcmp( Tcl_GetVar( inter, "existVal", 0 ), "0" ) )
 	{
-		cmd( "newtop $in \"v\\[...\\]\" { destroytop .deb.val } .deb" ); 
+		cmd( "newtop $in \"v\\[...\\]\" { destroytop .deb.val } .deb" );
 
 		cmd( "ttk::frame $in.l1" );
 		cmd( "ttk::label $in.l1.l -text \"Name and instance\"" );
@@ -1655,7 +1655,7 @@ void show_tmp_vars( object *r, bool update )
 		cmd( "ttk::label $in.l1.n.id -style hl.TLabel" );
 		cmd( "pack $in.l1.n.name $in.l1.n.sep $in.l1.n.id -side left" );
 		cmd( "pack $in.l1.l $in.l1.n" );
-		
+
 		cmd( "ttk::frame $in.l2" );
 		cmd( "ttk::label $in.l2.id -width 6 -text Variable" );
 		cmd( "ttk::label $in.l2.pad" );
@@ -1671,7 +1671,7 @@ void show_tmp_vars( object *r, bool update )
 		cmd( "mouse_wheel $in.n.t" );
 		cmd( "pack $in.n.t -expand yes -fill both" );
 		cmd( "pack $in.n -expand yes -fill both" );
-		
+
 		cmd( "ttk::label $in.l3 -justify center -text \"(double-click name to\nchange to object)\"" );
 		cmd( "pack $in.l3 -pady 5" );
 
@@ -1686,7 +1686,7 @@ void show_tmp_vars( object *r, bool update )
 	else
 		if ( update )
 		{
-			
+
 			cmd( "$in.n.t configure -state normal" );
 			cmd( "$in.n.t delete 1.0 end" );
 		}
@@ -1695,21 +1695,21 @@ void show_tmp_vars( object *r, bool update )
 			cmd( "destroytop .deb.val" );
 			return;
 		}
-	
+
 	m = root->search_inst( r, true );
 	cmd( "$in.l1.n.name configure -text \"%s\"", r->label == NULL ? "" : r->label );
 	cmd( "$in.l1.n.id configure -text \"%d\"", m );
-	
+
 	Tcl_LinkVar( inter, "i", ( char * ) &i, TCL_LINK_INT );
-	
+
 	cmd( "$in.n.t insert end \"Temporary storage\n\" bold" );
-	
+
 	for ( i = 1, j = 0; j < 10; ++i, ++j )
 	{
 		cmd( "ttk::frame $in.n.t.n$i" );
 		cmd( "ttk::label $in.n.t.n$i.var -width 6 -text \"v\\\[%d\\]\"", j );
 		cmd( "ttk::label $in.n.t.n$i.pad -width 1" );
-		
+
 		if ( is_nan( d_values[ j ] ) )
 			cmd( "ttk::label $in.n.t.n$i.val -width 13 -style hl.TLabel -text NAN" );
 		else
@@ -1720,49 +1720,49 @@ void show_tmp_vars( object *r, bool update )
 					cmd( "ttk::label $in.n.t.n$i.val -width 13 -style hl.TLabel -text ~0" );
 				else
 					cmd( "ttk::label $in.n.t.n$i.val -width 13 -style hl.TLabel -text %g", d_values[ j ] );
-				
+
 		cmd( "pack $in.n.t.n$i.var $in.n.t.n$i.pad $in.n.t.n$i.val -side left" );
-		
+
 		cmd( "mouse_wheel $in.n.t.n$i.var" );
 		cmd( "mouse_wheel $in.n.t.n$i.pad" );
 		cmd( "mouse_wheel $in.n.t.n$i.val" );
-		
+
 		cmd( "$in.n.t window create end -window $in.n.t.n$i" );
 		cmd( "$in.n.t insert end \\n" );
 	}
-	
+
 	cmd( "$in.n.t insert end \"Integer indexes\n\" bold" );
-	
+
 	for ( j = 0; j < ( int ) ( sizeof i_names / sizeof i_names[ 0 ] ); ++i, ++j )
 	{
 		cmd( "ttk::frame $in.n.t.n$i" );
 		cmd( "ttk::label $in.n.t.n$i.var -width 6 -text \"%c\"", i_names[ j ] );
 		cmd( "ttk::label $in.n.t.n$i.pad -width 1" );
-		
+
 		cmd( "ttk::label $in.n.t.n$i.val -width 13 -style hl.TLabel -text %d", i_values[ j ] );
 
 		cmd( "pack $in.n.t.n$i.var $in.n.t.n$i.pad $in.n.t.n$i.val -side left" );
-		
+
 		cmd( "mouse_wheel $in.n.t.n$i.var" );
 		cmd( "mouse_wheel $in.n.t.n$i.pad" );
 		cmd( "mouse_wheel $in.n.t.n$i.val" );
-		
+
 		cmd( "$in.n.t window create end -window $in.n.t.n$i" );
 		cmd( "$in.n.t insert end \\n" );
 	}
-	
+
 	cmd( "$in.n.t insert end \"Object pointers\n\" bold" );
-	
+
 	for ( j = 0; j < 10; ++i, ++j )
 	{
 		cmd( "ttk::frame $in.n.t.n$i" );
 		cmd( "ttk::label $in.n.t.n$i.pad -width 1" );
-		
+
 		if ( j == 0 )
 			cmd( "ttk::label $in.n.t.n$i.var -width 6 -text cur" );
 		else
 			cmd( "ttk::label $in.n.t.n$i.var -width 6 -text \"cur%d\"", j );
-		
+
 		n = 0;
 		if ( o_values[ j ] == NULL )
 			cmd( "ttk::label $in.n.t.n$i.val -width 13 -style hl.TLabel -text NULL" );
@@ -1770,7 +1770,7 @@ void show_tmp_vars( object *r, bool update )
 		{
 			// search an object pointed by the pointer
 			n = ( int ) root->search_inst( o_values[ j ], false );
-			
+
 			if ( n > 0 && o_values[ j ]->label != NULL )
 				cmd( "ttk::label $in.n.t.n$i.val -width 13 -style hl.TLabel -text \"%s(%d)\"", o_values[ j ]->label, n );
 			else
@@ -1779,35 +1779,35 @@ void show_tmp_vars( object *r, bool update )
 				else
 					cmd( "ttk::label $in.n.t.n$i.val -width 13 -style hl.TLabel -text \"(invalid)\"" );
 		}
-		
+
 		cmd( "pack $in.n.t.n$i.var $in.n.t.n$i.pad $in.n.t.n$i.val -side left" );
-		
+
 		cmd( "mouse_wheel $in.n.t.n$i.var" );
 		cmd( "mouse_wheel $in.n.t.n$i.pad" );
 		cmd( "mouse_wheel $in.n.t.n$i.val" );
-		
+
 		if ( n > 0 )
 		{
 			cmd( "bind $in.n.t.n$i.var <Double-Button-1> { set objLab %s; set objNum %d; set choice 24 }", o_values[ j ]->label, n );
 			cmd( "bind $in.n.t.n$i.val <Double-Button-1> { set objLab %s; set objNum %d; set choice 24 }", o_values[ j ]->label, n );
 		}
-		
+
 		cmd( "$in.n.t window create end -window $in.n.t.n$i" );
 		cmd( "$in.n.t insert end \\n" );
 	}
-	
+
 	cmd( "$in.n.t insert end \"Network link pointers\n\" bold" );
-	
+
 	for ( j = 0; j < 10; ++i, ++j )
 	{
 		cmd( "ttk::frame $in.n.t.n$i" );
 		cmd( "ttk::label $in.n.t.n$i.pad -width 1" );
-		
+
 		if ( j == 0 )
 			cmd( "ttk::label $in.n.t.n$i.var -width 6 -text curl" );
 		else
 			cmd( "ttk::label $in.n.t.n$i.var -width 6 -text \"curl%d\"", j );
-		
+
 		if ( n_values[ j ] == NULL )
 			cmd( "ttk::label $in.n.t.n$i.val -width 13 -style hl.TLabel -text NULL" );
 		else
@@ -1824,29 +1824,29 @@ void show_tmp_vars( object *r, bool update )
 						break;
 					}
 			}
-			
+
 			if ( n == 0 )
 				cmd( "ttk::label $in.n.t.n$i.val -width 13 -style hl.TLabel -text \"(unknown)\"" );
 		}
-		
+
 		cmd( "pack $in.n.t.n$i.var $in.n.t.n$i.pad $in.n.t.n$i.val -side left" );
-		
+
 		cmd( "mouse_wheel $in.n.t.n$i.var" );
 		cmd( "mouse_wheel $in.n.t.n$i.pad" );
 		cmd( "mouse_wheel $in.n.t.n$i.val" );
-		
+
 		if ( n > 0 && curLnk != NULL )
 		{
 			cmd( "bind $in.n.t.n$i.var <Double-Button-1> { set nodeId %ld; set nodeLab %s; set choice 23 }", curLnk->ptrTo->node->id, curLnk->ptrTo->label );
 			cmd( "bind $in.n.t.n$i.val <Double-Button-1> { set nodeId %ld; set nodeLab %s; set choice 23 }", curLnk->ptrTo->node->id, curLnk->ptrTo->label );
 		}
-		
+
 		cmd( "$in.n.t window create end -window $in.n.t.n$i" );
 		cmd( "$in.n.t insert end \\n" );
 	}
-	
+
 	cmd( "$in.n.t insert end \"Object hook pointers\n\" bold" );
-	
+
 	for ( j = -1; j < ( int ) r->hooks.size( ); ++i, ++j )
 	{
 		cmd( "ttk::frame $in.n.t.n$i" );
@@ -1855,14 +1855,14 @@ void show_tmp_vars( object *r, bool update )
 		if ( j < 0 )
 		{
 			cmd( "ttk::label $in.n.t.n$i.var -width 7 -text SHOOK" );
-			cur = r->hook;	
+			cur = r->hook;
 		}
 		else
 		{
 			cmd( "ttk::label $in.n.t.n$i.var -width 7 -text \"HOOK(%d)\"", j );
-			cur = r->hooks[ j ];	
+			cur = r->hooks[ j ];
 		}
-		
+
 		n = 0;
 		if ( cur == NULL )
 			cmd( "ttk::label $in.n.t.n$i.val -width 12 -style hl.TLabel -text NULL" );
@@ -1870,7 +1870,7 @@ void show_tmp_vars( object *r, bool update )
 		{
 			// search an object pointed by the hook
 			n = ( int ) root->search_inst( cur, false );
-			
+
 			if ( n > 0 && cur->label != NULL )
 				cmd( "ttk::label $in.n.t.n$i.val -width 12 -style hl.TLabel -text \"%s(%d)\"", cur->label, n );
 			else
@@ -1879,31 +1879,31 @@ void show_tmp_vars( object *r, bool update )
 				else
 					cmd( "ttk::label $in.n.t.n$i.val -width 12 -style hl.TLabel -text \"(invalid)\"" );
 		}
-		
+
 		cmd( "pack $in.n.t.n$i.var $in.n.t.n$i.pad $in.n.t.n$i.val -side left" );
-		
+
 		cmd( "mouse_wheel $in.n.t.n$i.var" );
 		cmd( "mouse_wheel $in.n.t.n$i.pad" );
 		cmd( "mouse_wheel $in.n.t.n$i.val" );
-		
+
 		if ( n > 0 )
 		{
 			cmd( "bind $in.n.t.n$i.var <Double-Button-1> { set objLab %s; set objNum %d; set choice 24 }", cur->label, n );
 			cmd( "bind $in.n.t.n$i.val <Double-Button-1> { set objLab %s; set objNum %d; set choice 24 }", cur->label, n );
 		}
-		
+
 		cmd( "$in.n.t window create end -window $in.n.t.n$i" );
 		cmd( "$in.n.t insert end \\n" );
 	}
 
 	cmd( "$in.n.t insert end \"More temporary storage\n\" bold" );
-	
+
 	for ( j = 10; j < min( 100, USER_D_VARS ); ++i, ++j )
 	{
 		cmd( "ttk::frame $in.n.t.n$i" );
 		cmd( "ttk::label $in.n.t.n$i.var -width 6 -text \"v\\\[%d\\]\"", j );
 		cmd( "ttk::label $in.n.t.n$i.pad -width 1" );
-		
+
 		if ( is_nan( d_values[ j ] ) )
 			cmd( "ttk::label $in.n.t.n$i.val -width 13 -style hl.TLabel -text NAN" );
 		else
@@ -1914,20 +1914,20 @@ void show_tmp_vars( object *r, bool update )
 					cmd( "ttk::label $in.n.t.n$i.val -width 13 -style hl.TLabel -text ~0" );
 				else
 					cmd( "ttk::label $in.n.t.n$i.val -width 13 -style hl.TLabel -text %g", d_values[ j ] );
-				
+
 		cmd( "pack $in.n.t.n$i.var $in.n.t.n$i.pad $in.n.t.n$i.val -side left" );
-		
+
 		cmd( "mouse_wheel $in.n.t.n$i.var" );
 		cmd( "mouse_wheel $in.n.t.n$i.pad" );
 		cmd( "mouse_wheel $in.n.t.n$i.val" );
-		
+
 		cmd( "$in.n.t window create end -window $in.n.t.n$i" );
 		cmd( "$in.n.t insert end \\n" );
 	}
-	
+
 	Tcl_UnlinkVar( inter, "i" );
 	cmd( "$in.n.t configure -state disabled" );
-} 
+}
 
 
 /*******************************************
@@ -1937,7 +1937,7 @@ void show_neighbors( object *r, bool update )
 {
 	int i;
 	netLink *curLnk;
-	
+
 	if ( r->node == NULL )
 		return;
 
@@ -1946,7 +1946,7 @@ void show_neighbors( object *r, bool update )
 	if ( ! strcmp( Tcl_GetVar( inter, "existNet", 0 ), "0" ) )
 	{
 		cmd( "newtop $N \"Network\" { destroytop .deb.net } .deb" );
-		
+
 		cmd( "ttk::frame $N.l1" );
 		cmd( "ttk::label $N.l1.l -text \"Node ID and name\"" );
 		cmd( "ttk::frame $N.l1.n" );
@@ -1955,15 +1955,15 @@ void show_neighbors( object *r, bool update )
 		cmd( "ttk::label $N.l1.n.name -style hl.TLabel" );
 		cmd( "pack $N.l1.n.id $N.l1.n.sep $N.l1.n.name -side left" );
 		cmd( "pack $N.l1.l $N.l1.n" );
-		
+
 		cmd( "ttk::frame $N.l2" );
 		cmd( "ttk::label $N.l2.l -text \"Num. links out:\"" );
 		cmd( "ttk::label $N.l2.n -style hl.TLabel" );
 		cmd( "pack $N.l2.l $N.l2.n -side left" );
-		
+
 		cmd( "ttk::frame $N.l3" );
 		cmd( "ttk::label $N.l3.l -text \"Outgoing links\"" );
-		
+
 		cmd( "ttk::frame $N.l3.h" );
 		cmd( "ttk::label $N.l3.h.id -width 6 -text \"Dest. ID\"" );
 		cmd( "ttk::label $N.l3.h.pad -width 2" );
@@ -1981,14 +1981,14 @@ void show_neighbors( object *r, bool update )
 		cmd( "mouse_wheel $N.n.t" );
 		cmd( "pack $N.n.t -expand yes -fill both" );
 		cmd( "pack $N.n -expand yes -fill both" );
-		
+
 		cmd( "ttk::label $N.l4 -justify center -text \"(double-click ID to\nchange to node)\"" );
 		cmd( "pack $N.l4 -pady 5" );
-		
+
 		cmd( "showtop $N topleftW 0 1 0" );
 		cmd( "wm minsize $N [ winfo reqwidth $N ] [ expr $vsizeDmin + $vmenusize ]" );
 		cmd( "wm geometry $N [ winfo reqwidth $N ]x[ expr [ winfo height .deb ] + $vmenusize ]" );
-		
+
 		cmd( "if { ! [ winfo exists .deb.val ] } { align $N .deb } { align $N .deb.val }" );
 	}
 	else
@@ -2002,13 +2002,13 @@ void show_neighbors( object *r, bool update )
 			cmd( "destroytop .deb.net" );
 			return;
 		}
-	
+
 	cmd( "$N.l1.n.id configure -text \"%ld\"", r->node->id );
 	cmd( "$N.l1.n.name configure -text \"%s\"", r->node->name == NULL ? "" : r->node->name );
 	cmd( "$N.l2.n configure -text %ld", r->node->nLinks );
-	
+
 	Tcl_LinkVar( inter, "i", ( char * ) &i, TCL_LINK_INT );
-	
+
 	for ( i = 1, curLnk = r->node->first; curLnk != NULL; curLnk = curLnk->next, ++i )
 	{
 		cmd( "ttk::frame $N.n.t.n$i" );
@@ -2018,25 +2018,25 @@ void show_neighbors( object *r, bool update )
 			cmd( "ttk::label $N.n.t.n$i.weight -width 12 -style hl.TLabel -text %g", curLnk->weight );
 		else
 			cmd( "ttk::label $N.n.t.n$i.weight -width 12" );
-		
+
 		cmd( "pack $N.n.t.n$i.nodeto $N.n.t.n$i.pad $N.n.t.n$i.weight -side left" );
-		
+
 		cmd( "mouse_wheel $N.n.t.n$i.nodeto" );
 		cmd( "mouse_wheel $N.n.t.n$i.pad" );
 		cmd( "mouse_wheel $N.n.t.n$i.weight" );
-		
+
 		cmd( "bind $N.n.t.n$i.nodeto <Double-Button-1> { set nodeId %ld; set nodeLab %s; set choice 23 }", curLnk->ptrTo->node->id, r->label );
-		
+
 		if ( curLnk->weight != 0 )
 			cmd( "bind $N.n.t.n$i.weight <Double-Button-1> { set nodeId %ld; set nodeLab %s; set choice 23 }", curLnk->ptrTo->node->id, r->label );
-		
+
 		cmd( "$N.n.t window create end -window $N.n.t.n$i" );
 		cmd( "$N.n.t insert end \\n" );
 	}
-	
+
 	Tcl_UnlinkVar( inter, "i" );
 	cmd( "$N.n.t configure -state disabled" );
-}	
+}
 
 
 /*******************************************
@@ -2051,14 +2051,14 @@ void attach_instance_number( char *ch, object *r )
 
 	if ( r == NULL )
 		return;
-	
+
 	attach_instance_number( ch, r->up );
 
 	if ( r->up != NULL )
 		for ( cur = r->up->search( r->label ); cur != NULL; cur = go_brother( cur ) )
 		{
 			if ( cur == r )
-			j = i;
+				j = i;
 			i++;
 		}
 

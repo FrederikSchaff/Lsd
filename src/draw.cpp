@@ -6,10 +6,10 @@
 
 	Copyright Marco Valente and Marcelo Pereira
 	LSD is distributed under the GNU General Public License
-	
+
 	See Readme.txt for copyright information of
 	third parties' code used in LSD
-	
+
  *************************************************************/
 
 /*************************************************************
@@ -57,7 +57,7 @@ void show_graph( object *t )
 		cmd( "destroytop .str" );
 		return;
 	}
-	
+
 	for ( top = t; top->up != NULL; top = top->up );
 
 	cmd( "set strExist [ winfo exists .str ]" );
@@ -71,22 +71,22 @@ void show_graph( object *t )
 		cmd( "destroy .str.f" );										// or just recreate canvas
 
 	cmd( "wm title .str \"%s%s - LSD Model Structure\"", unsaved_change() ? "*" : " ", simul_name );
-	
+
 	cmd( "ttk::frame .str.f" );
 	cmd( "ttk::canvas .str.f.c -xscrollincrement 1 -entry 0 -dark $darkTheme" );
 	cmd( "pack .str.f.c -expand yes -fill both" );
 	cmd( "pack .str.f -expand yes -fill both" );
 
 	cmd( "showtop .str current yes yes no 0 0 b" );
-	
+
 	draw_obj( top, t );
-	
+
 	cmd( "set hrsizeM [ winfo width .str ]" );
 	cmd( "set vrsizeM [ winfo height .str ]" );
 	cmd( ".str.f.c xview scroll [ expr - int ( $hrsizeM / 2 ) ] units" );
-	
+
 	draw_buttons( );
-	
+
 	cmd( "bind .str.f.c <Configure> { if { $hrsizeM != [ winfo width .str ] || $vrsizeM != [ winfo height .str ] } { set choice_g 70 } }" );
 	cmd( "bind .str.f.c <Button-1> { if [ info exists res_g ] { destroy .list; set choice_g 24 } }" );
 	cmd( "bind .str.f.c <Double-Button-1> { if [ info exists res_g ] { destroy .list; set choice 6 } }" );
@@ -129,7 +129,7 @@ void draw_buttons( void )
 	cmd( "set cy1 [ .str.f.c canvasy 0 ]" );
 	cmd( "set cx2 [ .str.f.c canvasx [ winfo width .str ] ]" );
 	cmd( "set cy2 [ .str.f.c canvasy [ winfo height .str ] ]" );
-	
+
 	cmd( "if { $n == 4 } { \
 			set hratioM [ expr ( $cx2 - $cx1 ) / ( $x2 - $x1 + 2 * $borderM ) ]; \
 			set vratioM [ expr ( $cy2 - $cy1 ) / ( $y2 - $y1 + 2 * $borderM ) ] \
@@ -137,7 +137,7 @@ void draw_buttons( void )
 			set hratioM 1; \
 			set vratioM 1 \
 		}" );
-	
+
 	cmd( "ttk::button .str.f.c.hplus -text \"\u25B6\" -width 2 -style bold.Toolbutton -command { \
 			set hfactM [ round_N [ expr $hfactM + $rstepM ] 2 ]; \
 			set choice_g 70 \
@@ -159,17 +159,17 @@ void draw_buttons( void )
 			set vfactM [ round_N [ expr $vfactM * $vratioM ] 2 ]; \
 			set choice_g 70 \
 		}" );
-		
+
 	cmd( "bind .str <Control-plus> { invoke .str.f.c.hplus }" );
 	cmd( "bind .str <Control-minus> { invoke .str.f.c.hminus }" );
 	cmd( "bind .str <Alt-plus> { invoke .str.f.c.vplus }" );
 	cmd( "bind .str <Alt-minus> { invoke .str.f.c.vminus }" );
 	cmd( "bind .str <Control-a> { invoke .str.f.c.auto }; bind .str <Control-A> { invoke .str.f.c.auto }" );
 	cmd( "bind .str <Alt-a> { invoke .str.f.c.auto }; bind .str <Alt-A> { invoke .str.f.c.auto }" );
-		
+
 	cmd( "set colM [ expr $cx2 - $borderM - $borderMadj ]" );
 	cmd( "set rowM [ expr $cy2 - $borderM ]" );
-	
+
 	cmd( ".str.f.c create window $colM $rowM -window .str.f.c.auto" );
 	cmd( ".str.f.c create window [ expr $colM - $bhstepM ] $rowM -window .str.f.c.hplus" );
 	cmd( ".str.f.c create window [ expr $colM - 2 * $bhstepM ] $rowM -window .str.f.c.hminus" );
@@ -197,7 +197,7 @@ void draw_obj( object *t, object *sel, int level, int center, int from, bool zer
 	range_init = get_int( "rinitM" );
 	step_level = get_int( "vstepM" );
 	step_level = round( step_level * v_fact );
-	
+
 	// element list to appear on the left of the window
 	cmd( "set list_%s \"\"", t->label );
 
@@ -208,7 +208,7 @@ void draw_obj( object *t, object *sel, int level, int center, int from, bool zer
 	for ( cv = t->v; cv != NULL; cv = cv->next )
 	{
 		sprintf( ch,"append list_%s \"%s", t->label, cv->label );
-		
+
 		// special updating scheme?
 		if ( cv->param == 0 && ( cv->delay > 0 || cv->delay_range > 0 || cv->period > 1 || cv->period_range > 0 ) )
 			sp_upd = true;
@@ -217,7 +217,7 @@ void draw_obj( object *t, object *sel, int level, int center, int from, bool zer
 
 		// set flags string
 		cmd( "set varFlags \"%s%s%s%s%s\"", ( cv->save || cv->savei ) ? "+" : "", cv->plot ? "*" : "", cv->debug == 'd' ? "!" : "", cv->parallel ? "&" : "", sp_upd ? "\u00A7" : "" );
-				
+
 		if ( cv->param == 1 )
 			sprintf( str," (P$varFlags)\n\"" );
 		else
@@ -227,41 +227,41 @@ void draw_obj( object *t, object *sel, int level, int center, int from, bool zer
 			else
 				sprintf( str, " (%s_%d$varFlags)\n\"", ( cv->param == 0 ) ? "V" : "F", cv->num_lag );
 		}
-		
+
 		strcat( ch, str );
 		cmd( ch );
 	}
 
 	// find current tree depth
 	for ( j = 0, cur = t; cur->up != NULL; ++j, cur = cur->up );
-	
+
 	// draw node only if it is not the root
 	if ( t->up != NULL )
 	{
 		sprintf( ch, "%s", t->label );
 		strcpy( ch1, "" );
-		
+
 		// count number of brothers and define maximum width for number string
 		for ( k = 0, cb = t->up->b; cb != NULL; ++k, cb = cb->next );
-		
+
 		switch ( j )
 		{
-			case 1:								// first line objects
-				max_wid = 15 * h_fact;
-				break;
-			case 2:								// second line objects
-				max_wid = min( 15 * h_fact, 80 * h_fact / k );
-				break;
-			default:							// all other lines
-				max_wid = min( 7 * h_fact, 10 * h_fact / k );
+		case 1:								// first line objects
+			max_wid = 15 * h_fact;
+			break;
+		case 2:								// second line objects
+			max_wid = min( 15 * h_fact, 80 * h_fact / k );
+			break;
+		default:							// all other lines
+			max_wid = min( 7 * h_fact, 10 * h_fact / k );
 		}
-		
-	
+
+
 		// format number string
 		if ( zeroinst )
 		{
 			strcpy( ch1, "0" );
-			
+
 			// if parent is multi-instanced, add ellipsis to the zero
 			if ( t->up->up != NULL )
 			{
@@ -272,7 +272,7 @@ void draw_obj( object *t, object *sel, int level, int center, int from, bool zer
 				{
 					cb = cur->search_bridge( t->up->label );
 					for ( k = 0, cur = cb->head; cur != NULL; ++k, cur = cur->next );
-				
+
 					if ( k > 1 )				// handle multi-instanced parents
 						strcat( ch1, "\u2026" );
 				}
@@ -289,28 +289,28 @@ void draw_obj( object *t, object *sel, int level, int center, int from, bool zer
 					fit_wid = false;
 					break;
 				}
-				
+
 				skip_next_obj( cur, &count );
 				sprintf( str, "%s%d", strlen( ch1 ) > 0 ? " " : "", count );
 				strcat( ch1, str );
-				
+
 				for ( ; cur->next != NULL; cur = cur->next ); // reaches the last object of this group
 			}
-			
+
 			// count number of instances of parent and check for zero instances
 			if ( fit_wid && t->up->up != NULL )	// first level cannot have multiple zero instances
 			{
 				cb = t->up->up->search_bridge( t->up->label );
 				for ( k = 0, cur = cb->head; cur != NULL; ++k, cur = cur->next );
-			
+
 				if ( h < k )					// found zero instanced object?
 					strcat( ch1, "\u2026" );
 			}
 		}
-		
+
 		if ( t->up->up != NULL )
 			put_line( from, level, center );
-		
+
 		put_node( center, level, t->label, t == sel ? true : false );
 		put_text( ch, ch1, center, level, t->label );
 	}
@@ -320,19 +320,19 @@ void draw_obj( object *t, object *sel, int level, int center, int from, bool zer
 		level = get_int( "borderM" );
 		center = 0;
 	}
-	
+
 	// limit the maximum depth of plot
 	if ( j >= MAX_LEVEL )
 		return;
-	
+
 	// count the number of son object types
 	for ( i = 0, cb = t->b; cb != NULL; ++i, cb = cb->next );
-	
+
 	// root? adjust tree begin
-	if ( j == 0 )		
+	if ( j == 0 )
 	{
 		level -= step_level;
-		
+
 		// set the default horizontal scale factor per level
 		for ( k = 0; k < MAX_LEVEL; ++ k )
 			level_factor[ k ] = 0.3;
@@ -340,44 +340,44 @@ void draw_obj( object *t, object *sel, int level, int center, int from, bool zer
 		// pick hand set scale factors
 		switch ( i )
 		{
-			case 0:
-			case 1:
-				level_factor[ 0 ] = 0.4;
-				level_factor[ 1 ] = 0.1;
-				level_factor[ 2 ] = 0.5;
-				level_factor[ 3 ] = 0.6;
-				break;
-			case 2:
-				level_factor[ 0 ] = 0.5;
-				level_factor[ 1 ] = 0.8;
-				level_factor[ 2 ] = 0.6;
-				level_factor[ 3 ] = 0.4;
-				break;
-			case 3:
-				level_factor[ 0 ] = 0.6;
-				level_factor[ 1 ] = 1.1;
-				level_factor[ 2 ] = 0.4;
-				level_factor[ 3 ] = 0.4;
-				break;
-			case 4:
-				level_factor[ 0 ] = 0.7;
-				level_factor[ 1 ] = 1.2;
-				level_factor[ 2 ] = 0.3;
-				level_factor[ 3 ] = 0.4;
-				break;
-			case 5:
-				level_factor[ 0 ] = 0.7;
-				level_factor[ 1 ] = 1.3;
-				level_factor[ 2 ] = 0.2;
-				level_factor[ 3 ] = 0.4;
-				break;
-			default:
-				level_factor[ 0 ] = 0.9 + ( i - 5.0 ) / 10;
-				level_factor[ 1 ] = 1.2 + ( i - 5.0 ) / 20;
-				level_factor[ 2 ] = 0.3 + ( i - 5.0 ) / 30;
-				level_factor[ 3 ] = 0.5 + ( i - 5.0 ) / 40;
+		case 0:
+		case 1:
+			level_factor[ 0 ] = 0.4;
+			level_factor[ 1 ] = 0.1;
+			level_factor[ 2 ] = 0.5;
+			level_factor[ 3 ] = 0.6;
+			break;
+		case 2:
+			level_factor[ 0 ] = 0.5;
+			level_factor[ 1 ] = 0.8;
+			level_factor[ 2 ] = 0.6;
+			level_factor[ 3 ] = 0.4;
+			break;
+		case 3:
+			level_factor[ 0 ] = 0.6;
+			level_factor[ 1 ] = 1.1;
+			level_factor[ 2 ] = 0.4;
+			level_factor[ 3 ] = 0.4;
+			break;
+		case 4:
+			level_factor[ 0 ] = 0.7;
+			level_factor[ 1 ] = 1.2;
+			level_factor[ 2 ] = 0.3;
+			level_factor[ 3 ] = 0.4;
+			break;
+		case 5:
+			level_factor[ 0 ] = 0.7;
+			level_factor[ 1 ] = 1.3;
+			level_factor[ 2 ] = 0.2;
+			level_factor[ 3 ] = 0.4;
+			break;
+		default:
+			level_factor[ 0 ] = 0.9 + ( i - 5.0 ) / 10;
+			level_factor[ 1 ] = 1.2 + ( i - 5.0 ) / 20;
+			level_factor[ 2 ] = 0.3 + ( i - 5.0 ) / 30;
+			level_factor[ 3 ] = 0.5 + ( i - 5.0 ) / 40;
 		}
-		
+
 		range_type = round( level_factor[ 0 ] * range_init * h_fact );
 	}
 	else
@@ -385,7 +385,7 @@ void draw_obj( object *t, object *sel, int level, int center, int from, bool zer
 		// reduce object type width at each level
 		range_type = round( fabs( level_factor[ j ] * range_init / pow( 2, j + range_fact ) - pow( range_init * 2 / 3, 1 / j ) + 1 ) * h_fact );
 	}
-	
+
 	if ( i <= 1 )					// single object type son?
 	{
 		begin = center;				// adjust to print below parent
@@ -424,7 +424,7 @@ PUT_LINE
 ****************************************************/
 void put_line( int x1, int y1, int x2 )
 {
-    cmd( ".str.f.c create line %d [ expr round ( %d - $vstepM * $vfactM + $vmarginM + $nsizeM / 2 ) ] %d [ expr round ( %d + $nsizeM / 2 ) ] -fill $colorsTheme(dfg)", x1, y1, x2, y1 );
+	cmd( ".str.f.c create line %d [ expr round ( %d - $vstepM * $vfactM + $vmarginM + $nsizeM / 2 ) ] %d [ expr round ( %d + $nsizeM / 2 ) ] -fill $colorsTheme(dfg)", x1, y1, x2, y1 );
 }
 
 

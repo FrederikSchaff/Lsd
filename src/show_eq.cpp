@@ -6,14 +6,14 @@
 
 	Copyright Marco Valente and Marcelo Pereira
 	LSD is distributed under the GNU General Public License
-	
+
 	See Readme.txt for copyright information of
 	third parties' code used in LSD
-	
+
  *************************************************************/
 
 /*************************************************************
-SHOW_EQ.CPP 
+SHOW_EQ.CPP
 Show one window containig the equation for the label clicked on.
 
 Less simple as it seems, given that it has to deal with all weird characters
@@ -59,8 +59,8 @@ void show_eq( char *lab, int *choice )
 	// define the correct parent window
 	cmd( "switch %d { 0 { set parWnd . } 1 { set parWnd .chgelem } 2 { set parWnd .da } 3 { set parWnd .deb } }", *choice );
 
-	start:
-	
+start:
+
 	fname = equation_name;
 	sprintf( full_name, "%s/%s", exec_path, fname );
 	if ( ( f1 = fopen( full_name, "r" ) ) == NULL )
@@ -73,9 +73,9 @@ void show_eq( char *lab, int *choice )
 			app = ( char * ) Tcl_GetVar( inter, "res", 0 );
 			if ( app == NULL || strlen( app ) == 0 )
 				return;
-			
+
 			strncpy( equation_name, app, MAX_PATH_LENGTH - 1 );
-			
+
 			goto start;
 		}
 		else
@@ -88,7 +88,7 @@ void show_eq( char *lab, int *choice )
 	cmd( "set source_files [ get_source_files \"%s\" ]", exec_path );
 	cmd( "if { [ lsearch -exact $source_files \"%s\" ] == -1 } { lappend source_files \"%s\" }", equation_name, equation_name );
 	cmd( "set choice [ llength $source_files ]" );
-	
+
 	for ( done = false, k = 0; done == false && k < *choice; ++k )
 	{
 		cmd( "set brr [ lindex $source_files %d ]", k );
@@ -96,12 +96,12 @@ void show_eq( char *lab, int *choice )
 		fname = ( char * ) Tcl_GetVar( inter, "brr", 0 );
 		if ( ( f2 = fopen( fname, "r" ) ) == NULL )
 			continue;
-		
+
 		while ( ! done && fgets( c1_lab, MAX_LINE_SIZE - 1, f2 ) != NULL )
 			if ( is_equation_header( c1_lab, c2_lab, updt_in ) )
 				if ( ! strcmp( c2_lab, lab ) )
 					done = true;
-				
+
 		if ( ! done )
 			fclose( f2 );
 	}
@@ -114,7 +114,7 @@ void show_eq( char *lab, int *choice )
 
 	cmd( "set w .eq_%s", lab );
 	cmd( "set s \"\"" );
-	
+
 	cmd( "newtop $w \"'%s' %s Equation (%s)\" { destroytop .eq_%s; focus $parWnd } $parWnd", lab, eq_dum ? "Dummy" : "", fname, lab );
 
 	cmd( "ttk::frame $w.f" );
@@ -183,14 +183,14 @@ void show_eq( char *lab, int *choice )
 		start = 0;
 		bra = 2;
 	}
-	
+
 	strcpy( c3_lab, c1_lab );						// save original first line
-			
+
 	do
-	{	
+	{
 		strcpy( c2_lab, c1_lab );
 		clean_spaces( c2_lab );
-		
+
 		// handle dummy equations without RESULT closing
 		if ( eq_dum && strcmp( c1_lab, c3_lab ) && ( ! strncmp( c2_lab, "EQUATION(", 9 ) || ! strncmp( c2_lab, "EQUATION_DUMMY(", 15 ) || ! strncmp( c2_lab, "FUNCTION(", 9 ) || ! strncmp( c2_lab, "MODELEND", 8 ) ) )
 		{
@@ -198,17 +198,17 @@ void show_eq( char *lab, int *choice )
 				cmd( ".eq_%s.f.text insert end \"\n(DUMMY EQUATION: variable '%s' updated in '%s')\"", lab, lab, updt_in );
 			else
 				cmd( ".eq_%s.f.text insert end \"\n(DUMMY EQUATION: variable '%s' not updated here)\"", lab, lab );
-				
+
 			break;
 		}
-	
+
 		if ( ! strncmp( c2_lab,"RESULT(", 7 ) )
 			bra--;
 
 		for ( i = 0; c1_lab[ i ] != 0; ++i )
 		{
-			if ( c1_lab[ i ] == '\r' ) 
-			i++;
+			if ( c1_lab[ i ] == '\r' )
+				i++;
 			if ( c1_lab[ i ] == '{' )
 			{
 				if ( bra != 1 )
@@ -301,7 +301,7 @@ void show_eq( char *lab, int *choice )
 		}
 	}
 	while ( ( bra > 1 || start == 1 ) && fgets( c1_lab, MAX_LINE_SIZE, f2 ) != NULL  );
-	
+
 	fclose( f2 );
 
 	cmd( ".eq_%s.f.text mark set insert 1.0", lab );
@@ -341,7 +341,7 @@ void scan_used_lab( char *lab, int *choice )
 		cmd( "if [ winfo exists $list ] { set choice 1 } { set choice 0 }" );
 		if ( *choice == 1 )
 			return;
-		
+
 		cmd( "newtop $list \"Used In\" { destroytop .list_%s }", lab  );
 
 		cmd( "ttk::frame $list.lf " );
@@ -373,7 +373,7 @@ void scan_used_lab( char *lab, int *choice )
 	cmd( "if { [ lsearch -exact $source_files \"%s\" ] == -1 } { lappend source_files \"%s\" }", equation_name, equation_name );
 	cmd( "set res [ llength $source_files ]" );
 	nfiles = get_int( "res" );
-	
+
 	cmd( "unset -nocomplain list_used" );
 
 	for ( exist = false, k = 0; k < nfiles; ++k )
@@ -381,7 +381,7 @@ void scan_used_lab( char *lab, int *choice )
 		cmd( "set brr [ lindex $source_files %d ]", k );
 		cmd( "if { ! [ file exists $brr ] && [ file exists \"%s/$brr\" ] } { set brr \"%s/$brr\" }", exec_path, exec_path );
 		fname = ( char * ) Tcl_GetVar( inter, "brr", 0 );
-		
+
 		if ( ( f = fopen( fname, "r" ) ) != NULL )
 		{
 			strcpy( c1_lab, "" );
@@ -390,23 +390,23 @@ void scan_used_lab( char *lab, int *choice )
 			for ( done = 0; fgets( c1_lab, MAX_LINE_SIZE, f ) != NULL;  )
 			{
 				clean_spaces( c1_lab ); 	// eliminate the spaces
-				
+
 				for ( i = 0; c1_lab[ i ] != '"' && c1_lab[ i ] !=  '\0' ; ++i )
 					c2_lab[ i ] = c1_lab[ i ];
-				
+
 				c2_lab[ i ] = '\0'; 			// close the string
-				
+
 				if ( ! strcmp( c2_lab, "if(!strcmp(label," ) || ! strcmp( c2_lab, "EQUATION(" ) || ! strcmp( c2_lab, "EQUATION_DUMMY(" ) || ! strcmp( c2_lab, "FUNCTION(" ) )
 				{
 					if ( ! strcmp( c2_lab, "if(!strcmp(label," ) )
 						macro = false;
 					else
 						macro = true;
-					
+
 					for ( j = 0; c1_lab[ i + 1 + j ] != '"'; ++j )
-						c2_lab[ j ] = c1_lab[ i + 1 + j ]; 	// prepare the c2_lab to store the var's label			
+						c2_lab[ j ] = c1_lab[ i + 1 + j ]; 	// prepare the c2_lab to store the var's label
 					c2_lab[ j ] = '\0';
-					
+
 					done = contains( f, lab, strlen( lab ) );
 					if ( done == 1 )
 					{
@@ -418,11 +418,11 @@ void scan_used_lab( char *lab, int *choice )
 					}
 				}
 			}
-			
+
 			fclose( f );
 		}
 	}
-	
+
 	if ( no_window )
 	{
 		cmd( "if [ info exists list_used ] { set list_used [ join $list_used \", \" ] } { set list_used \"(never used)\" }" );
@@ -484,7 +484,7 @@ void scan_using_lab( char *lab, int *choice )
 
 	cv = root->search_var( root, lab );
 	find_using( root, cv, NULL, & found );
-	
+
 	cmd( "set choice [ $list.l.l size ]" );
 	if ( *choice != 0 )
 	{
@@ -507,13 +507,13 @@ void show_descr( char *lab, int *choice )
 	int i;
 	description *descr;
 	variable *cv;
-	
+
 	// define the correct parent window
 	cmd( "switch %d { 0 { set parWnd . } 1 { set parWnd .chgelem } 2 { set parWnd .da } 3 { set parWnd .deb } }", *choice );
-	
+
 	cv = root->search_var( NULL, lab );
 	descr = search_description( lab );
-	
+
 	if ( cv == NULL || descr == NULL || ! strcmp( descr->text, "(no description available)" ) )
 	{
 		cmd( "ttk::messageBox -parent $parWnd -type ok -icon warning -title Warning -message \"Description not available\" -detail \"A description for '%s' was not yet created. You may create one in LSD Browser with menu 'Model' > 'Change Element'.\"", lab  );
@@ -531,7 +531,7 @@ void show_descr( char *lab, int *choice )
 	cmd( "pack $w.f.yscroll -side right -fill y" );
 	cmd( "pack $w.f.text -expand yes -fill both" );
 	cmd( "pack $w.f -expand yes -fill both" );
-	
+
 	for ( i = 0; descr->text[ i ] != '\0'; ++i )
 		if ( descr->text[ i ] != '[' && descr->text[ i ] != ']' && descr->text[ i ] != '{' && descr->text[ i ] != '}' && descr->text[ i ] != '\"' && descr->text[ i ] != '\\')
 			cmd( "$w.f.text insert end \"%c\"", descr->text[ i ] );
@@ -539,7 +539,7 @@ void show_descr( char *lab, int *choice )
 			cmd( "$w.f.text insert end \"\\%c\"", descr->text[ i ] );
 
 	cmd( "$w.f.text conf -state disabled" );
-	
+
 	cmd( "done $w b { destroytop .desc_%s; focus $parWnd }", lab );
 
 	cmd( "showtop $w centerW 1 1" );
