@@ -42,7 +42,6 @@ test -f ${ASTYLE_OPTIONS_FILE} || {
 OPTIONS="--project=none" #due to bug https://sourceforge.net/p/astyle/bugs/541/ and issues encountered when setting up the hook, we read the options manually from a file.
 
 
-
 while read -r line; do
 	# echo "DEBUG -  line: ${line}"
 	if echo "${line}" | grep -q '^\#' || echo "${line}" | tr -d ' ' | grep -q '^$'; then
@@ -64,7 +63,7 @@ FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E "\.(c|cpp|h|h
 for FILE in ${FILES}; do
 	# echo "DEBUG - The command: ${ASTYLE} ${OPTIONS} --errors-to-stdout --dry-run ${FILE}"
 	# check if the formated file differs from the unformatted file. Do not format here.
-	NEEDS_FORMATTING=$(${ASTYLE} ${OPTIONS} --errors-to-stdout --dry-run ${FILE})
+	NEEDS_FORMATTING=$(${ASTYLE} ${OPTIONS} --errors-to-stdout --formatted --dry-run ${FILE})
 	# echo "DEBUG - var NEEDS_FORMATTING = ${NEEDS_FORMATTING}"
 	if echo ${NEEDS_FORMATTING} | tr -d ' ' | grep -q '^$'; then #empty output
 		echo "(OK) ${FILE} respects the agreed coding style."
