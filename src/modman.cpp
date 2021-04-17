@@ -9,7 +9,7 @@
 
 	See Readme.txt for copyright information of
 	third parties' code used in LSD
-
+	
  *************************************************************/
 
 /*************************************************************
@@ -174,7 +174,7 @@ int lsdmain( int argn, char **argv )
 			cmd( "ttk::messageBox -type ok -icon error -title Error -message \"File(s) missing or corrupted\" -detail \"Some critical LSD files or folders are missing or corrupted.\nPlease check your installation and reinstall LSD if the problem persists.\n\nLSD is aborting now.\"" );
 			return 6;
 		}
-
+		
 		cmd( "set env(LSDROOT) $RootLsd" );
 	}
 
@@ -192,7 +192,7 @@ int lsdmain( int argn, char **argv )
 		cmd( "ttk::messageBox -type ok -icon error -title Error -message \"LSD directory missing\" -detail \"Cannot locate the LSD installation folder on disk.\nPlease check your installation and reinstall LSD if the problem persists.\n\nLSD is aborting now.\"" );
 		return 7;
 	}
-
+		
 	// load/check configuration files
 	i = load_lmm_options( );
 	check_option_files( true );
@@ -786,7 +786,7 @@ int lsdmain( int argn, char **argv )
 	cmd( "focus .f.t.t" );
 	cmd( "set keepfocus 0" );
 
-loop:
+	loop:
 
 	cmd( "if { ! $keepfocus } { focus .f.t.t; update } { set keepfocus 0 }" );
 
@@ -956,7 +956,7 @@ loop:
 		}
 
 		sourcefile = 0;
-
+		
 		cmd( ".f.t.t edit reset" );
 		cmd( ".f.t.t mark set insert 1.0" );
 		cmd( ".f.hea.info.file.dat conf -text \"$filename\"" );
@@ -1258,7 +1258,7 @@ loop:
 
 		cmd( "ttk::frame .l.pad" );
 		cmd( "pack .l.pad -pady 5" );
-
+		
 		cmd( "ttk::frame .l.b1" );
 		cmd( "ttk::button .l.b1.repl -width $butWid -state disabled -text Replace -command { \
 				if { [ string length $cur ] > 0 } { \
@@ -1341,7 +1341,7 @@ loop:
 
 		choice = 0;
 
-here:
+		here:
 		while ( choice == 0 )
 			Tcl_DoOneEvent( 0 );
 
@@ -1430,22 +1430,22 @@ here:
 
 		switch( platform )
 		{
-		case LINUX:
-			sprintf( msg, "catch { exec $sysTerm -e $DbgExe $cmdbreak %s & } result", str1 );
-			break;
+			case LINUX:
+				sprintf( msg, "catch { exec $sysTerm -e $DbgExe $cmdbreak %s & } result", str1 );
+				break;
 
-		case MAC:
-			cmd( "if [ string equal $cmdbreak \"--args\" ] { set cmdbreak \"\" }" );
-			sprintf( msg, "catch { exec osascript -e \"tell application \\\"$sysTerm\\\" to do script \\\"cd $dirname; clear; $DbgExe $cmdbreak -f %s.app/Contents/MacOS/%s\\\"\" & } result", str1, str1 );
-			break;
+			case MAC:
+				cmd( "if [ string equal $cmdbreak \"--args\" ] { set cmdbreak \"\" }" );
+				sprintf( msg, "catch { exec osascript -e \"tell application \\\"$sysTerm\\\" to do script \\\"cd $dirname; clear; $DbgExe $cmdbreak -f %s.app/Contents/MacOS/%s\\\"\" & } result", str1, str1 );
+				break;
 
-		case WINDOWS:
-			strcat( str1, ".exe" );
-			sprintf( msg, "catch { exec $sysTerm /c $DbgExe $cmdbreak %s & } result", str1 );
-			break;
+			case WINDOWS:
+				strcat( str1, ".exe" );
+				sprintf( msg, "catch { exec $sysTerm /c $DbgExe $cmdbreak %s & } result", str1 );
+				break;
 
-		default:
-			goto end_gdb;
+			default:
+				goto end_gdb;
 		}
 
 		// check if executable file is older than model file
@@ -1457,7 +1457,7 @@ here:
 		if ( s != NULL && strcmp( s, "" ) )
 		{
 			sprintf( str2, "%s/%s", s, str );
-
+			
 			if ( platform == MAC )
 				sprintf( str, "%s/%s.app/Contents/MacOS/%s", s, str1, str1 );
 			else
@@ -1483,7 +1483,7 @@ here:
 
 		cmd( msg );					// if all ok, run debug command
 
-end_gdb:
+		end_gdb:
 		cmd( "cd \"$RootLsd\"" );
 		choice = 0;
 		goto loop;
@@ -1589,7 +1589,7 @@ end_gdb:
 			cmd( ".a.mname.e selection range 0 end" );
 			cmd( "focus .a.mname.e" );
 
-here_newgroup:
+			here_newgroup:
 
 			choice = 0;
 
@@ -1675,7 +1675,7 @@ here_newgroup:
 		cmd( ".a.mname.e selection range 0 end" );
 		cmd( "focus .a.mname.e" );
 
-loop_copy_new:
+		loop_copy_new:
 
 		choice = 0;
 
@@ -1696,9 +1696,9 @@ loop_copy_new:
 		if ( choice == -1 )
 		{
 			cmd( "ttk::messageBox -parent .a -type ok -title Error -icon error -message \"Space in path\" -detail \"Directory name must not contain spaces, please try a new name.\"" );
-			cmd( "focus .a.mdir.e" );
-			cmd( ".a.mdir.e selection range 0 end" );
-			goto loop_copy_new;
+		   cmd( "focus .a.mdir.e" );
+		   cmd( ".a.mdir.e selection range 0 end" );
+		   goto loop_copy_new;
 		}
 
 		// control for existing directory
@@ -1846,9 +1846,9 @@ loop_copy_new:
 
 		cmd( "set before [ .f.t.t get 1.0 end ]" );
 		cmd( ".f.hea.info.file.dat conf -text \"$filename\"" );
-
+		
 		sourcefile = recolor_all = is_source_file( ( char * ) Tcl_GetVar( inter, "filename", 0 ) );
-
+		
 		if ( sourcefile )
 		{
 			cmd( ".f.t.t tag add bc \"1.0\"" );
@@ -1873,7 +1873,7 @@ loop_copy_new:
 
 		s = ( char * ) Tcl_GetVar( inter, "s", 0 );
 		for ( i = 0; s[ i ] == ' ' || s[ i ] == '\t'; ++i )
-			str[ i ] = s[ i ];
+		  str[ i ] = s[ i ];
 
 		if ( i > 0 )
 		{
@@ -2117,7 +2117,7 @@ loop_copy_new:
 		cmd( ".f.t.t tag add sel insert \"insert + 7 char\"" );
 
 		v_counter = 0;
-
+		
 		cmd( ".f.t.t see insert" );
 
 		recolor_all = true;
@@ -2191,7 +2191,7 @@ loop_copy_new:
 		cmd( "if { $v_num != \"\" } { .f.t.t insert insert \";\" }" );
 
 		cmd( "if { $v_num == \"\" } { set num -1 } { set num $v_num }" );
-
+		
 		if ( num != -1 )
 			v_counter = ++num;
 
@@ -2345,7 +2345,7 @@ loop_copy_new:
 		cmd( "if { $v_num != \"\" } { .f.t.t insert insert \";\" }" );
 
 		cmd( "if { $v_num == \"\" } { set num -1 } { set num $v_num }" );
-
+		
 		if ( num != -1 )
 			v_counter = ++num;
 
@@ -2417,7 +2417,7 @@ loop_copy_new:
 		cmd( "if { $v_num != \"\" } { .f.t.t insert insert \";\" }" );
 
 		cmd( "if { $v_num == \"\" } { set num -1 } { set num $v_num }" );
-
+		
 		if ( num != -1 )
 			v_counter = ++num;
 
@@ -2627,9 +2627,9 @@ loop_copy_new:
 		cmd( "set a [ .f.t.t index insert ]" );
 
 		if ( choice == 1)
-			cmd( "set direction \"UP\"" );
+		  cmd( "set direction \"UP\"" );
 		else
-			cmd( "set direction \"DOWN\"" );
+		  cmd( "set direction \"DOWN\"" );
 
 		cmd( "if { $v_obj == \"p\" } { .f.t.t insert insert \"SORT(\\\"$v_obj0\\\", \\\"$v_label\\\", \\\"$direction\\\");\" }" );
 		cmd( "if { $v_obj != \"p\" } { .f.t.t insert insert \"SORTS($v_obj, \\\"$v_obj0\\\", \\\"$v_label\\\", \\\"$direction\\\");\" }" );
@@ -2708,17 +2708,17 @@ loop_copy_new:
 
 		if ( choice  == 1 )
 		{
-			cmd( "if { $v_obj == \"p\" && $v_num == \"\" } { .f.t.t insert insert \"ADDOBJ(\\\"$v_label\\\");\" }" );
-			cmd( "if { $v_obj == \"p\" && $v_num != \"\" } { .f.t.t insert insert \"ADDOBJ_EX(\\\"$v_label\\\", $v_num);\" }" );
-			cmd( "if { $v_obj != \"p\" && $v_num == \"\" } { .f.t.t insert insert \"ADDOBJS($v_obj, \\\"$v_label\\\");\" }" );
-			cmd( "if { $v_obj != \"p\" && $v_num != \"\" } { .f.t.t insert insert \"ADDOBJ_EXS($v_obj, \\\"$v_label\\\", $v_num);\" }" );
+		cmd( "if { $v_obj == \"p\" && $v_num == \"\" } { .f.t.t insert insert \"ADDOBJ(\\\"$v_label\\\");\" }" );
+		cmd( "if { $v_obj == \"p\" && $v_num != \"\" } { .f.t.t insert insert \"ADDOBJ_EX(\\\"$v_label\\\", $v_num);\" }" );
+		cmd( "if { $v_obj != \"p\" && $v_num == \"\" } { .f.t.t insert insert \"ADDOBJS($v_obj, \\\"$v_label\\\");\" }" );
+		cmd( "if { $v_obj != \"p\" && $v_num != \"\" } { .f.t.t insert insert \"ADDOBJ_EXS($v_obj, \\\"$v_label\\\", $v_num);\" }" );
 		}
 		else
 		{
-			cmd( "if { $v_obj == \"p\" && $v_num != \"\" } { .f.t.t insert insert \"ADDNOBJ_EX(\\\"$v_label\\\", $numobj, $v_num);\"; set choice -3 }" );
-			cmd( "if { $v_obj != \"p\" && $v_num != \"\" } { .f.t.t insert insert \"ADDNOBJ_EXS($v_obj, \\\"$v_label\\\", $numobj, $v_num);\"; set choice -3 }" );
-			cmd( "if { $v_obj == \"p\" && $v_num == \"\" } { .f.t.t insert insert \"ADDNOBJ(\\\"$v_label\\\", $numobj);\"; set choice -3 }" );
-			cmd( "if { $v_obj != \"p\" && $v_num == \"\" } { .f.t.t insert insert \"ADDNOBJS($v_obj, \\\"$v_label\\\", $numobj);\"; set choice -3 }" );
+		cmd( "if { $v_obj == \"p\" && $v_num != \"\" } { .f.t.t insert insert \"ADDNOBJ_EX(\\\"$v_label\\\", $numobj, $v_num);\"; set choice -3 }" );
+		cmd( "if { $v_obj != \"p\" && $v_num != \"\" } { .f.t.t insert insert \"ADDNOBJ_EXS($v_obj, \\\"$v_label\\\", $numobj, $v_num);\"; set choice -3 }" );
+		cmd( "if { $v_obj == \"p\" && $v_num == \"\" } { .f.t.t insert insert \"ADDNOBJ(\\\"$v_label\\\", $numobj);\"; set choice -3 }" );
+		cmd( "if { $v_obj != \"p\" && $v_num == \"\" } { .f.t.t insert insert \"ADDNOBJS($v_obj, \\\"$v_label\\\", $numobj);\"; set choice -3 }" );
 		}
 
 		cmd( ".f.t.t see insert" );
@@ -2843,21 +2843,21 @@ loop_copy_new:
 		cmd( "if { $v_tot == \"\" } { set choice 1 } { set choice 2 }" );
 
 		if ( choice == 1 )
-		{
-			cmd( "if { $v_obj == \"p\" && $v_lag == 0 && $v_label != \"\" } { .f.t.t insert insert \"$v_obj0 = RNDDRAW(\\\"$v_num\\\", \\\"$v_label\\\");\" }" );
-			cmd( "if { $v_obj == \"p\" && $v_lag == 0 && $v_label == \"\" } { .f.t.t insert insert \"$v_obj0 = RNDDRAW_FAIR(\\\"$v_num\\\");\" }" );
-			cmd( "if { $v_obj == \"p\" && $v_lag != 0 && [ string is integer -strict $v_lag ] } { .f.t.t insert insert \"$v_obj0 = RNDDRAWL(\\\"$v_num\\\", \\\"$v_label\\\", $v_lag);\" }" );
-			cmd( "if { $v_obj != \"p\" && $v_lag == 0 && $v_label != \"\" } { .f.t.t insert insert \"$v_obj0 = RNDDRAWS($v_obj, \\\"$v_num\\\", \\\"$v_label\\\");\" }" );
-			cmd( "if { $v_obj != \"p\" && $v_lag == 0 && $v_label == \"\" } { .f.t.t insert insert \"$v_obj0 = RNDDRAW_FAIRS($v_obj, \\\"$v_num\\\");\" }" );
-			cmd( "if { $v_obj != \"p\" && $v_lag != 0 && [ string is integer -strict $v_lag ] } { .f.t.t insert insert \"$v_obj0 = RNDDRAWLS($v_obj, \\\"$v_num\\\", \\\"$v_label\\\", $v_lag);\" }" );
-		}
+		 {
+		  cmd( "if { $v_obj == \"p\" && $v_lag == 0 && $v_label != \"\" } { .f.t.t insert insert \"$v_obj0 = RNDDRAW(\\\"$v_num\\\", \\\"$v_label\\\");\" }" );
+		  cmd( "if { $v_obj == \"p\" && $v_lag == 0 && $v_label == \"\" } { .f.t.t insert insert \"$v_obj0 = RNDDRAW_FAIR(\\\"$v_num\\\");\" }" );
+		  cmd( "if { $v_obj == \"p\" && $v_lag != 0 && [ string is integer -strict $v_lag ] } { .f.t.t insert insert \"$v_obj0 = RNDDRAWL(\\\"$v_num\\\", \\\"$v_label\\\", $v_lag);\" }" );
+		  cmd( "if { $v_obj != \"p\" && $v_lag == 0 && $v_label != \"\" } { .f.t.t insert insert \"$v_obj0 = RNDDRAWS($v_obj, \\\"$v_num\\\", \\\"$v_label\\\");\" }" );
+		  cmd( "if { $v_obj != \"p\" && $v_lag == 0 && $v_label == \"\" } { .f.t.t insert insert \"$v_obj0 = RNDDRAW_FAIRS($v_obj, \\\"$v_num\\\");\" }" );
+		  cmd( "if { $v_obj != \"p\" && $v_lag != 0 && [ string is integer -strict $v_lag ] } { .f.t.t insert insert \"$v_obj0 = RNDDRAWLS($v_obj, \\\"$v_num\\\", \\\"$v_label\\\", $v_lag);\" }" );
+		 }
 		else
-		{
-			cmd( "if { $v_obj == \"p\" && $v_lag == 0 } { .f.t.t insert insert \"$v_obj0 = RNDDRAWTOT(\\\"$v_num\\\", \\\"$v_label\\\", $v_tot);\" }" );
-			cmd( "if { $v_obj == \"p\" && $v_lag != 0 && [ string is integer -strict $v_lag ] } { .f.t.t insert insert \"$v_obj0 = RNDDRAW_TOTL(\\\"$v_num\\\", \\\"$v_label\\\", $v_lag, $v_tot);\" }" );
-			cmd( "if { $v_obj != \"p\" && $v_lag == 0 } { .f.t.t insert insert \"$v_obj0 = RNDDRAWTOTS($v_obj, \\\"$v_num\\\", \\\"$v_label\\\", $v_tot);\" }" );
-			cmd( "if { $v_obj != \"p\" && $v_lag != 0 && [ string is integer -strict $v_lag ] } { .f.t.t insert insert \"$v_obj0 = RNDDRAW_TOTLS($v_obj, \\\"$v_num\\\", \\\"$v_label\\\", $v_lag, $v_tot);\" }" );
-		}
+		 {
+		  cmd( "if { $v_obj == \"p\" && $v_lag == 0 } { .f.t.t insert insert \"$v_obj0 = RNDDRAWTOT(\\\"$v_num\\\", \\\"$v_label\\\", $v_tot);\" }" );
+		  cmd( "if { $v_obj == \"p\" && $v_lag != 0 && [ string is integer -strict $v_lag ] } { .f.t.t insert insert \"$v_obj0 = RNDDRAW_TOTL(\\\"$v_num\\\", \\\"$v_label\\\", $v_lag, $v_tot);\" }" );
+		  cmd( "if { $v_obj != \"p\" && $v_lag == 0 } { .f.t.t insert insert \"$v_obj0 = RNDDRAWTOTS($v_obj, \\\"$v_num\\\", \\\"$v_label\\\", $v_tot);\" }" );
+		  cmd( "if { $v_obj != \"p\" && $v_lag != 0 && [ string is integer -strict $v_lag ] } { .f.t.t insert insert \"$v_obj0 = RNDDRAW_TOTLS($v_obj, \\\"$v_num\\\", \\\"$v_label\\\", $v_lag, $v_tot);\" }" );
+		 }
 
 		cmd( ".f.t.t see insert" );
 
@@ -2988,7 +2988,7 @@ loop_copy_new:
 		cmd( "if { $v_num != \"\" } { .f.t.t insert insert \";\" }" );
 
 		cmd( "if { $v_num == \"\" } { set num -1 } { set num $v_num }" );
-
+		
 		if ( num != -1 )
 			v_counter = ++num;
 
@@ -3485,35 +3485,35 @@ loop_copy_new:
 
 		switch ( choice )
 		{
-		case 0:
-			cmd( "if { $v_num != \"\" && [ string is integer -strict $v_num ] } { .f.t.t insert insert \"v\\\[$v_num\\] = \" }" );
-			cmd( "if { $v_obj == \"p\" } { .f.t.t insert insert \"V_NODEID()\" }" );
-			cmd( "if { $v_obj != \"p\" } { .f.t.t insert insert \"V_NODEIDS($v_obj)\" }" );
+			case 0:
+				cmd( "if { $v_num != \"\" && [ string is integer -strict $v_num ] } { .f.t.t insert insert \"v\\\[$v_num\\] = \" }" );
+				cmd( "if { $v_obj == \"p\" } { .f.t.t insert insert \"V_NODEID()\" }" );
+				cmd( "if { $v_obj != \"p\" } { .f.t.t insert insert \"V_NODEIDS($v_obj)\" }" );
 
-			cmd( "if { $v_num == \"\" } { set num -1 } { set num $v_num }" );
+				cmd( "if { $v_num == \"\" } { set num -1 } { set num $v_num }" );
+				
+				if ( num != -1 )
+					v_counter = ++num;
+				break;
 
-			if ( num != -1 )
-				v_counter = ++num;
-			break;
+			case 1:
+				cmd( "if { $v_num != \"\" } { .f.t.t insert insert \"$v_num = \" }" );
+				cmd( "if { $v_obj == \"p\" } { .f.t.t insert insert \"V_NODENAME()\" }" );
+				cmd( "if { $v_obj != \"p\" } { .f.t.t insert insert \"V_NODENAMES($v_obj)\" }" );
+				break;
 
-		case 1:
-			cmd( "if { $v_num != \"\" } { .f.t.t insert insert \"$v_num = \" }" );
-			cmd( "if { $v_obj == \"p\" } { .f.t.t insert insert \"V_NODENAME()\" }" );
-			cmd( "if { $v_obj != \"p\" } { .f.t.t insert insert \"V_NODENAMES($v_obj)\" }" );
-			break;
+			case 2:
+				cmd( "if { $v_num != \"\" && [ string is integer -strict $v_num ] } { .f.t.t insert insert \"v\\\[$v_num\\] = \" }" );
+				cmd( ".f.t.t insert insert \"V_LINK($v_obj)\"" );
 
-		case 2:
-			cmd( "if { $v_num != \"\" && [ string is integer -strict $v_num ] } { .f.t.t insert insert \"v\\\[$v_num\\] = \" }" );
-			cmd( ".f.t.t insert insert \"V_LINK($v_obj)\"" );
+				cmd( "if { $v_num == \"\" } { set num -1 } { set num $v_num }" );
+				
+				if ( num != -1 )
+					v_counter = ++num;
+				break;
 
-			cmd( "if { $v_num == \"\" } { set num -1 } { set num $v_num }" );
-
-			if ( num != -1 )
-				v_counter = ++num;
-			break;
-
-		default:
-			break;
+			default:
+				break;
 		}
 
 		cmd( "if { $v_num != \"\" } { .f.t.t insert insert \";\" }" );
@@ -3585,22 +3585,22 @@ loop_copy_new:
 
 		switch ( choice )
 		{
-		case 0:
-			cmd( "if { $v_obj == \"p\" && $v_num != \"\" && [ string is integer -strict $v_num ] } { .f.t.t insert insert \"WRITE_NODEID($v_num);\" }" );
-			cmd( "if { $v_obj != \"p\" && $v_num != \"\" && [ string is integer -strict $v_num ] } { .f.t.t insert insert \"WRITE_NODEIDS($v_obj, $v_num);\" }" );
-			break;
+			case 0:
+				cmd( "if { $v_obj == \"p\" && $v_num != \"\" && [ string is integer -strict $v_num ] } { .f.t.t insert insert \"WRITE_NODEID($v_num);\" }" );
+				cmd( "if { $v_obj != \"p\" && $v_num != \"\" && [ string is integer -strict $v_num ] } { .f.t.t insert insert \"WRITE_NODEIDS($v_obj, $v_num);\" }" );
+				break;
 
-		case 1:
-			cmd( "if { $v_obj == \"p\" } { .f.t.t insert insert \"WRITE_NODENAME(\\\"$v_num\\\");\" }" );
-			cmd( "if { $v_obj != \"p\" } { .f.t.t insert insert \"WRITE_NODENAMES($v_obj, \\\"$v_num\\\");\" }" );
-			break;
+			case 1:
+				cmd( "if { $v_obj == \"p\" } { .f.t.t insert insert \"WRITE_NODENAME(\\\"$v_num\\\");\" }" );
+				cmd( "if { $v_obj != \"p\" } { .f.t.t insert insert \"WRITE_NODENAMES($v_obj, \\\"$v_num\\\");\" }" );
+				break;
 
-		case 2:
-			cmd( "if { $v_num != \"\" && [ string is double -strict $v_num ] } { .f.t.t insert insert \"WRITE_LINK($v_obj, $v_num);\" }" );
-			break;
+			case 2:
+				cmd( "if { $v_num != \"\" && [ string is double -strict $v_num ] } { .f.t.t insert insert \"WRITE_LINK($v_obj, $v_num);\" }" );
+				break;
 
-		default:
-			break;
+			default:
+				break;
 		}
 		cmd( ".f.t.t see insert" );
 
@@ -4041,22 +4041,22 @@ loop_copy_new:
 
 		switch ( choice )
 		{
-		case 0:
-			cmd( "if { $v_obj == \"p\" } { .f.t.t insert insert \"DELETE_NET(\\\"$v_label\\\");\" }" );
-			cmd( "if { $v_obj != \"p\" } { .f.t.t insert insert \"DELETE_NETS($v_obj, \\\"$v_label\\\");\" }" );
-			break;
+			case 0:
+				cmd( "if { $v_obj == \"p\" } { .f.t.t insert insert \"DELETE_NET(\\\"$v_label\\\");\" }" );
+				cmd( "if { $v_obj != \"p\" } { .f.t.t insert insert \"DELETE_NETS($v_obj, \\\"$v_label\\\");\" }" );
+				break;
 
-		case 1:
-			cmd( "if { $v_obj == \"p\" } { .f.t.t insert insert \"DELETE_NODE();\" }" );
-			cmd( "if { $v_obj != \"p\" } { .f.t.t insert insert \"DELETE_NODES($v_obj);\" }" );
-			break;
+			case 1:
+				cmd( "if { $v_obj == \"p\" } { .f.t.t insert insert \"DELETE_NODE();\" }" );
+				cmd( "if { $v_obj != \"p\" } { .f.t.t insert insert \"DELETE_NODES($v_obj);\" }" );
+				break;
 
-		case 2:
-			cmd( ".f.t.t insert insert \"DELETE_LINK($v_obj);\"" );
-			break;
+			case 2:
+				cmd( ".f.t.t insert insert \"DELETE_LINK($v_obj);\"" );
+				break;
 
-		default:
-			break;
+			default:
+				break;
 		}
 		cmd( ".f.t.t see insert" );
 
@@ -4129,8 +4129,8 @@ loop_copy_new:
 		}
 		else
 		{
-			cmd( "if { $v_obj == \"p\" } { .f.t.t insert insert \"STAT_NODE();\" }" );
-			cmd( "if { $v_obj != \"p\" } { .f.t.t insert insert \"STAT_NODES($v_obj);\" }" );
+				cmd( "if { $v_obj == \"p\" } { .f.t.t insert insert \"STAT_NODE();\" }" );
+				cmd( "if { $v_obj != \"p\" } { .f.t.t insert insert \"STAT_NODES($v_obj);\" }" );
 		}
 		cmd( ".f.t.t see insert" );
 
@@ -4297,7 +4297,7 @@ loop_copy_new:
 		cmd( ".a.mname.e selection range 0 end" );
 		cmd( "focus .a.mname.e" );
 
-loop_copy:
+		loop_copy:
 
 		choice = 0;
 		while ( choice == 0 )
@@ -4873,18 +4873,18 @@ loop_copy:
 	if ( choice == 60 )
 	{
 		cmd( "updateTheme" );
-
+		
 		for ( i = 1; i <= LMM_OPTIONS_NUM; ++i )
 		{
 			cmd( "set temp_var%d \"$%s\"", i, lmm_options[ i - 1 ] );
 			cmd( "set default_var%d \"%s\"", i, lmm_defaults[ i - 1 ] );
 		}
-
+		
 		cmd( "set temp_var16 \"[ dict get $themeToName $temp_var16 ]\"" );
 		cmd( "set default_var16 \"[ dict get $themeToName $default_var16 ]\"" );
-
+		
 		cmd( "newtop .a \"Options\" { set choice 2 }" );
-
+		
 		cmd( "ttk::frame .a.f" );
 
 		cmd( "ttk::frame .a.f.c1" );					// column 1
@@ -4928,7 +4928,7 @@ loop_copy:
 		cmd( "pack .a.f.c1.num .a.f.c1.num13 .a.f.c1.num2 .a.f.c1.num4 .a.f.c1.num12 .a.f.c1.num5 -padx 5 -pady 5" );
 
 		cmd( "pack .a.f.c1 -padx 10 -side left" );
-
+		
 		cmd( "ttk::frame .a.f.c2" );					// column 2
 
 		cmd( "ttk::frame .a.f.c2.num16" );
@@ -4937,7 +4937,7 @@ loop_copy:
 		cmd( "write_any .a.f.c2.num16.v $temp_var16" );
 		cmd( "pack .a.f.c2.num16.l .a.f.c2.num16.v" );
 		cmd( "bind .a.f.c2.num16.v <Return> { focus .a.f.c2.num3.f.v; .a.f.c2.num7.v selection range 0 end }" );
-
+		
 		cmd( "ttk::frame .a.f.c2.num3" );
 		cmd( "ttk::label .a.f.c2.num3.l -text \"Font name and size\"" );
 		cmd( "ttk::frame .a.f.c2.num3.f" );
@@ -4985,9 +4985,9 @@ loop_copy:
 		cmd( "pack .a.f.c2.num16 .a.f.c2.num3 .a.f.c2.num7 .a.f.c2.num9 .a.f.c2.num8 -padx 5 -pady 5" );
 
 		cmd( "pack .a.f.c2 -padx 10 -side left" );
-
+		
 		cmd( "pack .a.f" );
-
+		
 		cmd( "proc set_defaults { } { \
 				set ::temp_var1 \"$::default_var1\"; \
 				set ::temp_var2 \"$::default_var2\"; \
@@ -5185,7 +5185,7 @@ loop_copy:
 		cmd( "ttk::listbox $e.l.l -listvariable extra_files -width 30 -height 15 -selectmode single -yscroll \"$e.l.v_scroll set\" -dark $darkTheme" );
 		cmd( "pack $e.l.l $e.l.v_scroll -side left -fill y" );
 		cmd( "mouse_wheel $e.l.l" );
-
+		
 		cmd( "bind $e.l.l <Home> { selectinlist .extra.l.l 0 }" );
 		cmd( "bind $e.l.l <End> { selectinlist .extra.l.l end }" );
 
@@ -5416,7 +5416,7 @@ loop_copy:
 	Tcl_UnlinkVar( inter, "recolor_all");
 
 	set_env( false );
-
+	
 	delete [ ] rootLsd;
 	delete [ ] exec_path;
 
@@ -5430,14 +5430,14 @@ loop_copy:
 bool is_source_file( const char *fname )
 {
 	char *ext;
-
+	
 	cmd( "set ext \"[ file extension \"%s\" ]\"", fname );
 	ext = ( char * ) Tcl_GetVar( inter, "ext", 0 );
 
 	return ! strcmp( ext, ".cpp" ) || ! strcmp( ext, ".c" )   || ! strcmp( ext, ".C" )   || \
-				 ! strcmp( ext, ".CPP" ) || ! strcmp( ext, ".Cpp" ) || ! strcmp( ext, ".c++" ) || \
-				 ! strcmp( ext, ".C++" ) || ! strcmp( ext, ".h" )   || ! strcmp( ext, ".H" )   || \
-				 ! strcmp( ext, ".hpp" ) || ! strcmp( ext, ".HPP" ) || ! strcmp( ext, ".Hpp" );
+		   ! strcmp( ext, ".CPP" ) || ! strcmp( ext, ".Cpp" ) || ! strcmp( ext, ".c++" ) || \
+		   ! strcmp( ext, ".C++" ) || ! strcmp( ext, ".h" )   || ! strcmp( ext, ".H" )   || \
+		   ! strcmp( ext, ".hpp" ) || ! strcmp( ext, ".HPP" ) || ! strcmp( ext, ".Hpp" );
 }
 
 
@@ -5470,21 +5470,21 @@ int strwrds( char string[ ] )
 {
 	int i = 0, words = 0;
 	char lastC = '\0';
-
-	if ( string == NULL )
+	
+	if ( string == NULL ) 
 		return 0;
-
-	while ( isspace( string[ i ] ) )
+	
+	while ( isspace( string[ i ] ) ) 
 		++i;
-
-	if ( string[ i ] == '\0' )
+	
+	if ( string[ i ] == '\0' ) 
 		return 0;
-
+	
 	for ( ; string[ i ] != '\0'; lastC = string[ i++ ] )
-		if ( isspace( string[ i ] ) && ! isspace( lastC ) )
+		if ( isspace( string[ i ] ) && ! isspace( lastC ) ) 
 			words++;
-
-	if ( isspace( lastC ) )
+		
+	if ( isspace( lastC ) ) 
 		return words;
 
 	return words + 1;
@@ -5496,37 +5496,37 @@ int map_color( int hiLev )
 {
 	if ( ! sourcefile || hiLev == 0 )
 		return 0;
-
+	
 	if ( hiLev == 1 )
 		return 4;
-
+	
 	if ( ITEM_COUNT( cTypes ) > ITEM_COUNT( cRegex ) )
 		return ITEM_COUNT( cRegex );
-
+	
 	return ITEM_COUNT( cTypes );
 }
 
 // compare function for qsort to compare different color hits (used by color)
 int comphit(const void *p1, const void *p2)
 {
-	if ( ( ( hit * ) p1 )->iniLin < ( ( hit * ) p2 )->iniLin )
+	if ( ( ( hit * ) p1 )->iniLin < ( ( hit * ) p2 )->iniLin ) 
 		return -1;
-
-	if ( ( ( hit * ) p1 )->iniLin > ( ( hit * ) p2 )->iniLin )
+	
+	if ( ( ( hit * ) p1 )->iniLin > ( ( hit * ) p2 )->iniLin ) 
 		return 1;
-
-	if ( ( ( hit * ) p1 )->iniCol < ( ( hit * ) p2 )->iniCol )
+	
+	if ( ( ( hit * ) p1 )->iniCol < ( ( hit * ) p2 )->iniCol ) 
 		return -1;
-
-	if ( ( ( hit * ) p1 )->iniCol > ( ( hit * ) p2 )->iniCol )
+	
+	if ( ( ( hit * ) p1 )->iniCol > ( ( hit * ) p2 )->iniCol ) 
 		return 1;
-
-	if ( ( ( hit * ) p1 )->type < ( ( hit * ) p2 )->type )
+	
+	if ( ( ( hit * ) p1 )->type < ( ( hit * ) p2 )->type ) 
 		return -1;
-
-	if ( ( ( hit * ) p1 )->type > ( ( hit * ) p2 )->type )
+	
+	if ( ( ( hit * ) p1 )->type > ( ( hit * ) p2 )->type ) 
 		return 1;
-
+	
 	return 0;
 }
 
@@ -5648,7 +5648,7 @@ void make_makefile( bool nw )
 	cmd( "close $f" );
 
 	cmd( "set f [ open \"$RootLsd/$LsdSrc/makefile-%s.txt\" r ]", nw ? "NW" : ( char * ) Tcl_GetVar( inter, "CurPlatform", 0 ) );
-
+	
 	cmd( "set b [ read -nonewline $f ]" );
 	cmd( "close $f" );
 
@@ -5758,7 +5758,7 @@ bool use_eigen( void )
 		return false;
 
 	while ( fgets( buffer, 2 * MAX_PATH_LENGTH - 1, f ) != NULL &&
-					( nfound = strncmp( buffer, EIGEN, strlen( EIGEN ) ) ) );
+			( nfound = strncmp( buffer, EIGEN, strlen( EIGEN ) ) ) );
 
 	fclose( f );
 
@@ -5792,7 +5792,7 @@ bool compile_run( bool run, bool nw )
 	}
 
 	if ( ! run && ! nw )			// delete existing object file if it's just compiling
-	{	// to force recompilation
+	{								// to force recompilation
 		cmd( "set oldObj \"[ file rootname [ lindex [ glob -nocomplain fun_*.cpp ] 0 ] ].o\"" );
 		cmd( "if { [ file exists \"$oldObj\" ] } { file delete \"$oldObj\" }" );
 	}
@@ -5891,17 +5891,17 @@ bool compile_run( bool run, bool nw )
 
 			switch ( platform )
 			{
-			case LINUX:
-				cmd( "catch { exec ./%s & } result", str + 7 );
-				break;
-
-			case MAC:
-				cmd( "catch { exec open -F -n ./%s.app & } result", str + 7 );
-				break;
-
-			case WINDOWS:
-				cmd( "catch { exec %s.exe & } result", str + 7 );
-				break;
+				case LINUX:
+					cmd( "catch { exec ./%s & } result", str + 7 );
+					break;
+					
+				case MAC:
+					cmd( "catch { exec open -F -n ./%s.app & } result", str + 7 );
+					break;
+					
+				case WINDOWS:
+					cmd( "catch { exec %s.exe & } result", str + 7 );
+					break;
 			}
 		}
 	}

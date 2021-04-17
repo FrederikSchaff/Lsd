@@ -6,10 +6,10 @@
 
 	Copyright Marco Valente and Marcelo Pereira
 	LSD is distributed under the GNU General Public License
-
+	
 	See Readme.txt for copyright information of
 	third parties' code used in LSD
-
+	
  *************************************************************/
 
 /*************************************************************
@@ -98,7 +98,7 @@ bool no_ptr_chk = true;
 	sprintf( msg, "equation not found for variable '%s'", label ); \
 	error_hard( msg, "equation not found", "check your configuration (variable name) or\ncode (equation name) to prevent this situation\nPossible problems:\n- There is no equation for this variable\n- The equation name is different from the variable name (case matters!)" ); \
 	return res;
-
+	
 #define EQ_TEST_RESULT \
 	if ( quit == 0 && ( ( ! use_nan && is_nan( res ) ) || is_inf( res ) ) ) \
 	{ \
@@ -153,7 +153,7 @@ bool no_ptr_chk = true;
 		variable *var = this; \
 		object app; \
 		EQ_BEGIN
-
+		
 #define MODELEND \
 		EQ_NOT_FOUND \
 		end: \
@@ -163,7 +163,7 @@ bool no_ptr_chk = true;
 	}
 
 #define EQUATION( X ) \
-	if ( ! strcmp( label, X ) ) {
+	if ( ! strcmp( label, X ) ) { 
 
 #define RESULT( X ) \
 		res = X; \
@@ -217,12 +217,12 @@ bool no_ptr_chk = true;
 #define MODELEND \
 		}; \
 	}
-
+			
 #define EQUATION( X ) \
 	{ string( X ), [ ]( object *caller, variable *var ) \
 		{ \
 			EQ_BEGIN
-
+		
 #define RESULT( X ) \
 			; \
 			res = X; \
@@ -427,7 +427,7 @@ bool no_ptr_chk = true;
 #define INTERACTS( O, X, Y ) ( CHK_PTR_DBL( O ) O->interact( ( char * ) X, Y, v, i, j, h, k, \
 	cur, cur1, cur2, cur3, cur4, cur5, cur6, cur7, cur8, cur9, \
 	curl, curl1, curl2, curl3, curl4, curl5, curl6, curl7, curl8, curl9 ) )
-
+	
 #define SEARCH( X ) ( p->search( ( char * ) X, false ) )
 #define SEARCHS( O, X ) ( CHK_PTR_OBJ( O ) O->search( ( char * ) X, false ) )
 #define SEARCH_CND( X, Y ) ( p->search_var_cond( ( char * ) X, Y, 0 ) )
@@ -628,7 +628,7 @@ bool no_ptr_chk = true;
 #define CYCLE3_SAFES( O, X, Y ) for ( X = cycle_obj( O, ( char * ) Y, "CYCLE_SAFES" ), \
 								 cyccur3 = brother( X ); X != NULL; X = cyccur3, \
 								 cyccur3 != NULL ? cyccur3 = brother( cyccur3 ) : cyccur3 = cyccur3 )
-
+								 
 #ifdef NO_POINTER_INIT
 #define CYCLE_LINK( O ) for ( O = p->node->first; O != NULL; O = O->next )
 #define CYCLE_LINKS( C, O ) for ( O = C->node->first; O != NULL; O = O->next )
@@ -652,9 +652,9 @@ bool no_ptr_chk = true;
 // enabled only when directly including fun_head.h (and not fun_head_fast.h)
 #ifndef FAST_LOOKUP
 
-double init_lattice( double pixW = 0, double pixH = 0, double nrow = 100, double ncol = 100,
-										 char const lrow[ ] = "y", char const lcol[ ] = "x", char const lvar[ ] = "",
-										 object *p = NULL, int init_color = -0xffffff );
+double init_lattice( double pixW = 0, double pixH = 0, double nrow = 100, double ncol = 100, 
+					 char const lrow[ ] = "y", char const lcol[ ] = "x", char const lvar[ ] = "", 
+					 object *p = NULL, int init_color = -0xffffff );
 double poidev( double xm, long *idum_loc = NULL );
 int deb( object *r, object *c, char const *lab, double *res, bool interact = false, const char *hl_var = "" );
 object *go_brother( object *c );
@@ -726,7 +726,7 @@ void cmd( const char *cm, ... );
 	f = fopen( "log.txt", "a" ); \
 	fprintf( f, "t=%d\t%s\t(cur=%g)\n", t, var->label, var->val[0] ); \
 	fclose( f );
-
+ 
 #define DEBUG_AT( X ) \
 	if ( t >= X ) \
 	{ \

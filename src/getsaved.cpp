@@ -9,7 +9,7 @@
 
 	See Readme.txt for copyright information of
 	third parties' code used in LSD
-
+	
  *************************************************************/
 
 /*************************************************************
@@ -203,14 +203,10 @@ int lsdmain( int argn, char **argv )
 FUN
 Dummy for linking
 *********************************/
-double variable::fun( object* r ) {
-	return NAN;
-}
+double variable::fun( object* r ) { return NAN; }
 
 
 /*********************************
 ALLOC_SAVE_VAR
 *********************************/
-bool alloc_save_var( variable *v ) {
-	return true;
-}
+bool alloc_save_var( variable *v ) { return true; }

@@ -6,12 +6,12 @@
 
 	Copyright Marco Valente and Marcelo Pereira
 	LSD is distributed under the GNU General Public License
-
+	
 	See Readme.txt for copyright information of
 	third parties' code used in LSD
-
+	
  *************************************************************/
-
+ 
 /*************************************************************
 DECL.H
 Global definitions among all LSD C++ modules
@@ -75,7 +75,7 @@ Relevant flags (when defined):
 #endif
 
 // redefine NAN to use faster non-signaling NaNs
-#if has_quiet_NaN
+#if has_quiet_NaN 
 #undef NAN
 #define NAN quiet_NaN( )
 #endif
@@ -90,7 +90,7 @@ Relevant flags (when defined):
 
 // access permissions in Linux/Mac
 #ifndef ACCESSPERMS
-#define ACCESSPERMS 0777
+#define ACCESSPERMS 0777 
 #endif
 
 // standalone C functions/procedures (visible to the users)
@@ -271,7 +271,7 @@ void draw_buttons( void );
 void draw_obj( object *t, object *sel, int level = 0, int center = 0, int from = 0, bool zeroinst = false );
 void edit_data( object *root, int *choice, char *obj_name );
 void edit_str( object *r, const char *tag, int *idx, int res, int *choice, int *done );
-void eliminate_obj( object **c, int actual, int desired, int *choice );
+void eliminate_obj( object **c, int actual, int desired , int *choice );
 void empty_blueprint( void );
 void empty_cemetery( void );
 void empty_description( void );
@@ -434,7 +434,7 @@ extern int findexSens;			// index to sequential sensitivity configuration filena
 extern int log_start;			// first period to start logging to file, if any
 extern int log_stop;			// last period to log to file, if any
 extern int macro;				// equations style (macros or C++) (bool)
-extern int max_threads;			// suggested maximum number of parallel threads
+extern int max_threads;			// suggested maximum number of parallel threads 
 extern int no_res;				// do not produce .res results files (bool)
 extern int overwConf;			// overwrite current configuration file on run (bool)
 extern int parallel_disable;	// flag to control parallel mode
@@ -461,7 +461,7 @@ extern variable *cemetery;  	// LSD saved data from deleted objects
 extern variable *last_cemetery;	// LSD last saved data from deleted objects
 extern void *random_engine;		// current random number generator engine
 
-// multi-threading control
+// multi-threading control 
 #ifndef NP
 extern atomic< bool > parallel_ready;	// flag to indicate multitasking is available
 extern map< thread::id, worker * > thr_ptr;	// worker thread pointers
