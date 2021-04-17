@@ -205,7 +205,7 @@ proc showmodel pippo {
 					set kk _
 				}
 				set ll %W
-				set ff [ lsearch -start [ expr [ $ll curselection ] + 1 ] -nocase [ $ll get 0 end ] "${kk}*" ]
+				set ff [ lsearch -start [ expr { [ $ll curselection ] + 1 } ] -nocase [ $ll get 0 end ] "${kk}*" ]
 				if { $ff == -1 } {
 					set ff [ lsearch -start 0 -nocase [ $ll get 0 end ] "${kk}*" ]
 				}
@@ -389,7 +389,7 @@ proc showmodel pippo {
 
 	cd $curdir
 	
-	update
+	update idletasks
 }
 
 
@@ -438,7 +438,7 @@ proc mdelete i {
 		set answer [ ttk::messageBox -parent .l -type yesno -title Confirmation -icon question -default yes -message "Confirm deletion?" -detail "Do you want to delete $item\n[ lindex $lmn $i ]\n([ lindex $ldn $i ])?" ]
 
 		if { $answer == "yes" } {
-			set modelDir [ string range [ lindex $ldn $i ] 0 [ expr [ string last / [ lindex $ldn $i ] ] - 1 ] ] 
+			set modelDir [ string range [ lindex $ldn $i ] 0 [ expr { [ string last / [ lindex $ldn $i ] ] - 1 } ] ] 
 			if { ! [ file exists "$RootLsd/trashbin" ] } {
 				file mkdir "$RootLsd/trashbin"
 			}
@@ -450,7 +450,7 @@ proc mdelete i {
 				puts $f "Folder containing deleted models.\n"
 				close $f
 			}
-			set modelName [ string range [ lindex $ldn $i ] [ expr [ string last / [ lindex $ldn $i ] ] + 1 ] end ]
+			set modelName [ string range [ lindex $ldn $i ] [ expr { [ string last / [ lindex $ldn $i ] ] + 1 } ] end ]
 			if { [ file exists "$RootLsd/trashbin/$modelName" ] } {
 				catch { file delete -force "$RootLsd/trashbin/$modelName" }
 			}
@@ -501,7 +501,6 @@ proc medit i {
 	ttk::frame .l.e.t.t
 	ttk::scrollbar .l.e.t.t.yscroll -command ".l.e.t.t.text yview"
 	ttk::text .l.e.t.t.text -wrap word -width 60 -height 20 -yscrollcommand ".l.e.t.t.yscroll set" -dark $darkTheme -style smallFixed.TText
-	.l.e.t.t.text insert end "[ lindex $lmd $i ]"
 	pack .l.e.t.t.yscroll -side right -fill y
 	pack .l.e.t.t.text
 	mouse_wheel .l.e.t.t.text
@@ -551,9 +550,11 @@ proc medit i {
 	}
 
 	showtop .l.e
+	mousewarpto .l.e.b.ok
+	
+	.l.e.t.t.text insert end "[ lindex $lmd $i ]"
 	.l.e.n.n selection range 0 end
 	focus .l.e.n.n
-	mousewarpto .l.e.b.ok
 }
 
 
@@ -606,7 +607,6 @@ proc mpaste i {
 	ttk::frame .l.p.t.t
 	ttk::scrollbar .l.p.t.t.yscroll -command ".l.p.t.t.text yview"
 	ttk::text .l.p.t.t.text -wrap word -width 60 -height 20 -yscrollcommand ".l.p.t.t.yscroll set" -dark $darkTheme -style smallFixed.TText
-	.l.p.t.t.text insert end "$copydscr"
 	pack .l.p.t.t.yscroll -side right -fill y
 	pack .l.p.t.t.text
 	mouse_wheel .l.p.t.t.text
@@ -621,6 +621,9 @@ proc mpaste i {
 	bind .l.p.d.d <Return> { focus .l.p.t.t.text; .l.p.t.t.text mark set insert 1.0 }
 
 	showtop .l.p
+	mousewarpto .l.p.b.ok
+	
+	.l.p.t.t.text insert end "$copydscr"
 	.l.p.n.n selection range 0 end
 	focus .l.p.n.n
 

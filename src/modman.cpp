@@ -201,16 +201,16 @@ int lsdmain( int argn, char **argv )
 	choice = 0;
 
 	// load native Tk procedures for graphical user interface management
-	cmd( "if [ file exists \"$RootLsd/$LsdSrc/gui.tcl\" ] { if [ catch { source \"$RootLsd/$LsdSrc/gui.tcl\" } err0x01 ] { set choice [ expr $choice + %d ] } } { set choice [ expr $choice + %d ] }", 0x0100, 0x01 );
+	cmd( "if [ file exists \"$RootLsd/$LsdSrc/gui.tcl\" ] { if [ catch { source \"$RootLsd/$LsdSrc/gui.tcl\" } err0x01 ] { set choice [ expr { $choice + %d } ] } } { set choice [ expr { $choice + %d } ] }", 0x0100, 0x01 );
 
 	// load native Tcl procedures for external files handling
-	cmd( "if [ file exists \"$RootLsd/$LsdSrc/file.tcl\" ] { if [ catch { source \"$RootLsd/$LsdSrc/file.tcl\" } err0x02 ] { set choice [ expr $choice + %d ] } } { set choice [ expr $choice + %d ] }", 0x0200, 0x02 );
+	cmd( "if [ file exists \"$RootLsd/$LsdSrc/file.tcl\" ] { if [ catch { source \"$RootLsd/$LsdSrc/file.tcl\" } err0x02 ] { set choice [ expr { $choice + %d } ] } } { set choice [ expr { $choice + %d } ] }", 0x0200, 0x02 );
 
 	// load native Tcl procedures for general utilities
-	cmd( "if [ file exists \"$RootLsd/$LsdSrc/util.tcl\" ] { if [ catch { source \"$RootLsd/$LsdSrc/util.tcl\" } err0x04 ] { set choice [ expr $choice + %d ] } } { set choice [ expr $choice + %d ] }", 0x0400, 0x04 );
+	cmd( "if [ file exists \"$RootLsd/$LsdSrc/util.tcl\" ] { if [ catch { source \"$RootLsd/$LsdSrc/util.tcl\" } err0x04 ] { set choice [ expr { $choice + %d } ] } } { set choice [ expr { $choice + %d } ] }", 0x0400, 0x04 );
 
 	// load the native model browser module
-	cmd( "if [ file exists \"$RootLsd/$LsdSrc/model.tcl\" ] { if [ catch { source \"$RootLsd/$LsdSrc/model.tcl\" } err0x08 ] { set choice [ expr $choice + %d ] } } { set choice [ expr $choice + %d ] }", 0x0800, 0x08 );
+	cmd( "if [ file exists \"$RootLsd/$LsdSrc/model.tcl\" ] { if [ catch { source \"$RootLsd/$LsdSrc/model.tcl\" } err0x08 ] { set choice [ expr { $choice + %d } ] } } { set choice [ expr { $choice + %d } ] }", 0x0800, 0x08 );
 
 	if ( choice != 0 )
 	{
@@ -263,7 +263,7 @@ int lsdmain( int argn, char **argv )
 	cmd( "set v_num 0" );
 	cmd( "set alignMode \"LMM\"" );
 	cmd( "set MakeExe \"$DefaultMakeExe\"" );
-	cmd( "set small_character [ expr $dim_character - $deltaSize ]" );
+	cmd( "set small_character [ expr { $dim_character - $deltaSize } ]" );
 
 	// configure main window
 	cmd( ". configure -menu .m -background $colorsTheme(bg)" );
@@ -459,7 +459,7 @@ int lsdmain( int argn, char **argv )
 	cmd( "ttk::button .bbar.equation -image equationImg -style Toolbutton -command { set choice 8 }" );
 	cmd( "ttk::button .bbar.extra -image extraImg -style Toolbutton -command { set choice 70 }" );
 	cmd( "ttk::button .bbar.set -image setImg -style Toolbutton -command { set choice 48 }" );
-	cmd( "ttk::button .bbar.hide -image hideImg -style Toolbutton -command { set autoHide [ expr ! $autoHide ] }" );
+	cmd( "ttk::button .bbar.hide -image hideImg -style Toolbutton -command { set autoHide [ expr { ! $autoHide } ] }" );
 	cmd( "ttk::button .bbar.help -image helpImg -style Toolbutton -command { LsdHelp LSD_macros.html }" );
 	cmd( "ttk::label .bbar.tip -textvariable ttip -width 30 -style graySmall.TLabel -anchor w" );
 
@@ -788,7 +788,7 @@ int lsdmain( int argn, char **argv )
 
 	loop:
 
-	cmd( "if { ! $keepfocus } { focus .f.t.t; update } { set keepfocus 0 }" );
+	cmd( "if { ! $keepfocus } { focus .f.t.t; update idletasks } { set keepfocus 0 }" );
 
 	// update file save status in titlebar and cursor position in info bar
 	cmd( "update_title_bar" );
@@ -1131,7 +1131,7 @@ int lsdmain( int argn, char **argv )
 		cmd( "Xcancel .find b Find { \
 				if { $textsearch != \"\" } { \
 					incr lfindsize; \
-					set curcounter [ expr $lfindsize - 1 ]; \
+					set curcounter [ expr { $lfindsize - 1 } ]; \
 					lappend lfind \"$textsearch\"; \
 					.f.t.t tag remove sel 1.0 end; \
 					set cur [ .f.t.t index insert ]; \
@@ -1151,7 +1151,7 @@ int lsdmain( int argn, char **argv )
 						destroytop .find; \
 						focus .f.t.t; \
 						set keepfocus 0; \
-						update \
+						update idletasks \
 					} else { \
 						.find.l.e selection range 0 end; \
 						bell \
@@ -1173,7 +1173,7 @@ int lsdmain( int argn, char **argv )
 				} \
 			}" );
 		cmd( "bind .find.l.e <Down> { \
-				if { $lfindsize > 0 && $curcounter < [ expr $lfindsize - 1 ] } { \
+				if { $lfindsize > 0 && $curcounter < [ expr { $lfindsize - 1 } ] } { \
 					incr curcounter; \
 					set textsearch \"[ lindex $lfind $curcounter ]\"; \
 					.find.l.e selection range 0 end \
@@ -1217,7 +1217,7 @@ int lsdmain( int argn, char **argv )
 					.f.t.t mark set insert \"$cur + $length char\"; \
 					.f.t.t see $cur; \
 					upd_cursor; \
-					update \
+					update idletasks \
 				} else { \
 					bell \
 				} \
@@ -1279,7 +1279,7 @@ int lsdmain( int argn, char **argv )
 		cmd( "Xcancel .l b2 Find { \
 				if { $textsearch != \"\" } { \
 					incr lfindsize; \
-					set curcounter [ expr $lfindsize - 1 ]; \
+					set curcounter [ expr { $lfindsize - 1 } ]; \
 					lappend lfind \"$textsearch\"; \
 					.f.t.t tag remove found 1.0 end; \
 					.f.t.t tag remove sel 1.0 end; \
@@ -1298,7 +1298,7 @@ int lsdmain( int argn, char **argv )
 						}; \
 						.f.t.t see $cur; \
 						upd_cursor; \
-						update; \
+						update idletasks; \
 						.l.b1.repl conf -state normal; \
 						.l.b1.all conf -state normal \
 					} else { \
@@ -1320,7 +1320,7 @@ int lsdmain( int argn, char **argv )
 				} \
 			}" );
 		cmd( "bind .l.l.e <Down> { \
-				if { $lfindsize > 0 && $curcounter < [ expr $lfindsize - 1 ] } { \
+				if { $lfindsize > 0 && $curcounter < [ expr { $lfindsize - 1 } ] } { \
 					incr curcounter; \
 					set textsearch \"[ lindex $lfind $curcounter ]\"; \
 					.l.l.e selection range 0 end \
@@ -1868,7 +1868,7 @@ int lsdmain( int argn, char **argv )
 	{
 		cmd( "set in [ .f.t.t index insert ]" );
 		cmd( "scan $in %%d.%%d line col" );
-		cmd( "set line [ expr $line - 1 ]" );
+		cmd( "set line [ expr { $line - 1 } ]" );
 		cmd( "set s [ .f.t.t get $line.0 $line.end ]" );
 
 		s = ( char * ) Tcl_GetVar( inter, "s", 0 );
@@ -1909,9 +1909,9 @@ int lsdmain( int argn, char **argv )
 				goto loop;
 
 			if ( num > 0 )
-				cmd( "if [ .f.t.t compare $a < $b ] { set num [ expr $num + 1 ]; set cur [ .f.t.t index \"$a+1char\" ] } { set num [ expr $num - 1 ]; set cur [ .f.t.t index \"$b+1char\" ] }" );
+				cmd( "if [ .f.t.t compare $a < $b ] { set num [ expr { $num + 1 } ]; set cur [ .f.t.t index \"$a+1char\" ] } { set num [ expr { $num - 1 } ]; set cur [ .f.t.t index \"$b+1char\" ] }" );
 			else
-				cmd( "if [ .f.t.t compare $a > $b ] { set num [ expr $num + 1 ]; set cur [ .f.t.t index $a ] } { set num [ expr $num - 1 ]; set cur [ .f.t.t index $b ] }" );
+				cmd( "if [ .f.t.t compare $a > $b ] { set num [ expr { $num + 1 } ]; set cur [ .f.t.t index $a ] } { set num [ expr { $num - 1 } ]; set cur [ .f.t.t index $b ] }" );
 
 
 		}
@@ -2254,7 +2254,7 @@ int lsdmain( int argn, char **argv )
 
 		cmd( "set in [ .f.t.t index insert ]" );
 		cmd( "scan $in %%d.%%d line col" );
-		cmd( "set line [ expr $line -1 ]" );
+		cmd( "set line [ expr { $line -1 } ]" );
 		cmd( "set s [ .f.t.t get $line.0 $line.end ]" );
 		s = ( char * ) Tcl_GetVar( inter, "s", 0 );
 		for ( i = 0; s[ i ] == ' ' || s[ i ] == '\t'; ++i )
@@ -3655,7 +3655,7 @@ int lsdmain( int argn, char **argv )
 
 		cmd( "set in [ .f.t.t index insert ]" );
 		cmd( "scan $in %%d.%%d line col" );
-		cmd( "set line [ expr $line -1 ]" );
+		cmd( "set line [ expr { $line - 1 } ]" );
 		cmd( "set s [ .f.t.t get $line.0 $line.end ]" );
 		s = ( char * ) Tcl_GetVar( inter, "s", 0 );
 		for ( i = 0; s[ i ] == ' ' || s[ i ] == '\t'; ++i )
@@ -4178,9 +4178,9 @@ int lsdmain( int argn, char **argv )
 			if ( choice == 0 )
 				goto loop;
 			if ( num > 0 )
-				cmd( "if [ .f.t.t compare $a < $b ] { set num [ expr $num + 1 ]; set cur [ .f.t.t index \"$a+1char\" ] } { set num [ expr $num - 1 ]; set cur [ .f.t.t index \"$b+1char\" ] }" );
+				cmd( "if [ .f.t.t compare $a < $b ] { set num [ expr { $num + 1 } ]; set cur [ .f.t.t index \"$a+1char\" ] } { set num [ expr { $num - 1 } ]; set cur [ .f.t.t index \"$b+1char\" ] }" );
 			else
-				cmd( "if [ .f.t.t compare $a > $b ] { set num [ expr $num + 1 ]; set cur [ .f.t.t index $a ] } { set num [ expr $num - 1 ]; set cur [ .f.t.t index $b ] }" );
+				cmd( "if [ .f.t.t compare $a > $b ] { set num [ expr { $num + 1 } ]; set cur [ .f.t.t index $a ] } { set num [ expr { $num - 1 } ]; set cur [ .f.t.t index $b ] }" );
 		}
 
 		choice = 0;
@@ -4568,9 +4568,8 @@ int lsdmain( int argn, char **argv )
 		cmd( "newtop .l \"System Options\" { set choice 2 }" );
 
 		cmd( "ttk::frame .l.t" );
-		cmd( "ttk::scrollbar .l.t.yscroll -command \".l.t.text yview\"" );
-		cmd( "ttk::text .l.t.text -wrap word -width 70 -height 20 -yscrollcommand \".l.t.yscroll set\" -dark $darkTheme -style smallFixed.TText" );
-		cmd( ".l.t.text insert end $a" );
+		cmd( "ttk::scrollbar .l.t.yscroll -command { .l.t.text yview }" );
+		cmd( "ttk::text .l.t.text -wrap word -width 70 -height 20 -yscrollcommand { .l.t.yscroll set } -dark $darkTheme -style smallFixed.TText" );
 		cmd( "pack .l.t.yscroll -side right -fill y" );
 		cmd( "pack .l.t.text" );
 		cmd( "mouse_wheel .l.t.text" );
@@ -4612,8 +4611,10 @@ int lsdmain( int argn, char **argv )
 			} { set choice 1 } { LsdHelp LMM.html#compilation_options } { set choice 2 }" );
 
 		cmd( "showtop .l" );
-		cmd( "focus .l.t.text" );
 		cmd( "mousewarpto .l.b.ok" );
+		
+		cmd( ".l.t.text insert end $a" );
+		cmd( "focus .l.t.text" );
 
 		choice = 0;
 		while ( choice == 0 )
@@ -4675,9 +4676,8 @@ int lsdmain( int argn, char **argv )
 		cmd( "newtop .l \"Model Options\" { set choice 2 }" );
 
 		cmd( "ttk::frame .l.t" );
-		cmd( "ttk::scrollbar .l.t.yscroll -command \".l.t.text yview\"" );
-		cmd( "ttk::text .l.t.text -wrap word -width 70 -height 16 -yscrollcommand \".l.t.yscroll set\" -dark $darkTheme -style smallFixed.TText" );
-		cmd( ".l.t.text insert end $a" );
+		cmd( "ttk::scrollbar .l.t.yscroll -command { .l.t.text yview }" );
+		cmd( "ttk::text .l.t.text -wrap word -width 70 -height 16 -yscrollcommand { .l.t.yscroll set } -dark $darkTheme -style smallFixed.TText" );
 		cmd( "pack .l.t.yscroll -side right -fill y" );
 		cmd( "pack .l.t.text" );
 		cmd( "pack .l.t" );
@@ -4805,8 +4805,10 @@ int lsdmain( int argn, char **argv )
 
 
 		cmd( "showtop .l" );
-		cmd( "focus .l.t.text" );
 		cmd( "mousewarpto .l.b.ok" );
+
+		cmd( ".l.t.text insert end $a" );
+		cmd( "focus .l.t.text" );
 
 		choice = 0;
 		while ( choice == 0 )
@@ -5319,8 +5321,8 @@ int lsdmain( int argn, char **argv )
 					.f.t.t tag remove sel 1.0 end; \
 					.f.t.t tag add sel $errlin.0 $errlin.end; \
 					if { [ info exists errcol ] && $errcol != \"\" && [ string is integer -strict $errcol ] } { \
-						.f.t.t see $errlin.[ expr $errcol - 1 ]; \
-						.f.t.t mark set insert $errlin.[ expr $errcol - 1 ] \
+						.f.t.t see $errlin.[ expr { $errcol - 1 } ]; \
+						.f.t.t mark set insert $errlin.[ expr { $errcol - 1 } ] \
 					} else { \
 						.f.t.t see $errlin.0; \
 						.f.t.t mark set insert $errlin.0 \
@@ -5460,7 +5462,7 @@ const char *cRegex[ ] = {
 	"^(\\s)*#\[^/]*",
 	"\\\"\[^\\\"]*\\\"",
 	"v\\[\[0-9]{1,3}]|curl?\[1-9]?|root|up|next|hook",
-	"MODEL(BEGIN|END)|(END_)?EQUATION(_DUMMY)?|FUNCTION|RESULT|ABORT|DEBUG_(START|STOP)(_AT)?|CURRENT|VL?S?|V_(CHEATL?S?|NODEIDS?|NODENAMES?|LINKS?|EXTS?|LAT)|SUM(_CND)?L?S?|COUNT(_ALL|_CNDL?|_ALL_CNDL?|_HOOK)?S?|STAT(_CND)?L?S?|STAT_(NETS?|NODES?)|(WHT)?AVE(_CND)?L?S?|MED(_CND)?L?S?|PERC(_CND)?L?S?|SD(_CND)?L?S?|INCRS?|MULTS?|CYCLES?|CYCLE_(EXTS?|LINKS?)|CYCLE2?3?_SAFES?|MAX(_CND)?L?S?|MIN(_CND)?L?S?|HOOKS?|SHOOKS?|WRITEL?L?S?|WRITE_(NODEIDS?|NODENAMES?|LINK|EXTS?|ARG_EXTS?|LAT|HOOKS?|SHOOKS?)|SEARCH(_CNDL?|_INST|_NODE|_LINK)?S?|SEARCHS?|TSEARCH(_CND)?S?|SORT2?S?|ADDN?OBJL?S?|ADDN?OBJ_EXL?S?|ADD(NODES?|LINKW?S?|EXTS?|EXT_INITS?|HOOKS?)|DELETE|DELETE_(EXTS?|NETS?|NODES?|LINKS?)|DELETINGS?|RND|RND_(GENERATOR|SEED|SETSEED)|RNDDRAWL?S?|RNDDRAW_(FAIRS?|TOTL?S?|NODES?|LINKS?)|DRAWPROB_(NODES?|LINK)|PARAMETER|INTERACTS?|P?LOG|INIT_(TSEARCH(_CND)?T?S?|NETS?|LAT)|LOAD_NETS?|SAVE_(NETS?|LAT)|(SNAP|SHUFFLE)_NETS?|LINK(TO|FROM)|EXTS?|(P|DO|EXEC)_EXTS?|(USE|NO)_NAN|(USE|NO)_POINTER_CHECK|(USE|NO)_SAVED|(USE|NO)_SEARCH|(USE|NO)_ZERO_INSTANCE|PATH|CONFIG|(LAST_)?T|SLEEP|FAST(_FULL)?|OBSERVE|LAST_CALCS?|RECALCS?|UPDATE(S|_RECS?)?|DEFAULT_RESULT|THIS|NEXTS?|(GRAND)?PARENTS?|UP|DOWN|RUN|abs|min|max|round(_digits)?|(sq|cb)rt|pow|exp|log(10)?|fact|(t|l)?gamma|a?sin|a?cos|a?tan|pi|is_(finite|inf|nan)|uniform(_int)?|l?norm(cdf)?|poisson(cdf)?|beta(cdf)?|alapl(cdf)?|unifcdf|gammacdf|close_sim",
+	"MODEL(BEGIN|END)|(END_)?EQUATION(_DUMMY)?|FUNCTION|RESULT|ABORT|DEBUG_(START|STOP)(_AT)?|CURRENT|VL?S?|V_(CHEATL?S?|NODEIDS?|NODENAMES?|LINKS?|EXTS?|LAT)|SUM(_CND)?L?S?|COUNT(_ALL|_CNDL?|_ALL_CNDL?|_HOOK)?S?|STAT(_CND)?L?S?|STAT_(NETS?|NODES?)|(WHT)?AVE(_CND)?L?S?|MED(_CND)?L?S?|PERC(_CND)?L?S?|SD(_CND)?L?S?|INCRS?|MULTS?|CYCLES?|CYCLE_(EXTS?|LINKS?)|CYCLE2?3?_SAFES?|MAX(_CND)?L?S?|MIN(_CND)?L?S?|HOOKS?|SHOOKS?|WRITEL?L?S?|WRITE_(NODEIDS?|NODENAMES?|LINK|EXTS?|ARG_EXTS?|LAT|HOOKS?|SHOOKS?)|SEARCH(_CNDL?|_INST|_NODE|_LINK)?S?|SEARCHS?|TSEARCH(_CND)?S?|SORT2?L?S?|ADDN?OBJL?S?|ADDN?OBJ_EXL?S?|ADD(NODES?|LINKW?S?|EXTS?|EXT_INITS?|HOOKS?)|DELETE|DELETE_(EXTS?|NETS?|NODES?|LINKS?)|DELETINGS?|RND|RND_(GENERATOR|SEED|SETSEED)|RNDDRAWL?S?|RNDDRAW_(FAIRS?|TOTL?S?|NODES?|LINKS?)|DRAWPROB_(NODES?|LINK)|PARAMETER|INTERACTS?|P?LOG|INIT_(TSEARCH(_CND)?T?S?|NETS?|LAT)|LOAD_NETS?|SAVE_(NETS?|LAT)|(SNAP|SHUFFLE)_NETS?|LINK(TO|FROM)|EXTS?|(P|DO|EXEC)_EXTS?|(USE|NO)_NAN|(USE|NO)_POINTER_CHECK|(USE|NO)_SAVED|(USE|NO)_SEARCH|(USE|NO)_ZERO_INSTANCE|PATH|CONFIG|(LAST_)?T|SLEEP|FAST(_FULL)?|OBSERVE|LAST_CALCS?|RECALCS?|UPDATE(S|_RECS?)?|DEFAULT_RESULT|THIS|NEXTS?|(GRAND)?PARENTS?|UP|DOWN|RUN|abs|min|max|round(_digits)?|(sq|cb)rt|pow|exp|log(10)?|fact|(t|l)?gamma|a?sin|a?cos|a?tan|pi|is_(finite|inf|nan)|uniform(_int)?|l?norm(cdf)?|poisson(cdf)?|beta(cdf)?|alapl(cdf)?|unifcdf|gammacdf|close_sim",
 	"auto|const|double|float|int|short|struct|unsigned|long|signed|void|enum|volatile|char|extern|static|union|asm|bool|explicit|template|typename|class|friend|private|inline|public|virtual|mutable|protected|wchar_t",
 	"break|continue|else|for|switch|case|default|goto|sizeof|typedef|do|if|return|while|dynamic_cast|namespace|reinterpret_cast|try|new|static_cast|typeid|catch|false|operator|this|using|throw|delete|true|const_cast|cin|endl|iomanip|main|npos|std|cout|include|iostream|NULL|string"
 };
@@ -5886,21 +5888,24 @@ bool compile_run( bool run, bool nw )
 
 		if ( run )							// no problem - execute
 		{
-			// create the element list file in background
-			cmd( "after 0 { create_elem_file $modelDir }; update" );
+			// create the element list file in background and try to open 10 times every 50 ms
+			cmd( "after 0 { create_elem_file $modelDir }" );
+			cmd( "update" );
+			cmd( "set n 10" );
+			cmd( "set result \"\"" );
 
 			switch ( platform )
 			{
 				case LINUX:
-					cmd( "catch { exec ./%s & } result", str + 7 );
+					cmd( "while { [ catch { exec ./%s & } result ] && $n > 0 } { incr n -1; after 50 }", str + 7 );
 					break;
 					
 				case MAC:
-					cmd( "catch { exec open -F -n ./%s.app & } result", str + 7 );
+					cmd( "while { [ catch { exec open -F -n ./%s.app & } result ] && $n > 0 } { incr n -1; after 50 }", str + 7 );
 					break;
 					
 				case WINDOWS:
-					cmd( "catch { exec %s.exe & } result", str + 7 );
+					cmd( "while { [ catch { exec %s.exe & } result ] && $n > 0 } { incr n -1; after 50 }", str + 7 );
 					break;
 			}
 		}
@@ -5961,7 +5966,7 @@ void create_compresult_window( bool nw )
 
 	cmd( "ttk::frame .mm.b" );
 
-	cmd( "ttk::button .mm.b.perr -width [ expr $butWid + 4 ] -text \"Previous Error\" -underline 0 -command { \
+	cmd( "ttk::button .mm.b.perr -width [ expr { $butWid + 4 } ] -text \"Previous Error\" -underline 0 -command { \
 			focus .mm.t.t; \
 			set start \"$cerr linestart\"; \
 			set errtemp [ .mm.t.t search -nocase -regexp -count errlen -backward -- $error $start 1.0];  \
@@ -5995,8 +6000,8 @@ void create_compresult_window( bool nw )
 				.mm.i.c.n configure -text $errcol; \
 			} \
 		}" );
-	cmd( "ttk::button .mm.b.gerr -width [ expr $butWid + 4 ] -text \"Go to Error\" -underline 0 -command { set choice 87 }" );
-	cmd( "ttk::button .mm.b.ferr -width [ expr $butWid + 4 ] -text \"Next Error\" -underline 0 -command { \
+	cmd( "ttk::button .mm.b.gerr -width [ expr { $butWid + 4 } ] -text \"Go to Error\" -underline 0 -command { set choice 87 }" );
+	cmd( "ttk::button .mm.b.ferr -width [ expr { $butWid + 4 } ] -text \"Next Error\" -underline 0 -command { \
 			focus .mm.t.t; \
 			if { ! [ string equal $cerr 1.0 ] } { \
 				set start \"$cerr lineend\" \
@@ -6034,7 +6039,7 @@ void create_compresult_window( bool nw )
 				.mm.i.c.n configure -text $errcol; \
 			} \
 		}" );
-	cmd( "ttk::button .mm.b.close -width [ expr $butWid + 4 ] -text Done -underline 0 -command { unset -nocomplain errfil errlin errcol; destroytop .mm; focustop .f.t.t; set keepfocus 0 }" );
+	cmd( "ttk::button .mm.b.close -width [ expr { $butWid + 4 } ] -text Done -underline 0 -command { unset -nocomplain errfil errlin errcol; destroytop .mm; focustop .f.t.t; set keepfocus 0 }" );
 	cmd( "pack .mm.b.perr .mm.b.gerr .mm.b.ferr .mm.b.close -padx $butSpc -expand yes -fill x -side left" );
 	cmd( "pack .mm.b -padx $butPad -pady $butPad -side right" );
 
@@ -6056,14 +6061,14 @@ void create_compresult_window( bool nw )
 	cmd( "showtop .mm lefttoW no no no" );
 	cmd( "mousewarpto .mm.b.gerr" );
 
-	cmd( "if [ file exists \"$modelDir/makemessage.txt\" ] { set file [open \"$modelDir/makemessage.txt\"]; .mm.t.t insert end [read $file]; close $file } { .mm.t.t insert end \"(no compilation errors)\" }" );
+	cmd( "if [ file exists \"$modelDir/makemessage.txt\" ] { set file [ open \"$modelDir/makemessage.txt\" ]; .mm.t.t insert end [ read -nonewline $file ]; close $file } { .mm.t.t insert end \"(no compilation errors)\" }" );
 	cmd( ".mm.t.t mark set insert \"1.0\"" );
 	cmd( ".mm.b.ferr invoke" );
 
 	cmd( ".mm.t.t configure -state disabled" );
 	cmd( "focustop .mm.t.t" );
 	cmd( "set keepfocus 1" );
-	cmd( "update" );
+	cmd( "update idletasks" );
 }
 
 

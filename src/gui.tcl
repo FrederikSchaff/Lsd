@@ -90,10 +90,6 @@ if [ string equal $CurPlatform mac ] {
 	set bhstepM $bhstepMac
 	set bvstepM $bvstepMac
 	set borderMadj $bborderMac
-
-	if { [ string equal [ info patchlevel ] 8.6.9 ] } {
-		set borderMadj $bborderLinux
-	}
 	
 } elseif [ string equal $CurPlatform linux ] {
 	set DefaultSysTerm $sysTermLinux
@@ -215,6 +211,7 @@ if { ! [ info exists lsdTheme ] || \
 # also use special aqua theme-automatic colors
 if { [ string equal $lsdTheme aqua ] } {
 	set darkTheme [ isDarkTheme ]
+
 	set colorsTheme(bg) systemWindowBackgroundColor					; # non-entry light/dark text background
 	set colorsTheme(fg) systemTextColor								; # entry/non-entry dark text foreground
 	set colorsTheme(dbg) systemTextBackgroundColor					; # entry dark text background
@@ -324,7 +321,7 @@ set wndLst [ list .lmm .lsd .log .str .da .deb .lat .plt .dap ]
 set wndMenuHeight 0
 
 # text line default canvas height & minimum horizontal border width
-set lheightP [ expr int( [ font actual $fontP -size ] * [ tk scaling ] ) + $vtmarginP ]
+set lheightP [ expr { int( [ font actual $fontP -size ] * [ tk scaling ] ) + $vtmarginP } ]
 set hbordsizeP	$hmbordsizeP
 
 # current position of structure window

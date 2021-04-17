@@ -142,7 +142,7 @@ void show_eq( char *lab, int *choice )
 					$W.f.text mark set insert \"$cur1 + $length char\"; \
 					focus $W.f.text; \
 					$W.f.text see $cur1; \
-					update \
+					update idletasks \
 				} \
 			}; \
 			pack $W.s.l $W.s.e -padx 5; \
@@ -163,9 +163,21 @@ void show_eq( char *lab, int *choice )
 				$W.f.text mark set insert \"$cur1 + $length char\"; \
 				focus $W.f.text; \
 				$W.f.text see $cur1; \
-				update \
+				update idletasks \
 			} \
 		}", lab, lab );
+
+	cmd( "bind .eq_%s.f.text <KeyPress-Prior> { .eq_%s.f.text yview scroll -1 pages }", lab, lab );
+	cmd( "bind .eq_%s.f.text <KeyPress-Next> { .eq_%s.f.text yview scroll 1 pages }", lab, lab );
+	cmd( "bind .eq_%s.f.text <KeyPress-Up> { .eq_%s.f.text yview scroll -1 units }", lab, lab );
+	cmd( "bind .eq_%s.f.text <KeyPress-Down> { .eq_%s.f.text yview scroll 1 units }", lab, lab );
+	cmd( "bind .eq_%s.f.text <KeyPress-Left> { .eq_%s.f.text xview scroll -1 units }", lab, lab );
+	cmd( "bind .eq_%s.f.text <KeyPress-Right> { .eq_%s.f.text xview scroll 1 units }", lab, lab );
+
+	cmd( "bind .eq_%s.f.text <Double-1> { .eq_%s.f.text tag remove sel 1.0 end; set a @%%x,%%y; .eq_%s.f.text tag add sel \"$a wordstart\" \"$a wordend\"; set res [ .eq_%s.f.text get sel.first sel.last ]; set choice 29 }", lab, lab, lab, lab );
+
+	cmd( "showtop $w centerW 1 1" );
+	cmd( "mousewarpto $w.b.cancel" );
 
 	cmd( ".eq_%s.f.text tag conf vars -foreground $colorsTheme(str)", lab );
 	cmd( ".eq_%s.f.text tag conf comment_line -foreground $colorsTheme(comm)", lab );
@@ -174,7 +186,7 @@ void show_eq( char *lab, int *choice )
 	cmd( "set mytag \"\"" );
 
 	if ( ! macro )
-	{	//standard type of equations
+	{	// standard type of equations
 		start = 1;
 		bra = 1;
 	}
@@ -305,19 +317,6 @@ void show_eq( char *lab, int *choice )
 	fclose( f2 );
 
 	cmd( ".eq_%s.f.text mark set insert 1.0", lab );
-
-	cmd( "bind .eq_%s.f.text <KeyPress-Prior> { .eq_%s.f.text yview scroll -1 pages }", lab, lab );
-	cmd( "bind .eq_%s.f.text <KeyPress-Next> { .eq_%s.f.text yview scroll 1 pages }", lab, lab );
-	cmd( "bind .eq_%s.f.text <KeyPress-Up> { .eq_%s.f.text yview scroll -1 units }", lab, lab );
-	cmd( "bind .eq_%s.f.text <KeyPress-Down> { .eq_%s.f.text yview scroll 1 units }", lab, lab );
-	cmd( "bind .eq_%s.f.text <KeyPress-Left> { .eq_%s.f.text xview scroll -1 units }", lab, lab );
-	cmd( "bind .eq_%s.f.text <KeyPress-Right> { .eq_%s.f.text xview scroll 1 units }", lab, lab );
-
-	cmd( "bind .eq_%s.f.text <Double-1> {.eq_%s.f.text tag remove sel 1.0 end; set a @%%x,%%y; .eq_%s.f.text tag add sel \"$a wordstart\" \"$a wordend\"; set res [.eq_%s.f.text get sel.first sel.last]; set choice 29 }", lab, lab, lab, lab );
-
-	cmd( "showtop $w centerW 1 1" );
-	cmd( "mousewarpto $w.b.cancel" );
-
 	cmd( ".eq_%s.f.text conf -state disabled", lab );
 }
 
@@ -532,6 +531,11 @@ void show_descr( char *lab, int *choice )
 	cmd( "pack $w.f.text -expand yes -fill both" );
 	cmd( "pack $w.f -expand yes -fill both" );
 	
+	cmd( "done $w b { destroytop .desc_%s; focus $parWnd }", lab );
+
+	cmd( "showtop $w centerW 1 1" );
+	cmd( "mousewarpto $w.b.ok" );
+	
 	for ( i = 0; descr->text[ i ] != '\0'; ++i )
 		if ( descr->text[ i ] != '[' && descr->text[ i ] != ']' && descr->text[ i ] != '{' && descr->text[ i ] != '}' && descr->text[ i ] != '\"' && descr->text[ i ] != '\\')
 			cmd( "$w.f.text insert end \"%c\"", descr->text[ i ] );
@@ -539,9 +543,4 @@ void show_descr( char *lab, int *choice )
 			cmd( "$w.f.text insert end \"\\%c\"", descr->text[ i ] );
 
 	cmd( "$w.f.text conf -state disabled" );
-	
-	cmd( "done $w b { destroytop .desc_%s; focus $parWnd }", lab );
-
-	cmd( "showtop $w centerW 1 1" );
-	cmd( "mousewarpto $w.b.ok" );
 }

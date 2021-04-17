@@ -130,8 +130,9 @@ void set_obj_number( object *r, int *choice )
 		
 		if ( notShown )
 		{
-			cmd( "showtop .inin topleftW 1 1 1 [ expr max( $ininWid + 10, $hsizeNmin ) ] [ expr max( $ininHgt + 110, $vsizeNmin ) ]" );
+			cmd( "showtop .inin topleftW 1 1 1 [ expr { max( $ininWid + 10, $hsizeNmin ) } ] [ expr { max( $ininHgt + 110, $vsizeNmin ) } ]" );			
 			cmd( "wm minsize .inin $hsizeNmin $vsizeNmin" );
+			cmd( "wm maxsize .inin [ winfo vrootwidth .inin ] [ winfo vrootheight .inin ]" );
 			notShown = false;
 		}
 		
@@ -260,8 +261,8 @@ void insert_obj_num( object *r, const char *tag, const char *ind, int *idx, int 
 			
 			cmd( "$t insert end \\n" );
 			
-			cmd( "set ininWid [ expr max( $ininWid, [ winfo reqwidth $t.but$idx ] + [ winfo reqwidth $t.ind$idx ] + [ winfo reqwidth $t.lab$idx ] + [ winfo reqwidth $t.val$idx ] + [ winfo reqwidth $t.tag$idx ] ) ]" );
-			cmd( "set ininHgt [ expr $ininHgt + max( [ winfo reqheight $t.but$idx ], [ winfo reqheight $t.ind$idx ], [ winfo reqheight $t.lab$idx ], [ winfo reqheight $t.val$idx ], [ winfo reqheight $t.tag$idx ] ) ]" );
+			cmd( "set ininWid [ expr { max( $ininWid, [ winfo reqwidth $t.but$idx ] + [ winfo reqwidth $t.ind$idx ] + [ winfo reqwidth $t.lab$idx ] + [ winfo reqwidth $t.val$idx ] + [ winfo reqwidth $t.tag$idx ] ) } ]" );
+			cmd( "set ininHgt [ expr { $ininHgt + max( [ winfo reqheight $t.but$idx ], [ winfo reqheight $t.ind$idx ], [ winfo reqheight $t.lab$idx ], [ winfo reqheight $t.val$idx ], [ winfo reqheight $t.tag$idx ] ) } ]" );
 
 			if ( level >= max_depth && cb->head->b != NULL )
 				hid_level = true;
@@ -373,7 +374,7 @@ int entry_new_objnum( object *c, const char *tag, int *choice )
 	cmd( "ttk::frame $T.e" );
 	
 	cmd( "ttk::label $T.e.l -text \"Number of instances\"" );
-	cmd( "ttk::spinbox $T.e.e -width 5 -from 1 -to 9999 -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 1 && $n <= 9999 } { set num %%P; return 1 } { %%W delete 0 end; %%W insert 0 $num; return 0 } } -invalidcommand { bell } -justify center" );
+	cmd( "ttk::spinbox $T.e.e -width 5 -from 1 -to 9999 -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 1 } { set num %%P; return 1 } { %%W delete 0 end; %%W insert 0 $num; return 0 } } -invalidcommand { bell } -justify center" );
 	cmd( "pack $T.e.l $T.e.e -side left -padx 2" );
 
 	cmd( "ttk::frame $T.cp" );
@@ -772,7 +773,7 @@ void eliminate_obj( object **c, int actual, int desired, int *choice )
 		{
 			do
 			{
-				cmd( "$d.t.tit1 configure -text \"([ expr $idx2 - 1 ] instance(s) done, %d to do)\"", actual - desired - idx2 + 1 );
+				cmd( "$d.t.tit1 configure -text \"([ expr { $idx2 - 1 } ] instance(s) done, %d to do)\"", actual - desired - idx2 + 1 );
 				cmd( "write_any $d.t.e $val2" );
 				cmd( "$d.t.e selection range 0 end" );
 				cmd( "focus $d.t.e" );
