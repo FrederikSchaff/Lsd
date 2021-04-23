@@ -3,7 +3,7 @@
 #include "fun_head_fast.h"
 
 #define TUSH_MODEL "Test_0001_tush"
-#include "../tush_test_utilities.cpp"
+#include "../tush_test_utilities.h"
 
 // do not add Equations in this area
 
@@ -15,10 +15,9 @@ EQUATION("Test")
 /*
 Comment
 */
-
 	std::string logEntry = "Test log. Step: " + std::to_string(t) + ".";
 	plog(std::string(logEntry + '\n').c_str());
-	tushTest.addLog(logEntry);
+	TEST_UNCHANGED(logEntry);
 RESULT(0)
 
 

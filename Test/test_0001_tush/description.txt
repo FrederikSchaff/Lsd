@@ -7,10 +7,12 @@ that are used within the tush tests.
 # Test procedure
 
 Firstly, we make the specific no window version.
-$ cd .. && make -f makefileNWtush > tushLogNull.log
+$ rm -f ../lsdNW -f >> tushLogNull.log
+$ cd .. && make -f makefileNWtush >> tushLogNull.log
 
 Secondly, we run the tushTest.lsd and expect it to not fail. Important: Pipe stdout to null, to ignore it.
-$ cd .. && ./lsdNW -f tushTest.lsd > tushLogNull.log
+Otherwise you would, e.g., include timing issues.
+$ cd .. && ./lsdNW -f tushTest.lsd >> tushLogNull.log
 
 Thirdly, we compare the output with the expected output. Here we use tush explicitly.
 $ cd .. && cat tushTestLog.log
