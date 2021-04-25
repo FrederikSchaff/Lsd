@@ -37,7 +37,7 @@ ttkthemes 3.1.0 is copyrighted by RedFantom under GNU GPL 3+, https://github.com
 dblclick.tcl is copyrighted by Wolf-Dieter Busch under OLL, https://wiki.tcl-lang.org/page/doubleclick
 tkcon 2.5 is copyrighted by Jeffrey Hobbs, https://wiki.tcl-lang.org/page/Tkcon
 tkdiff 4.2 is copyrighted by John M. Klassa and others GNU GPL 2+, https://sourceforge.net/projects/tkdiff
-
+tush is copyrighted by Darius Bacon, https://github.com/darius/tush (used version: https://github.com/FrederikSchaff/tush)
 
 ********
 Contents
