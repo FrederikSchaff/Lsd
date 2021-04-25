@@ -35,7 +35,7 @@ proc newtop { w { name "" } { destroy { } } { par "." } { noglobkeys 0 } } {
 
 	wm withdraw $w
 	update idletasks
-	
+
 	if { $par != "" } {
 		if { $par != "." } {
 			if { [ winfo viewable [ winfo toplevel $par ] ] } {
@@ -176,15 +176,16 @@ proc showtop { w { pos none } { resizeX no } { resizeY no } { grab yes } { sizeX
 			if { ! [ string equal $pos xy ]	} {
 				set x [ getx $w $pos ]
 				set y [ gety $w $pos ]
-				
-				set maxHgt [ expr { [ winfo screenwidth $w ] - $x - 2 * $bordsize - $hmargin } ]
-				set maxWid [ expr { [ winfo screenheight $w ] - $y- 2 * $bordsize - $vmargin - $tbarsize } ]
-				if { $sizeX > $maxHgt } {
-					set sizeX $maxHgt
+
+				set maxWid [ expr { [ winfo vrootwidth $w ] - $x - 2 * $bordsize - $hmargin } ]
+				set maxHgt [ expr { [ winfo vrootheight $w ] - $y- 2 * $bordsize - $vmargin - $tbarsize } ]
+					
+				if { $maxWid > 0 && $sizeX > $maxWid } {
+					set sizeX $maxWid
 					$w configure -width $sizeX
 				}
-				if { $sizeY > $maxWid } {
-					set sizeY $maxWid
+				if { $maxHgt > 0 && $sizeY > $maxHgt } {
+					set sizeY $maxHgt
 					$w configure -height $sizeY
 				}
 			} else {
@@ -492,8 +493,8 @@ proc sizetop { { w all } } {
 		set realW $w
 	}
 
-	set screenWidth [ winfo screenwidth $realW ]
-	set screenHeight [ winfo screenheight $realW ]
+	set screenWidth [ winfo vrootwidth $realW ]
+	set screenHeight [ winfo vrootheight $realW ]
 
 	foreach wnd $wndLst {
 		if { ! [ string compare $w all ] || ! [ string compare $w $wnd ] } {
@@ -626,8 +627,8 @@ proc resizetop { w sizeX { sizeY 0 } } {
 		set sizeY [ winfo height $w ]
 	}
 	
-	set sizeX [ expr { min( $sizeX, [ winfo screenwidth $w ] - [ winfo rootx $w ] - 2 * $bordsize - $hmargin ) } ]
-	set sizeY [ expr { min( $sizeY, [ winfo screenheight $w ] - [ winfo rooty $w ] - 2 * $bordsize - $vmargin - $tbarsize ) } ]
+	set sizeX [ expr { min( $sizeX, [ winfo vrootwidth $w ] - [ winfo rootx $w ] - 2 * $bordsize - $hmargin ) } ]
+	set sizeY [ expr { min( $sizeY, [ winfo vrootheight $w ] - [ winfo rooty $w ] - 2 * $bordsize - $vmargin - $tbarsize ) } ]
 	
 	set newMinX [ expr { min( [ lindex [ wm minsize $w ] 0 ], $sizeX ) } ]
 	set newMinY [ expr { min( [ lindex [ wm minsize $w ] 1 ], $sizeY ) } ]
@@ -1042,6 +1043,7 @@ proc selectinlist { w pos { foc 0 } } {
 #************************************************
 proc addtolist { w text } {
 	$w insert end "$text"
+	tooltip::tooltip $w -item [ expr { [ $w index end ] - 1 } ] "Double-click to show\nRight-click to delete"
 	selectinlist $w end
 }
 
@@ -1849,11 +1851,15 @@ proc canvas_axis { c type grid hticks { y2 0 } } {
 # PLOT_BARS
 # plot color filled bars
 #************************************************
-proc plot_bars { c x1 y1 x2 y2 { tags "" } { fill "" } { width 1 } } {
+proc plot_bars { c x1 y1 x2 y2 { tags "" } { fill "" } { width 1 } { outline "" } } {
 	global colorsTheme
 	
 	if { $fill == "" } {
 		set fill $colorsTheme(bg)
+	}
+	
+	if { $outline == "" } {
+		set outline $colorsTheme(fg)
 	}
 	
 	set size [ expr { min( [ llength $x1 ], [ llength $y1 ], [ llength $x2 ], [ llength $y2 ]  ) } ]
@@ -1867,7 +1873,7 @@ proc plot_bars { c x1 y1 x2 y2 { tags "" } { fill "" } { width 1 } } {
 		set y2i [ lindex $y2 $i ]
 		if { $x1i != $x2i && $y1i != $y2i } {
 			# plot bar
-			$c create rect $x1i $y1i $x2i $y2i -width $width -fill $fill -tags $tags
+			$c create rectangle $x1i $y1i $x2i $y2i -fill $fill -width $width -outline $outline -tags $tags
 		}
 	}
 }
@@ -2041,9 +2047,9 @@ proc init_canvas_colors { } {
 # DETACH_TAB
 # Detach/reattach a plot tab/window
 #************************************************
-proc detach_tab { nb tab but da maxLen } {
+proc detach_tab { nb tab but1 but2 da maxLen } {
 
-	if { [ $nb.$tab.$but cget -text ] eq "Attach" } {
+	if { [ $nb.$tab.$but1 cget -text ] eq "Attach" } {
 		
 		set tt [ wm title $nb.$tab ]
 		
@@ -2059,7 +2065,10 @@ proc detach_tab { nb tab but da maxLen } {
 		update idletasks
 		destroy .tmp
 		
-		$nb.$tab.$but configure -text Detach
+		$nb.$tab.$but1 configure -text Detach
+		tooltip::tooltip $nb.$tab.$but1 "Move to independent window"
+		tooltip::tooltip $nb.$tab.$but2 "Save plot to file"
+		
 		pack $new -expand yes -fill both
 		$nb add $nb.$tab -text [ string range [ lindex [ split $tt ] 1 ] 0 $maxLen ]
 		$nb select $nb.$tab 
@@ -2081,17 +2090,20 @@ proc detach_tab { nb tab but da maxLen } {
 		update idletasks
 		destroy $nb.$tab
 		
-		newtop $nb.$tab "$tt" "$nb.$tab.$but invoke" ""
+		newtop $nb.$tab "$tt" "$nb.$tab.$but1 invoke" ""
 		wm transient $nb.$tab $da
 		set new [ clone_widget $tmp $nb.$tab ]
 		update idletasks
 		pack $new -expand yes -fill both
 		destroy .tmp
 		
-		$nb.$tab.$but configure -text Attach
+		$nb.$tab.$but1 configure -text Attach
+		tooltip::tooltip $nb.$tab.$but1 "Move back to main plot window"
+		tooltip::tooltip $nb.$tab.$but2 "Save plot to file"
+		
 		showtop $nb.$tab current yes yes no
 		bind $nb.$tab <F1> { LsdHelp menudata_res.html#graph }
-		bind $nb.$tab <Escape> "$nb.$tab.$but invoke"
+		bind $nb.$tab <Escape> "$nb.$tab.$but1 invoke"
 	}
 }
 

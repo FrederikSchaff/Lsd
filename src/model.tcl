@@ -30,7 +30,6 @@ set rootname "Root"
 set modelGroup "$rootname"
 set result 0
 set memory 0
-set ltip ""
 set months [ list January February March April May June July August September October November December ]	
 
 
@@ -38,7 +37,7 @@ set months [ list January February March April May June July August September Oc
 # SHOWMODEL
 #************************************************
 proc showmodel pippo {
-	global lmn lmd ldn lrn lbn group result choiceSM lver rootname modelGroup upSymbol groupSymbol RootLsd memory ltip fonttype small_character GROUP_INFO MODEL_INFO DESCRIPTION colorsTheme darkTheme
+	global lmn lmd ldn lrn lbn group result choiceSM lver rootname modelGroup upSymbol groupSymbol RootLsd memory fonttype small_character GROUP_INFO MODEL_INFO DESCRIPTION colorsTheme darkTheme
 
 	unset -nocomplain lmn lver lmd ldn lrn lbn group
 	lappend lmn
@@ -53,6 +52,10 @@ proc showmodel pippo {
 		.l.l.l delete 0 end
 		.l.t.text conf -state normal
 		.l.t.text delete 1.0 end
+		
+		# close tool tip if still showing
+		tooltip::tooltip disable
+		tooltip::tooltip enable
 	} else { 
 		newtop .l "LSD Model Browser" { .l.m.file invoke 2 }
 		
@@ -124,7 +127,6 @@ proc showmodel pippo {
 
 		.l configure -menu .l.m
 
-		set ltip ""
 		ttk::frame .l.bbar
 		ttk::button .l.bbar.new -image newImg -style Toolbutton -command  { .l.m.file invoke 1 }
 		ttk::button .l.bbar.edit -image editImg -style Toolbutton -command  { .l.m.edit invoke 0 }
@@ -132,20 +134,15 @@ proc showmodel pippo {
 		ttk::button .l.bbar.paste -image pasteImg -style Toolbutton -command { .l.m.edit invoke 2 }
 		ttk::button .l.bbar.delete -image deleteImg -style Toolbutton -command { .l.m.edit invoke 3 }
 		ttk::button .l.bbar.help -image helpImg -style Toolbutton -command { .l.m.help invoke 0 }
-		ttk::label .l.bbar.tip -textvariable ltip -width 30 -style graySmall.TLabel -anchor w
-		bind .l.bbar.new <Enter> { set ltip "New model/group..." }
-		bind .l.bbar.new <Leave> { set ltip "" }
-		bind .l.bbar.edit <Enter> { set ltip "Edit name/description..." }
-		bind .l.bbar.edit <Leave> { set ltip "" }
-		bind .l.bbar.copy <Enter> { set ltip "Copy" }
-		bind .l.bbar.copy <Leave> { set ltip "" }
-		bind .l.bbar.paste <Enter> { set ltip "Paste" }
-		bind .l.bbar.paste <Leave> { set ltip "" }
-		bind .l.bbar.delete <Enter> { set ltip "Delete..." }
-		bind .l.bbar.delete <Leave> { set ltip "" }
-		bind .l.bbar.help <Enter> { set ltip "Help" }
-		bind .l.bbar.help <Leave> { set ltip "" }
-		pack .l.bbar.new .l.bbar.edit .l.bbar.copy .l.bbar.paste .l.bbar.delete .l.bbar.help .l.bbar.tip -side left
+
+		tooltip::tooltip .l.bbar.new "New Model/Group..."
+		tooltip::tooltip .l.bbar.edit "Edit Name/Description..."
+		tooltip::tooltip .l.bbar.copy "Copy"
+		tooltip::tooltip .l.bbar.paste "Paste"
+		tooltip::tooltip .l.bbar.delete "Delete..."
+		tooltip::tooltip .l.bbar.help "Help"
+		
+		pack .l.bbar.new .l.bbar.edit .l.bbar.copy .l.bbar.paste .l.bbar.delete .l.bbar.help -side left
 		pack .l.bbar -padx 3 -anchor w -fill x
 		
 		ttk::frame .l.l
@@ -295,6 +292,8 @@ proc showmodel pippo {
 		showtop .l centerW no no yes 0 0 "" no yes
 	}
 
+	tooltip::tooltip clear .l.l.l*
+
 	.l.l.tit.n conf -text "$modelGroup"
 
 	set curdir [ pwd ]
@@ -322,6 +321,8 @@ proc showmodel pippo {
 		lappend lmn "$upgroup"
 		lappend group -1
 		.l.l.l insert end "$upSymbol"
+		
+		tooltip::tooltip .l.l.l -item [ expr { [ .l.l.l index end ] - 1 } ] "$upgroup"
 	}
 
 	set dir [ lsort -dictionary [ glob -nocomplain -type d * ] ]
@@ -348,6 +349,8 @@ proc showmodel pippo {
 			lappend group 1
 			.l.l.l insert end "$groupSymbol$app"
 			.l.l.l itemconf end -fg $colorsTheme(grp)
+			
+			tooltip::tooltip .l.l.l -item [ expr { [ .l.l.l index end ] - 1 } ] "[ file nativename $pippo/$i ]"
 		}
 	}
 
@@ -379,6 +382,8 @@ proc showmodel pippo {
 			lappend group 0
 			.l.l.l insert end "$app1 (v. $app2)"				 
 			.l.l.l itemconf end -fg $colorsTheme(mod)
+			
+			tooltip::tooltip .l.l.l -item [ expr { [ .l.l.l index end ] - 1 } ] "[ file nativename $pippo/$i ]"
 		}
 	}
 
