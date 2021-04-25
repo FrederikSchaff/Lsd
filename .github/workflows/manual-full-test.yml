@@ -44,10 +44,10 @@ jobs:
     - run: echo "🖥️ The workflow is now ready to test your code on the runner."
     - name: Copy tush to bin
       run: |
-        cp dev/tush/bin/overwrite /usr/bin/overwrite
-        cp dev/tush/bin/tush-check /usr/bin/tush-check
-        cp dev/tush/bin/tush-run /usr/bin/tush-run
-        cp dev/tush/bin/tush-run-raw /usr/bin/tush-run-raw
+        sudo cp dev/tush/bin/overwrite /usr/bin/overwrite
+        sudo cp dev/tush/bin/tush-check /usr/bin/tush-check
+        sudo cp dev/tush/bin/tush-run /usr/bin/tush-run
+        sudo cp dev/tush/bin/tush-run-raw /usr/bin/tush-run-raw
         echo "✅ tush setup complete"
     - name: Run regression test
       run: |
