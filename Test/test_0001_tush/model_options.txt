@@ -1,0 +1,10 @@
+# LSD options
+TARGET=LSD
+FUN=fun_test_0001_tush
+
+# Additional model files
+FUN_EXTRA=
+
+# Compiler options
+SWITCH_CC=-O0 -ggdb3
+SWITCH_CC_LNK=

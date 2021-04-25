@@ -1,0 +1,50 @@
+Model Test_0001_tush (ver. 1.0)
+
+# Description
+This testmodel is a meta-test model. Its purpose is to test the utilities
+that are used within the tush tests.
+
+# Test procedure
+
+Firstly, we make the specific no window version.
+$ rm -f ../lsdNW -f >> tushLogNull.log
+$ cd .. && make -f makefileNWtush >> tushLogNull.log
+
+Secondly, we run the tushTest.lsd and expect it to not fail. Important: Pipe stdout to null, to ignore it.
+Otherwise you would, e.g., include timing issues.
+$ cd .. && ./lsdNW -f tushTest.lsd >> tushLogNull.log
+
+Thirdly, we compare the output with the expected output. Here we use tush explicitly.
+$ cd .. && cat tushTestLog.log
+| Begin of test logs for 'Test_0001_tush'
+| 
+| 
+| Test log. Step: 1.
+| Test log. Step: 2.
+| Test log. Step: 3.
+| Test log. Step: 4.
+| Test log. Step: 5.
+| Test log. Step: 6.
+| Test log. Step: 7.
+| Test log. Step: 8.
+| Test log. Step: 9.
+| Test log. Step: 10.
+| Test log. Step: 11.
+| Test log. Step: 12.
+| Test log. Step: 13.
+| Test log. Step: 14.
+| Test log. Step: 15.
+| Test log. Step: 16.
+| Test log. Step: 17.
+| Test log. Step: 18.
+| Test log. Step: 19.
+| Test log. Step: 20.
+| 
+| 
+| End of test logs for 'Test_0001_tush'
+
+# Additional Notes
+For more details on testing LSD with Tush, see <LSD>/dev/1_developer-setup.md
+
+(PRESS CTRL+E TO EDIT EQUATIONS)
+
