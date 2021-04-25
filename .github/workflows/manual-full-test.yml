@@ -43,10 +43,14 @@ jobs:
     - name: Run regression test
       run: |
         sudo cp dev/tush/bin/overwrite /usr/local/bin/overwrite
+        sudo chmod 755 /usr/local/bin/overwrite
         sudo cp dev/tush/bin/tush-check /usr/local/bin/tush-check
+        sudo chmod 755 /usr/local/bin/tush-check
         sudo cp dev/tush/bin/tush-run /usr/local/bin/tush-run
+        sudo chmod 755 /usr/local/bin/tush-run
         sudo cp dev/tush/bin/tush-run-raw /usr/local/bin/tush-run-raw
+        sudo chmod 755 /usr/local/bin/tush-run-raw
         echo "✅ tush setup complete"
         cd dev 
-        sudo tush-check 3_regression_tests.md 
+        tush-check 3_regression_tests.md 
         echo "✔ Regression test completed successfully 🎉"
