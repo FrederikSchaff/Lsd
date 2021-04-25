@@ -42,12 +42,12 @@ jobs:
       uses: actions/checkout@v2
     - name: Add tush to path
       run: |
-        PATH=$PWD/dev/tush/bin:$PATH
+        export PATH=$PWD/dev/tush/bin:$PATH
         echo "Path is ${PATH}".        
         echo "✅ tush setup complete"
     - name: Run regression test
       run: | 
-        PATH=$PWD/dev/tush/bin:$PATH 
+        echo "Path is ${PATH}". 
         cd dev 
         tush-check 3_regression_tests.md 
         echo "✔ Regression test completed successfully 🎉"
