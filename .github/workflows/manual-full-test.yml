@@ -40,8 +40,6 @@ jobs:
           echo "✅ dependencies successfully installed"
     - name: Check out repository code
       uses: actions/checkout@v2
-    - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-    - run: echo "🖥️ The workflow is now ready to test your code on the runner."
     - name: Copy tush to bin
       run: |
         sudo cp dev/tush/bin/overwrite /usr/bin/overwrite
@@ -51,4 +49,4 @@ jobs:
         echo "✅ tush setup complete"
     - name: Run regression test
       run: |
-        sudo cd dev && sudo tush-check 3_regression_tests.md && echo "✔️ regression check ok." || echo "🚨  regression test failed!"
+        sudo cd dev && sudo tush-check 3_regression_tests.md
