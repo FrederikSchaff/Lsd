@@ -44,26 +44,34 @@ float level_factor[ MAX_LEVEL ];
 int range;
 int range_type;
 
-
 /****************************************************
 SHOW_GRAPH
 ****************************************************/
 void show_graph( object *t )
 {
 	object *top;
-
+	static object *last_t = NULL;
+	
 	if ( ! struct_loaded || ! strWindowOn )		// model structure window is deactivated?
 	{
 		cmd( "destroytop .str" );
 		return;
 	}
 	
+	if ( t == NULL )
+		if ( last_t == NULL )
+			t = root;
+		else
+			t = last_t;
+	else
+		last_t = t;
+
 	for ( top = t; top->up != NULL; top = top->up );
 
 	cmd( "set strExist [ winfo exists .str ]" );
 	if ( ! strcmp( Tcl_GetVar( inter, "strExist", 0 ), "0" ) )		// build window only if needed
 	{
-		cmd( "newtop .str \"\" { set strWindowOn 0; set choice 70 } \"\"" );
+		cmd( "newtop .str \"\" { set strWindowOn 0; set choice 23 } \"\"" );
 		cmd( "wm transient .str ." );
 		cmd( "sizetop .str" );
 	}
@@ -87,11 +95,11 @@ void show_graph( object *t )
 	
 	draw_buttons( );
 	
-	cmd( "bind .str.f.c <Configure> { if { $hrsizeM != [ winfo width .str ] || $vrsizeM != [ winfo height .str ] } { set choice_g 70 } }" );
-	cmd( "bind .str.f.c <Button-1> { if [ info exists res_g ] { destroy .list; set choice_g 24 } }" );
-	cmd( "bind .str.f.c <Double-Button-1> { if [ info exists res_g ] { destroy .list; set choice 6 } }" );
-	cmd( "bind .str.f.c <Button-2> { if [ info exists res_g ] { destroy .list; set vname $res_g; set useCurrObj no; tk_popup .str.f.c.v %%X %%Y } }" );
-	cmd( "bind .str.f.c <Button-3> { if [ info exists res_g ] { destroy .list; set vname $res_g; set useCurrObj no; tk_popup .str.f.c.v %%X %%Y } }" );
+	cmd( "bind .str.f.c <Configure> { if { $hrsizeM != [ winfo width .str ] || $vrsizeM != [ winfo height .str ] } { set choice_g 23 } }" );
+	cmd( "bind .str.f.c <Button-1> { if { [ info exists res_g ] } { set choice_g 24 } }" );
+	cmd( "bind .str.f.c <Double-Button-1> { if { [ info exists res_g ] && [ winfo exists .m ] } { destroy .list; set choice 6 } }" );
+	cmd( "bind .str.f.c <Button-2> { if { [ info exists res_g ] && [ winfo exists .m ] } { destroy .list; set vname $res_g; set useCurrObj no; tk_popup .str.f.c.v %%X %%Y } }" );
+	cmd( "bind .str.f.c <Button-3> { event generate .str.f.c <Button-2> -x %%x -y %%y }" );
 
 	cmd( "ttk::menu .str.f.c.v -tearoff 0" );
 	cmd( ".str.f.c.v add command -label \"Make Current\" -command { set choice 4 }" );
@@ -142,24 +150,24 @@ void draw_buttons( void )
 	
 	cmd( "ttk::button .str.f.c.hplus -text \"\u25B6\" -width 2 -style bold.Toolbutton -command { \
 			set hfactM [ round_N [ expr { $hfactM + $rstepM } ] 2 ]; \
-			set choice_g 70 \
+			set choice_g 23 \
 		}" );
 	cmd( "ttk::button .str.f.c.hminus -text \"\u25C0\" -width 2 -style bold.Toolbutton -command { \
 			set hfactM [ round_N [ expr { max( $hfactM - $rstepM, $hfactMmin ) } ] 2 ]; \
-			set choice_g 70 \
+			set choice_g 23 \
 		}" );
 	cmd( "ttk::button .str.f.c.vplus -text \"\u25BC\" -width 2 -style Toolbutton -command { \
 			set vfactM [ round_N [ expr { $vfactM + $rstepM } ] 2 ]; \
-			set choice_g 70 \
+			set choice_g 23 \
 		}" );
 	cmd( "ttk::button .str.f.c.vminus -text \"\u25B2\" -width 2 -style Toolbutton -command { \
 			set vfactM [ round_N [ expr { max( $vfactM - $rstepM, $vfactMmin ) } ] 2 ]; \
-			set choice_g 70 \
+			set choice_g 23 \
 		}" );
 	cmd( "ttk::button .str.f.c.auto -text \"A\" -width 2 -style bold.Toolbutton -command { \
 			set hfactM [ round_N [ expr { $hfactM * $hratioM } ] 2 ]; \
 			set vfactM [ round_N [ expr { $vfactM * $vratioM } ] 2 ]; \
-			set choice_g 70 \
+			set choice_g 23 \
 		}" );
 		
 	cmd( "bind .str <Control-plus> { invoke .str.f.c.hplus }" );
@@ -168,15 +176,84 @@ void draw_buttons( void )
 	cmd( "bind .str <Alt-minus> { invoke .str.f.c.vminus }" );
 	cmd( "bind .str <Control-a> { invoke .str.f.c.auto }; bind .str <Control-A> { invoke .str.f.c.auto }" );
 	cmd( "bind .str <Alt-a> { invoke .str.f.c.auto }; bind .str <Alt-A> { invoke .str.f.c.auto }" );
-		
+	
 	cmd( "set colM [ expr { $cx2 - $borderM - $borderMadj } ]" );
 	cmd( "set rowM [ expr { $cy2 - $borderM } ]" );
 	
-	cmd( ".str.f.c create window $colM $rowM -window .str.f.c.auto" );
-	cmd( ".str.f.c create window [ expr { $colM - $bhstepM } ] $rowM -window .str.f.c.hplus" );
-	cmd( ".str.f.c create window [ expr { $colM - 2 * $bhstepM } ] $rowM -window .str.f.c.hminus" );
-	cmd( ".str.f.c create window $colM [ expr { $rowM - $bvstepM } ] -window .str.f.c.vplus" );
-	cmd( ".str.f.c create window $colM [ expr { $rowM - 2 * $bvstepM } ] -window .str.f.c.vminus" );
+	cmd( "set a [ .str.f.c create window $colM $rowM -window .str.f.c.auto -tags tooltip ]" );
+	cmd( "set b [ .str.f.c create window [ expr { $colM - $bhstepM } ] $rowM -window .str.f.c.hplus -tags tooltip ]" );
+	cmd( "set c [ .str.f.c create window [ expr { $colM - 2 * $bhstepM } ] $rowM -window .str.f.c.hminus -tags tooltip ]" );
+	cmd( "set d [ .str.f.c create window $colM [ expr { $rowM - $bvstepM } ] -window .str.f.c.vplus -tags tooltip ]" );
+	cmd( "set e [ .str.f.c create window $colM [ expr { $rowM - 2 * $bvstepM } ] -window .str.f.c.vminus -tags tooltip ]" );
+		
+	cmd( "update idletasks" );
+	
+	cmd( "tooltip::tooltip .str.f.c -item $a \"Automatic adjustment\"" );
+	cmd( "tooltip::tooltip .str.f.c -item $b \"Increase horizontal spacing\"" );
+	cmd( "tooltip::tooltip .str.f.c -item $c \"Decrease horizontal spacing\"" );
+	cmd( "tooltip::tooltip .str.f.c -item $d \"Increase vertical spacing\"" );
+	cmd( "tooltip::tooltip .str.f.c -item $e \"Decrease vertical spacing\"" );
+}
+
+
+/****************************************************
+CREATE_FLOAT_LIST
+****************************************************/
+void create_float_list( object *t )
+{
+	bool sp_upd;
+	variable *cv;
+
+	// element lists used to build floating elements window
+	cmd( "set tlist_%s [ list ]", t->label );
+	cmd( "set slist_%s [ list ]", t->label );
+
+	if ( t->v != NULL )
+		for ( cv = t->v; cv != NULL; cv = cv->next )
+		{
+			// special updating scheme?
+			if ( cv->param == 0 && ( cv->delay > 0 || cv->delay_range > 0 || cv->period > 1 || cv->period_range > 0 ) )
+				sp_upd = true;
+			else
+				sp_upd = false;
+
+			// set flags string
+			cmd( "set varFlags \"%s%s%s%s%s\"", ( cv->save || cv->savei ) ? "+" : "", cv->plot ? "*" : "", cv->debug == 'd' ? "!" : "", cv->parallel ? "&" : "", sp_upd ? "\u00A7" : "" );
+					
+			if ( cv->param == 0 )
+			{
+				if ( cv->num_lag == 0 )
+				{
+					cmd( "lappend tlist_%s \"%s (V$varFlags)\"", t->label, cv->label );
+					cmd( "lappend slist_%s tvar.TLabel", t->label );
+				}
+				else
+				{
+					cmd( "lappend tlist_%s \"%s (V_%d$varFlags)\"", t->label, cv->label );
+					cmd( "lappend slist_%s tlvar.TLabel", t->label );
+				}
+			}
+			
+			if ( cv->param == 1 )
+			{
+				cmd( "lappend tlist_%s \"%s (P$varFlags)\"", t->label, cv->label );
+				cmd( "lappend slist_%s tpar.TLabel", t->label );
+			}
+			
+			if ( cv->param == 2 )
+			{
+				if ( cv->num_lag == 0 )
+				{
+					cmd( "lappend tlist_%s \"%s (F$varFlags)\"", t->label, cv->label );
+					cmd( "lappend slist_%s tfun.TLabel", t->label );
+				}
+				else
+				{
+					cmd( "lappend tlist_%s \"%s (F_%d$varFlags)\"", t->label, cv->label );
+					cmd( "lappend slist_%s tlfun.TLabel", t->label );
+				}
+			}
+		}
 }
 
 
@@ -185,13 +262,14 @@ DRAW_OBJ
 ****************************************************/
 void draw_obj( object *t, object *sel, int level, int center, int from, bool zeroinst )
 {
-	bool sp_upd, fit_wid;
-	char str[ MAX_LINE_SIZE ], ch[ TCL_BUFF_STR ], ch1[ MAX_ELEM_LENGTH ];
+	bool fit_wid;
+	char str[ MAX_LINE_SIZE ], ch[ TCL_BUFF_STR ], ch1[ MAX_LINE_SIZE ];
 	double h_fact, v_fact, range_fact;
 	int h, i, j, k, step_level, step_type, begin, count, max_wid, range_init;
 	object *cur;
-	variable *cv;
 	bridge *cb;
+	
+	create_float_list( t );		// create floating element list
 
 	h_fact = get_double( "hfactM" );
 	v_fact = get_double( "vfactM" );
@@ -200,40 +278,6 @@ void draw_obj( object *t, object *sel, int level, int center, int from, bool zer
 	step_level = get_int( "vstepM" );
 	step_level = round( step_level * v_fact );
 	
-	// element list to appear on the left of the window
-	cmd( "set list_%s \"\"", t->label );
-
-	if ( t->v == NULL )
-		cmd( "append list_%s \"(no elements)\"", t->label );
-
-	// floating variable list
-	for ( cv = t->v; cv != NULL; cv = cv->next )
-	{
-		sprintf( ch,"append list_%s \"%s", t->label, cv->label );
-		
-		// special updating scheme?
-		if ( cv->param == 0 && ( cv->delay > 0 || cv->delay_range > 0 || cv->period > 1 || cv->period_range > 0 ) )
-			sp_upd = true;
-		else
-			sp_upd = false;
-
-		// set flags string
-		cmd( "set varFlags \"%s%s%s%s%s\"", ( cv->save || cv->savei ) ? "+" : "", cv->plot ? "*" : "", cv->debug == 'd' ? "!" : "", cv->parallel ? "&" : "", sp_upd ? "\u00A7" : "" );
-				
-		if ( cv->param == 1 )
-			sprintf( str," (P$varFlags)\n\"" );
-		else
-		{
-			if ( cv->num_lag == 0 )
-				sprintf( str, " (%s$varFlags)\n\"", ( cv->param == 0 ) ? "V" : "F" );
-			else
-				sprintf( str, " (%s_%d$varFlags)\n\"", ( cv->param == 0 ) ? "V" : "F", cv->num_lag );
-		}
-		
-		strcat( ch, str );
-		cmd( ch );
-	}
-
 	// find current tree depth
 	for ( j = 0, cur = t; cur->up != NULL; ++j, cur = cur->up );
 	
@@ -293,8 +337,8 @@ void draw_obj( object *t, object *sel, int level, int center, int from, bool zer
 				}
 				
 				skip_next_obj( cur, &count );
-				sprintf( str, "%s%d", strlen( ch1 ) > 0 ? " " : "", count );
-				strcat( ch1, str );
+				snprintf( str, MAX_LINE_SIZE, "%s%d", strlen( ch1 ) > 0 ? " " : "", count );
+				strncat( ch1, str, MAX_LINE_SIZE - 2 );
 				
 				for ( ; cur->next != NULL; cur = cur->next ); // reaches the last object of this group
 			}
@@ -445,26 +489,36 @@ void put_text( char *str, char *n, int x, int y, char *str2 )
 
 	cmd( ".str.f.c bind %s <Enter> { \
 			set res_g %s; \
-			if [ winfo exists .list ] { \
-				destroy .list \
+			if { [ info exists res_g_id ] } { \
+				after cancel $res_g_id \
 			}; \
-			toplevel .list -background $colorsTheme(bg); \
-			wm transient .list .str; \
-			wm title .list \"\"; \
-			wm protocol .list WM_DELETE_WINDOW { }; \
-			ttk::frame .list.h; \
-			ttk::label .list.h.l -text \"Object:\"; \
-			ttk::label .list.h.n -style hl.TLabel -text \"%s\"; \
-			pack .list.h.l .list.h.n -side left -padx 2; \
-			ttk::label .list.l -text \"$list_%s\" -justify left; \
-			pack .list.h .list.l; \
-			align .list .str \
-		}", str2, str2, str2, str2 );
+			destroy .list; \
+			if { [ llength $tlist_%s ] > 0 } { \
+				set res_g_id [ after $ttipdelay { \
+					destroy .list; \
+					toplevel .list -class Tooltip -background $colorsTheme(ttip) -borderwidth 0 -highlightthickness 1 -highlightbackground $colorsTheme(fg); \
+					wm withdraw .list; \
+					set res_g_i 0; \
+					foreach res_g_t $tlist_%s res_g_s $slist_%s { \
+						ttk::label .list.e$res_g_i -text \"$res_g_t\" -style $res_g_s -background $colorsTheme(ttip); \
+						pack .list.e$res_g_i -anchor w -ipadx 1; \
+						incr res_g_i \
+					}; \
+					update idletasks; \
+					wm geometry .list +[ expr { %%X + 5 } ]+[ expr { %%Y + 5 } ]; \
+					wm overrideredirect .list 1; \
+					wm attributes .list -topmost 1; \
+					wm state .list normal; \
+					update idletasks \
+				} ] \
+			} \
+		}", str2, str2, str2, str2, str2 );
 
 	cmd( ".str.f.c bind %s <Leave> { \
-			if [ info exists res_g ] { \
-				unset res_g \
+			if { [ info exists res_g_id ] } { \
+				after cancel $res_g_id \
 			}; \
+			unset -nocomplain res_g res_g_id; \
 			destroy .list \
 		}", str2 );
 }

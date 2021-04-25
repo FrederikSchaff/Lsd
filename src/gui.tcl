@@ -37,6 +37,7 @@ source "$RootLsd/$LsdSrc/defaults.tcl" ;	# load LSD defaults
 source "$RootLsd/$LsdSrc/window.tcl" ;		# load LSD gui management
 source "$RootLsd/$LsdSrc/wgtclone.tcl" ;	# load LSD widget cloning tools
 source "$RootLsd/$LsdSrc/theme.tcl" ;		# load LSD gui theming
+source "$RootLsd/$LsdSrc/tooltip.tcl" ;		# tklib tootip management
 source "$RootLsd/$LsdSrc/dblclick.tcl" ;	# enhancements to double-click in text widgets
 
 # optional development tools
@@ -280,6 +281,7 @@ if { $darkTheme } {
 	set colorsTheme(obj) $objcolorD
 	set colorsTheme(grp) $grpcolorD
 	set colorsTheme(mod) $modcolorD
+	set colorsTheme(ttip) $ttipcolorD
 } else {
 	set defcolors $defcolorsL
 	set colorsTheme(hl) $hlcolorL
@@ -298,7 +300,14 @@ if { $darkTheme } {
 	set colorsTheme(obj) $objcolorL
 	set colorsTheme(grp) $grpcolorL
 	set colorsTheme(mod) $modcolorL
+	set colorsTheme(ttip) $ttipcolorL
 }
+
+# set tool tips (balloons)
+set tooltip::labelOpts [ list -background $colorsTheme(ttip) -foreground $colorsTheme(fg) \
+	 -borderwidth 0 -highlightthickness 1 -highlightbackground $colorsTheme(fg) ]
+tooltip::tooltip delay $ttipdelay
+tooltip::tooltip fade $ttipfade
 
 # Variable 'alignMode' configure special, per module (LMM, LSD), settings
 unset -nocomplain defaultPos defaultFocus
@@ -314,7 +323,7 @@ if [ info exists alignMode ] {
 # lists to hold the windows parents stacks and exceptions to the parent mgmt.
 set parWndLst [ list ]
 set grabLst [ list ]
-set noParLst [ list .log .str .lat .plt .dap .tst ]
+set noParLst [ list .log .str .deb .lat .plt .dap .tst ]
 
 # list of windows with predefined sizes & positions
 set wndLst [ list .lmm .lsd .log .str .da .deb .lat .plt .dap ]

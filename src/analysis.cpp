@@ -71,7 +71,7 @@ used case 47
 
 bool avgSmplMsg;
 bool first_run = true;
-char filename[ MAX_PATH_LENGTH ];
+char filename[ MAX_PATH_LENGTH + 1 ];
 double maxy, maxy2;
 double miny, miny2;
 double point_size;
@@ -229,6 +229,8 @@ cmd( "ttk::label .da.vars.lb.th -text \"Series available\" -style boldSmall.TLab
 cmd( "ttk::combobox .da.vars.lb.flt -state readonly -textvariable serPar -postcommand { .da.vars.lb.flt configure -values [ update_parent ] }" );
 cmd( "pack .da.vars.lb.th .da.vars.lb.flt -fill x" );
 
+cmd( "tooltip::tooltip .da.vars.lb.flt \"Filter series to show\"" );
+
 cmd( "bind .da.vars.lb.flt <<ComboboxSelected>> { filter_series }" );
 
 cmd( "set f .da.vars.lb.f" );
@@ -295,6 +297,16 @@ cmd( "ttk::button $f.add -width 6 -style Toolbutton -text \"Add...\" -command { 
 cmd( "ttk::button $f.empty -width 6 -style Toolbutton -text Clear -command { set choice 8 } -underline 0" );
 cmd( "ttk::label $f.pad2" );
 cmd( "pack $f.pad1 $f.in $f.out $f.sort $f.sortdesc $f.sortend $f.unsort $f.search $f.add $f.empty $f.pad2 -padx 2 -pady 1 -fill y" );
+
+cmd( "tooltip::tooltip $f.in \"Add highlighted series to seleced\"" );
+cmd( "tooltip::tooltip $f.out \"Remove highlighted selected series\"" );
+cmd( "tooltip::tooltip $f.sort \"Sort in alphabetical order\"" );
+cmd( "tooltip::tooltip $f.sortdesc \"Sort in inverse alphabetical order\"" );
+cmd( "tooltip::tooltip $f.sortend \"Sort in alphabetical & time order\"" );
+cmd( "tooltip::tooltip $f.unsort \"Restore original order\"" );
+cmd( "tooltip::tooltip $f.search \"Find...\"" );
+cmd( "tooltip::tooltip $f.add \"Add new series...\"" );
+cmd( "tooltip::tooltip $f.empty \"Remove all selected series\"" );
 
 // selected series listbox
 cmd( "ttk::frame .da.vars.ch" );
@@ -421,6 +433,8 @@ cmd( "pack  .da.f.h.v.ft.to.maxc .da.f.h.v.ft.to.mxc -ipadx 5 -side left" );
 
 cmd( "pack .da.f.h.v.ft.auto .da.f.h.v.ft.from .da.f.h.v.ft.to -side left -padx 5 -expand 1 -fill x" );
 
+cmd( "tooltip::tooltip .da.f.h.v.ft \"Choose cases (time steps) to use\"" );
+
 cmd( "ttk::frame .da.f.h.v.sc" );			// scaling/limits options
 
 cmd( "ttk::checkbutton .da.f.h.v.sc.auto -text \"Y self-scaling\" -variable auto -command { if { $auto } { .da.f.h.v.sc.max.max conf -state disabled; .da.f.h.v.sc.min.min conf -state disabled } { .da.f.h.v.sc.max.max conf -state normal; .da.f.h.v.sc.min.min conf -state normal } }" );
@@ -437,6 +451,10 @@ cmd( "pack .da.f.h.v.sc.max.lmax .da.f.h.v.sc.max.max -ipadx 5 -side left" );
 
 cmd( "pack .da.f.h.v.sc.auto .da.f.h.v.sc.min .da.f.h.v.sc.max -side left -padx 5 -expand 1 -fill x" );
 
+cmd( "tooltip::tooltip .da.f.h.v.sc.auto \"Automatic vertical axis limits\"" );
+cmd( "tooltip::tooltip .da.f.h.v.sc.min \"Minimum (lower) vertical axis limit\"" );
+cmd( "tooltip::tooltip .da.f.h.v.sc.max \"Maximum (upper) vertical axis limit\"" );
+
 cmd( "ttk::frame .da.f.h.v.y2" );			// log and 2nd y axis
 cmd( "ttk::checkbutton .da.f.h.v.y2.logs -text \"Series in logs\" -variable logs" );
 cmd( "ttk::label .da.f.h.v.y2.pad" );
@@ -451,16 +469,26 @@ cmd( "pack .da.f.h.v.y2.logs .da.f.h.v.y2.pad .da.f.h.v.y2.y2 .da.f.h.v.y2.f -si
 
 cmd( "pack .da.f.h.v.ft .da.f.h.v.sc .da.f.h.v.y2 -anchor w -expand 1 -fill x" );
 
+cmd( "tooltip::tooltip .da.f.h.v.y2.logs \"Use log values of series\"" );
+cmd( "tooltip::tooltip .da.f.h.v.y2.y2 \"Enable secondary vertical scale\"" );
+cmd( "tooltip::tooltip .da.f.h.v.y2.f \"First series to use secondary scale\"" );
+
 // right options block
 cmd( "ttk::frame .da.f.h.tc -relief solid -borderwidth 1 -padding [ list $frPadX $frPadY ]" );
 cmd( "ttk::radiobutton .da.f.h.tc.time -text \"Time series\" -variable tc -value 0 -command { if { $xy == 0 } { .da.f.h.v.y2.y2 conf -state normal }; if { $xy == 1 } { .da.f.tit.lp.line config -state normal; set line_point $linemodeP } }" );
 cmd( "ttk::radiobutton .da.f.h.tc.cross -text \"Cross-section\" -variable tc -value 1 -command { set y2 0; .da.f.h.v.y2.y2 conf -state disabled; .da.f.h.v.y2.f.e conf -state disabled; if { $xy == 1 } { set line_point 2;  .da.f.tit.lp.line config -state disabled } }" );
 cmd( "pack .da.f.h.tc.time .da.f.h.tc.cross -anchor w" );
 
+cmd( "tooltip::tooltip .da.f.h.tc.time \"Longitudinal plot (cases in x axis)\"" );
+cmd( "tooltip::tooltip .da.f.h.tc.cross \"Cross-section plot (series in x axis)\"" );
+
 cmd( "ttk::frame .da.f.h.xy -relief solid -borderwidth 1 -padding [ list $frPadX $frPadY ]" );
 cmd( "ttk::radiobutton .da.f.h.xy.seq -text \"Sequence\" -variable xy -value 0 -command { if { $tc == 0 } { .da.f.h.v.y2.y2 conf -state normal } { set y2 0; .da.f.h.v.y2.y2 conf -state disabled; .da.f.h.v.y2.f.e conf -state disabled }; .da.f.tit.run.gnu conf -state disabled; .da.f.tit.run.watch conf -state normal; if { $tc == 1 } { .da.f.tit.lp.line config -state normal; set line_point $linemodeP } }" );
 cmd( "ttk::radiobutton .da.f.h.xy.xy -text \"XY plot\" -variable xy -value 1 -command { set y2 0; .da.f.h.v.y2.y2 conf -state disabled; .da.f.h.v.y2.f.e conf -state disabled; .da.f.tit.run.gnu conf -state normal; .da.f.tit.run.watch conf -state disabled; if { $tc == 1 } { set line_point 2;  .da.f.tit.lp.line config -state disabled } }" );
 cmd( "pack .da.f.h.xy.seq .da.f.h.xy.xy -anchor w" );
+
+cmd( "tooltip::tooltip .da.f.h.xy.seq \"Regular plot (cases and series in axes)\"" );
+cmd( "tooltip::tooltip .da.f.h.xy.xy \"Scatter plot (series in both axes)\"" );
 
 // pack first horizontal group of controls
 cmd( "pack .da.f.h.v .da.f.h.tc .da.f.h.xy -padx 20 -side left -expand 1 -fill x" );
@@ -473,32 +501,47 @@ cmd( "ttk::label .da.f.tit.t.l -text Title" );
 cmd( "ttk::entry .da.f.tit.t.e -textvariable tit -width 35 -justify center" );
 cmd( "pack .da.f.tit.t.l .da.f.tit.t.e -ipadx 5 -side left" );
 
+cmd( "tooltip::tooltip .da.f.tit.t \"Title (name) to use in plot tab/window\"" );
+
 cmd( "ttk::frame .da.f.tit.chk" );			// golor/grid options
 
 cmd( "ttk::checkbutton .da.f.tit.chk.allblack -text \"No colors\" -variable allblack" );
 cmd( "ttk::checkbutton .da.f.tit.chk.grid -text \"Grids\" -variable grid" );
 cmd( "pack .da.f.tit.chk.allblack .da.f.tit.chk.grid -anchor w" );
 
+cmd( "tooltip::tooltip .da.f.tit.chk.allblack \"Gray scale plots only\"" );
+cmd( "tooltip::tooltip .da.f.tit.chk.grid \"Show grid lines on plots\"" );
+
 cmd( "ttk::frame .da.f.tit.run" );			// watch/gnuplot options 
 cmd( "ttk::checkbutton .da.f.tit.run.watch -text Watch -variable watch" );
 cmd( "ttk::checkbutton .da.f.tit.run.gnu -text Gnuplot -variable gnu -state disabled" );
 cmd( "pack .da.f.tit.run.watch .da.f.tit.run.gnu -anchor w" );
+
+cmd( "tooltip::tooltip .da.f.tit.run.watch \"Enable plotting to be interrupted\"" );
+cmd( "tooltip::tooltip .da.f.tit.run.gnu \"Open plot in Gnuplot\"" );
 
 cmd( "ttk::frame .da.f.tit.pr" );			// precision positions
 cmd( "ttk::label .da.f.tit.pr.l -text \"Precision\"" );
 cmd( "ttk::spinbox .da.f.tit.pr.e -width 2 -from 0 -to 9 -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 0 && $n <= 9 } { set pdigits %%P; return 1 } { %%W delete 0 end; %%W insert 0 $pdigits; return 0 } } -invalidcommand { bell } -justify center" );
 cmd( "pack .da.f.tit.pr.l .da.f.tit.pr.e" );
 
+cmd( "tooltip::tooltip .da.f.tit.pr \"Number of significant digits to use\"" );
+
 cmd( "ttk::frame .da.f.tit.ps" );			// point size
 cmd( "ttk::label .da.f.tit.ps.l -text \"Point size\"" );
 cmd( "ttk::spinbox .da.f.tit.ps.e -width 4 -from 0.2 -to 9.8 -increment 0.2 -validate focusout -validatecommand { set n %%P; if { [ string is double -strict $n ] && $n >= 0.2 && $n <= 9.8 } { set point_size %%P; return 1 } { %%W delete 0 end; %%W insert 0 $point_size; return 0 } } -invalidcommand { bell } -justify center" );
 cmd( "pack .da.f.tit.ps.l .da.f.tit.ps.e" );
+
+cmd( "tooltip::tooltip .da.f.tit.ps \"Size/width of data points/lines\"" );
 
 // line/points option
 cmd( "ttk::frame .da.f.tit.lp -relief solid -borderwidth 1 -padding [ list $frPadX $frPadY ]" );
 cmd( "ttk::radiobutton .da.f.tit.lp.line -text \"Lines\" -variable line_point -value 1" );
 cmd( "ttk::radiobutton .da.f.tit.lp.point -text \"Points\" -variable line_point -value 2" );
 cmd( "pack .da.f.tit.lp.line .da.f.tit.lp.point -anchor w" );
+
+cmd( "tooltip::tooltip .da.f.tit.lp.line \"Connect data points with lines\"" );
+cmd( "tooltip::tooltip .da.f.tit.lp.point \"Represent data points with markers\"" );
 
 // pack second horizontal group of controls
 cmd( "pack .da.f.tit.t .da.f.tit.chk .da.f.tit.run .da.f.tit.pr .da.f.tit.ps .da.f.tit.lp -padx 10 -pady 5 -side left -expand 1 -fill x" );
@@ -519,6 +562,14 @@ cmd( "ttk::button .da.b.lat -width [ expr { $butWid + 1 } ] -text Lattice -comma
 
 cmd( "pack .da.b.ts .da.b.dump .da.b.sv .da.b.sp .da.b.st .da.b.fr .da.b.lat -padx $butSpc -side left" );
 cmd( "pack .da.b -padx $butPad -pady $butPad -side right" );
+
+cmd( "tooltip::tooltip .da.b.ts \"Plot selected series\"" );
+cmd( "tooltip::tooltip .da.b.dump \"Save selected plot to file\"" );
+cmd( "tooltip::tooltip .da.b.sv \"Save selected series to file\"" );
+cmd( "tooltip::tooltip .da.b.sp \"Show selected series data\"" );
+cmd( "tooltip::tooltip .da.b.st \"Statistics from selected series\"" );
+cmd( "tooltip::tooltip .da.b.fr \"Histogram from selected series\"" );
+cmd( "tooltip::tooltip .da.b.lat \"Lattice from selected series\"" );
 
 // top window shortcuts binding
 cmd( "bind .da <KeyPress-Escape> { set choice 2 }" );	// quit
@@ -550,10 +601,10 @@ Tcl_SetVar( inter, "running", running ? "1" : "0", 0 );
 cmd( "if $running { showtop .da overM } { showtop .da overM 1 1 0 }" );
 
 // add time series in memory to listbox
+update_descr_dict( );
 if ( actual_steps > 0 )
 {
 	insert_data_mem( root, &num_var );
-	
 	min_c = max( first_c, showInit ? 0 : 1 );
 	max_c = num_c;
 } 
@@ -645,10 +696,7 @@ while ( true )
 
 	// coming from the structure window
 	if ( choice_g )
-	{
-		*choice = 29;					// change the parent filter
-		cmd( "focus .da.vars.lb.f.v" );
-	}
+		*choice = 29;
 
 	// update linked variables with values in entry boxes
 	cmd( "if [ string is double [ .da.f.h.v.sc.min.min get ] ] { set miny [ .da.f.h.v.sc.min.min get ] }" );
@@ -1013,6 +1061,17 @@ while ( true )
 			cmd( "showtop .da.file" );
 			cmd( "mousewarpto .da.file.b.ok" );
 
+			cmd( "tooltip::tooltip .da.file.opt.fmt.p1 \"Scalable Vector Graphics format\"" );
+			cmd( "tooltip::tooltip .da.file.opt.fmt.p2 \"Encapsulated Postscript (EPS) format\"" );
+			cmd( "tooltip::tooltip .da.file.opt.col.r1 \"All colors\"" );
+			cmd( "tooltip::tooltip .da.file.opt.col.r2 \"Gray tones only\"" );
+			cmd( "tooltip::tooltip .da.file.opt.col.r3 \"Black and white only\"" );
+			cmd( "tooltip::tooltip .da.file.opt.pos.p1 \"Horizontal orientation\n(Postscript only)\"" );
+			cmd( "tooltip::tooltip .da.file.opt.pos.p2 \"Vertical orientation\n(Postscript only)\"" );
+			cmd( "tooltip::tooltip .da.file.dim.n \"Page width\n(Postscript only)\"" );
+			cmd( "tooltip::tooltip .da.file.lab \"Show names of series\"" );
+
+
 			*choice = 0;
 			while ( *choice == 0 )
 				Tcl_DoOneEvent( 0 );
@@ -1034,7 +1093,7 @@ while ( true )
 					set t \"Scalable Vector Graphics\" \
 				}" );
 					
-			cmd( "set fn [ tk_getSaveFile -parent .da -title \"Save Plot File\" -defaultextension .$pltSavFmt -initialfile $b.$pltSavFmt -initialdir \"$path\" -filetypes { { {Scalable Vector Graphics} {.svg} } { {Encapsulated Postscript} {.eps} } { {All files} {*} } } -typevariable t ]; if { [ string length $fn ] == 0 } { set choice 2 }" );
+			cmd( "set fn [ tk_getSaveFile -parent .da -title \"Save Plot to File\" -defaultextension .$pltSavFmt -initialfile $b.$pltSavFmt -initialdir \"$path\" -filetypes { { {Scalable Vector Graphics} {.svg} } { {Encapsulated Postscript} {.eps} } { {All files} {*} } } -typevariable t ]; if { [ string length $fn ] == 0 } { set choice 2 }" );
 			
 			if ( *choice == 2 )
 				break;
@@ -1346,6 +1405,9 @@ while ( true )
 			cmd( "XYokhelpcancel .da.a b Description Equation { set choice 3 } { set choice 4 } { set choice 1 } { LsdHelp menudata_res.html#batch_sel } { set choice 2 }" );
 			cmd( "showtop .da.a topleftW 0 0" );
 			cmd( "mousewarpto .da.a.b.r2.ok" );
+			
+			cmd( "tooltip::tooltip .da.a.b.r1.x \"Show textual description\"" );
+			cmd( "tooltip::tooltip .da.a.b.r1.y \"Show equation code\"" );
 
 			*choice = 0;
 			while ( *choice == 0 )
@@ -1875,6 +1937,9 @@ while ( true )
 			cmd( "XYokhelpcancel .da.a b Description Equation { set choice 3 } { set choice 4 } { set choice 1 } { LsdHelp menudata_res.html#batch_sel } { set choice 2 }" );
 			cmd( "showtop .da.a topleftW 0 0" );
 			cmd( "mousewarpto .da.a.b.r2.ok" );
+
+			cmd( "tooltip::tooltip .da.a.b.r1.x \"Variable/Parameter textual description\"" );
+			cmd( "tooltip::tooltip .da.a.b.r1.y \"Variable equation code\"" );
 
 			*choice = 0;
 			while ( *choice == 0 )
@@ -2472,10 +2537,10 @@ while ( true )
 					cmd( "set bidi 1" );
 					cmd( "set keepSeries 0" );
 
-					cmd( "newtop .da.s \"Monte Carlo Series Options\" { set choice 2 } .da" );
+					cmd( "newtop .da.s \"Monte Carlo Options\" { set choice 2 } .da" );
 
 					cmd( "ttk::frame .da.s.i" );
-					cmd( "ttk::label .da.s.i.l -text \"Mode\"" );
+					cmd( "ttk::label .da.s.i.l -text \"Series to create\"" );
 
 					cmd( "ttk::frame .da.s.i.r -relief solid -borderwidth 1 -padding [ list $frPadX $frPadY ]" );
 					cmd( "ttk::radiobutton .da.s.i.r.m -text \"Average only\" -variable bidi -value 1 -command { .da.s.ci.p configure -state disabled }" );
@@ -2513,6 +2578,8 @@ while ( true )
 					cmd( "showtop .da.s" );
 					cmd( "mousewarpto .da.s.b.ok" );
 					 
+					cmd( "tooltip::tooltip .da.s.s.k \"Preserve original series\nafter computing MC series\"" );
+
 					*choice = 0;
 					while ( *choice == 0 )
 						Tcl_DoOneEvent( 0 );
@@ -2526,29 +2593,35 @@ while ( true )
 						goto add_end;
 					
 				case 1:
-					gz = false;
-					const char extRes[ ] = ".res .res.gz";
-					const char extTot[ ] = ".tot .tot.gz";
-
-					// make sure there is a path set
-					cmd( "set path \"%s\"", path );
-					if ( strlen( path ) > 0 )
-						cmd( "cd \"$path\"" );
 				
-					cmd( "set lab [ tk_getOpenFile -parent .da -title \"Load Results File%s\" -multiple yes -initialdir \"$path\" -filetypes {{{LSD result files} {%s}} {{LSD total files} {%s}} {{All files} {*}}} ]", mc ? "s" : "(s)", extRes, extTot );
-					cmd( "if { ! [ fn_spaces \"$lab\" .da 1 ] } { set choice [ llength $lab ] } { set choice 0 }" );
-					h = *choice;		// number of files
-					
-					if ( h == 0 )
-						goto add_end; 	// no file selected
-					
-					if ( mc && h == 1 )
+					// check if MC results were not just created
+					if ( ! mc || res_list.size( ) <= 1 )
 					{
-						cmd( "ttk::messageBox -parent .da -type ok -icon error -title Error -message \"Invalid number of results files\" -detail \"Monte Carlo experiment requires two or more files. Please adjust the number of simulation runs properly and regenerate the files.\"" );
-						plog( "\nError: invalid number of files\n" );
-						goto add_end;
+						const char extRes[ ] = ".res .res.gz";
+						const char extTot[ ] = ".tot .tot.gz";
+
+						// make sure there is a path set
+						cmd( "set path \"%s\"", path );
+						if ( strlen( path ) > 0 )
+							cmd( "cd \"$path\"" );
+					
+						cmd( "set lab [ tk_getOpenFile -parent .da -title \"Load Results File%s\" -multiple yes -initialdir \"$path\" -filetypes {{{LSD result files} {%s}} {{LSD total files} {%s}} {{All files} {*}}} ]", mc ? "s" : "(s)", extRes, extTot );
+						cmd( "if { ! [ fn_spaces \"$lab\" .da 1 ] } { set choice [ llength $lab ] } { set choice 0 }" );
+						h = *choice;		// number of files
+						
+						if ( h == 0 )
+							goto add_end; 	// no file selected
+						
+						if ( mc && h == 1 )
+						{
+							cmd( "ttk::messageBox -parent .da -type ok -icon error -title Error -message \"Invalid number of results files\" -detail \"Monte Carlo experiment requires two or more files. Please adjust the number of simulation runs properly and regenerate the files.\"" );
+							plog( "\nError: invalid number of files\n" );
+							goto add_end;
+						}
 					}
-				
+					else
+						h = res_list.size( );
+					
 					var_names.resize( h );
 					
 					if ( mc )
@@ -2561,11 +2634,16 @@ while ( true )
 					else
 						cmd( "progressbox .da.pas \"Add Series\" \"Loading series\" \"\" 1 { set stop true } .da \"Case\"" );
 					
-					for ( i = 0, stop = false; i < h && ! stop; ++i )  
+					for ( i = 0, stop = gz = false; i < h && ! stop; ++i )  
 					{
-						cmd( "set datafile [ lindex $lab %d ]", i );
-						app = ( char * ) Tcl_GetVar( inter, "datafile", 0 );
-						strcpy( filename, app );
+						if ( ! mc || res_list.size( ) <= 1 )
+						{
+							cmd( "set datafile [ lindex $lab %d ]", i );
+							strncpy( filename, ( char * ) Tcl_GetVar( inter, "datafile", 0 ), MAX_PATH_LENGTH );
+						}
+						else
+							strncpy( filename, res_list[ i ].c_str( ), MAX_PATH_LENGTH );
+						
 						if ( strlen( filename ) > 3 && ! strcmp( &filename[ strlen( filename ) - 3 ], ".gz" ) )
 							gz = true;
 
@@ -3530,9 +3608,31 @@ while ( true )
 
 		// MODEL STRUCTURE ACTIONS
 
-		// select parent filter
 		case 29:
-			cmd( "filter_series $res_g" );
+		
+			switch ( choice_g )
+			{
+				// redraw model structure graph
+				case 23:
+				
+					show_graph( );
+					cmd( "focustop .da" );
+					
+					break;
+					
+					
+				// select parent filter from model structure graph
+				case 24:
+				
+					cmd( "focus .da.vars.lb.f.v" );
+					cmd( "if { [ info exists res_g ] } { filter_series $res_g }" );
+					
+					break;
+					
+				default:
+					break;
+			}
+		
 			break;
 
 		default:
@@ -4006,7 +4106,7 @@ void set_cs_data( int *choice )
 	cmd( "set list_times $list_times_new" );
 
 	cmd( "set p .da.s" );
-	cmd( "newtop $p \"Cross Section Cases\" { set choice 2 } .da" );
+	cmd( "newtop $p \"Cross-section Cases\" { set choice 2 } .da" );
 
 	cmd( "ttk::frame $p.u" );
 
@@ -4044,7 +4144,7 @@ void set_cs_data( int *choice )
 
 	cmd( "ttk::frame $p.u.s.r" );
 	cmd( "ttk::label $p.u.s.r.l -justify center -text \"Case reference\nfor series sorting\"" );
-	cmd( "ttk::entry $p.u.s.r.e -width 10 -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && ( $n in $list_times ) } { set res %%P; return 1 } { %%W delete 0 end; %%W insert 0 $res; return 0 } } -invalidcommand { bell } -justify center -state disabled" );
+	cmd( "ttk::entry $p.u.s.r.e -width 10 -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && ( $n in $list_times ) } { set res %%P; return 1 } { %%W delete 0 end; %%W insert 0 $res; return 0 } } -justify center -state disabled" );
 	cmd( "write_disabled $p.u.s.r.e $res" );
 	cmd( "pack $p.u.s.r.l $p.u.s.r.e" );
 	cmd( "pack $p.u.s.r -pady 10" );
@@ -4111,6 +4211,10 @@ void set_cs_data( int *choice )
 	cmd( "showtop $p centerW no no yes 0 0 .da.s.fb.r1.add" );
 	cmd( ".da.s.u.i.e.e selection range 0 end; focus .da.s.u.i.e.e" );
 	cmd( "mousewarpto $p.fb.ok" );
+
+	cmd( "tooltip::tooltip $p.fb.r1.x \"Add case to selected\"" );
+	cmd( "tooltip::tooltip $p.fb.r1.y \"Remove case from selected\"" );
+	cmd( "tooltip::tooltip $p.fb.r1.z \"Remove all selected cases\"" );
 
 	*choice = 0;
 	while ( ! *choice )
@@ -4239,6 +4343,19 @@ double *log_data( double *data, int start, int end, int ser, const char *err_msg
 
 
 /***************************************************
+UPDATE_DESCR_DICT
+****************************************************/
+void update_descr_dict( void )
+{
+	char desc[ MAX_LINE_SIZE + 1 ];				
+	description *cd;
+	
+	for ( cd = descr; cd != NULL; cd = cd->next )
+		cmd( "dict set serDescrDict %s \"%s\"", cd->label, fmt_ttip_descr( desc, cd, MAX_LINE_SIZE + 1 ) );
+}
+
+
+/***************************************************
 INSERT_DATA_MEM
 ****************************************************/
 void insert_data_mem( object *r, int *num_v, char *lab )
@@ -4283,7 +4400,7 @@ void create_par_map( object *r )
 	variable *cv;
 	
 	for ( cv = r->v; cv != NULL; cv = cv->next )
-		par_map.insert( make_pair < string, string > ( cv->label, r->label ) );		
+		par_map.insert( make_pair < string, string > ( cv->label, r->label ) );
 
 	for ( cb = r->b; cb != NULL; cb = cb->next )
 		for ( cur = cb->head; cur != NULL; cur = go_brother( cur ) )
@@ -4564,6 +4681,10 @@ void insert_data_file( bool gz, int *num_v, vector < string > *var_names, bool k
 	 
 		if ( keep_vars )
 		{
+			cmd( "if { ! [ dict exists serDescrDict %s ] } { \
+					dict set serDescrDict %s \"Loaded from file\n[ file nativename %s ]\" \
+				}", vs[ i ].label, vs[ i ].label, filename );
+			
 			if ( par_map.find( vs[ i ].label ) == par_map.end( ) )
 				cmd( "add_series \"%s\" %s", msg, filename );
 			else
@@ -4939,7 +5060,7 @@ void plot_gnu( int *choice )
 		cmd( "ttk::frame .da.s.t.d -relief solid -borderwidth 1 -padding [ list $frPadX $frPadY ]" );
 		cmd( "if { ! [ info exists ndim ] } { set ndim 2 }" );
 		cmd( "ttk::radiobutton .da.s.t.d.2d -text \"2D plot\" -variable ndim -value 2 -command { .da.s.d.o.a configure -state disabled; .da.s.d.o.c configure -state disabled; .da.s.d.o.b configure -state disabled; .da.s.o.g configure -state disabled; .da.s.o.p configure -state disabled; set box 0; set gridd 0; set pm3d 0 }" );
-		cmd( "ttk::radiobutton .da.s.t.d.3d -text \"3D plot \" -variable ndim -value 3 -command { .da.s.d.o.a configure -state normal; .da.s.d.o.c configure -state normal; .da.s.d.o.b configure -state normal; .da.s.o.g configure -state normal; .da.s.o.p configure -state normal }" );
+		cmd( "ttk::radiobutton .da.s.t.d.3d -text \"3D plot \" -variable ndim -value 3 -command { .da.s.d.o.a configure -state normal; .da.s.d.o.c configure -state normal; .da.s.d.o.b configure -state normal; if { $gnu } { .da.s.o.g configure -state normal; .da.s.o.p configure -state normal } }" );
 		cmd( "pack .da.s.t.d.2d .da.s.t.d.3d -anchor w" );
 
 		cmd( "pack .da.s.t.l .da.s.t.d" );
@@ -4959,6 +5080,7 @@ void plot_gnu( int *choice )
 		cmd( "ttk::frame .da.s.o" );
 		cmd( "ttk::checkbutton .da.s.o.g -text \"Use gridded data\" -variable gridd" );
 		cmd( "ttk::checkbutton .da.s.o.p -text \"Render 3D surface\" -variable pm3d" );
+		cmd( "if { ! $gnu } { .da.s.o.g configure -state disabled; .da.s.o.p configure -state disabled } { .da.s.o.g configure -state normal; .da.s.o.p configure -state normal }" );
 		cmd( "pack .da.s.o.g .da.s.o.p" );
 
 		cmd( "pack .da.s.t .da.s.d .da.s.o -padx 5 -pady 5" );
@@ -4969,6 +5091,9 @@ void plot_gnu( int *choice )
 
 		cmd( "showtop .da.s" );
 		cmd( "mousewarpto .da.s.b.ok" );
+
+		cmd( "tooltip::tooltip .da.s.o.g \"Supported only in Gnuplot\"" );
+		cmd( "tooltip::tooltip .da.s.o.p \"Supported only in Gnuplot\"" );
 
 		*choice = 0;
 		while ( *choice == 0 )
@@ -5512,8 +5637,8 @@ void plot_cs_xy( int *choice )
 
 	cmd( "ttk::frame .da.s.d.r -relief solid -borderwidth 1 -padding [ list $frPadX $frPadY ]" );
 	cmd( "if { ! [ info exists ndim ] } { set ndim 2 }" );
-	cmd( "ttk::radiobutton .da.s.d.r.2d -text \"2D plot\" -variable ndim -value 2 -command  { .da.s.o.g configure -state disabled; .da.s.o.p configure -state disabled; set gridd 0; set pm3d 0 }" );
-	cmd( "ttk::radiobutton .da.s.d.r.3d -text \"3D plot\" -variable ndim -value 3 -command  { .da.s.o.g configure -state normal; .da.s.o.p configure -state normal }" );
+	cmd( "ttk::radiobutton .da.s.d.r.2d -text \"2D plot\" -variable ndim -value 2 -command  { .da.s.o.opt.g configure -state disabled; .da.s.o.opt.p configure -state disabled; set gridd 0; set pm3d 0 }" );
+	cmd( "ttk::radiobutton .da.s.d.r.3d -text \"3D plot\" -variable ndim -value 3 -command  { if { $gnu } { .da.s.o.opt.g configure -state normal; .da.s.o.opt.p configure -state normal } }" );
 	cmd( "pack .da.s.d.r.2d .da.s.d.r.3d -anchor w" );
 
 	cmd( "pack .da.s.d.l .da.s.d.r" );
@@ -5523,7 +5648,7 @@ void plot_cs_xy( int *choice )
 	cmd( "ttk::frame .da.s.o.opt" );
 	cmd( "ttk::checkbutton .da.s.o.opt.g -text \"Use gridded data\" -variable gridd" );
 	cmd( "ttk::checkbutton .da.s.o.opt.p -text \"Render 3D surface\" -variable pm3d" );
-	cmd( "if { $ndim == 2 } { .da.s.o.opt.g configure -state disabled; .da.s.o.opt.p configure -state disabled; set gridd 0; set pm3d 0 } { .da.s.o.opt.g configure -state normal; .da.s.o.opt.p configure -state normal }" );
+	cmd( "if { $ndim == 2 || ! $gnu } { .da.s.o.opt.g configure -state disabled; .da.s.o.opt.p configure -state disabled; set gridd 0; set pm3d 0 } { .da.s.o.opt.g configure -state normal; .da.s.o.opt.p configure -state normal }" );
 	cmd( "pack .da.s.o.opt.g .da.s.o.opt.p -anchor w" );
 	cmd( "pack .da.s.o.l .da.s.o.opt" );
 
@@ -5538,12 +5663,17 @@ void plot_cs_xy( int *choice )
 	cmd( "ttk::label .da.s.v.l -text \"Dependent variables\"" );
 	cmd( "ttk::spinbox .da.s.v.e -width 5 -from 1 -to %d -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 1 && $n <= %d } { set numv %%P; return 1 } { %%W delete 0 end; %%W insert 0 $numv; return 0 } } -invalidcommand { bell } -justify center", nv, nv );
 	cmd( ".da.s.v.e insert 0 $numv" ); 
+	cmd( "if { ! $gnu } { .da.s.v.e configure -state disabled } { .da.s.v.e configure -state normal }" );
 	cmd( "ttk::label .da.s.v.n -text \"Block length: $blength\"" );
 	cmd( "pack .da.s.v.l .da.s.v.e .da.s.v.n" );
 
 	cmd( "pack .da.s.i .da.s.d .da.s.o .da.s.v -padx 5 -pady 5" );
 
 	cmd( "okhelpcancel .da.s b { set choice 1 } { LsdHelp menudata_res.html#3dCrossSection } { set choice 2 }" );
+	
+	cmd( "tooltip::tooltip .da.s.o.opt.g \"Supported only in Gnuplot\"" );
+	cmd( "tooltip::tooltip .da.s.o.opt.p \"Supported only in Gnuplot\"" );
+	cmd( "tooltip::tooltip .da.s.v \"Number of groups/surfaces\nSupported only in Gnuplot\"" );
 
 	cmd( "bind .da.s.v.e <KeyRelease> { set blength [ expr { $nnvar / ( $numv + $ndim - 1 ) } ]; .da.s.v.n conf -text \"Block length: $blength\" }" );
 	cmd( "set nnvar %d", nv );
@@ -6362,6 +6492,8 @@ void plot_lattice( int *choice )
 	cmd( "showtop .da.s" );
 	cmd( "mousewarpto .da.s.b.ok" );
 
+	cmd( "tooltip::tooltip .da.s.s.l \"Data multiplier values\"" );
+
 	*choice = 0;
 	while ( *choice == 0 )
 		Tcl_DoOneEvent( 0 );
@@ -6484,7 +6616,7 @@ void plot_lattice( int *choice )
 			set choice 11 \
 		}", cur_plot, ( char * ) Tcl_GetVar( inter, "tit", 0 ) );
 	cmd( "ttk::button $w.b.s.det -width $butWid -text Detach -command { \
-			detach_tab $daptab tab%d c.b.s.det .da %d \
+			detach_tab $daptab tab%d c.b.s.det c.b.s.save .da %d \
 		}", cur_plot, MAX_TAB_LEN - 1 );
 	cmd( "pack $w.b.s.save $w.b.s.det -pady 3" );
 	
@@ -6502,10 +6634,13 @@ void plot_lattice( int *choice )
 			if ( is_nan( color ) || ! is_finite( color ) )
 			  color = 0;
 
-			cmd( "plot_bars $p %d %d %d %d p%d_%d $c%d %lf", 
+			cmd( "plot_bars $p %d %d %d %d p%d_%d $c%d %lf $colorsTheme(dfg)", 
 			   i * le, j * hi, ( i + 1 ) * le, ( j + 1 ) * hi, j, i, 
 			   ( int ) color, grid ? point_size : 0.0 );
 		}
+
+	cmd( "tooltip::tooltip $w.b.s.save \"Save plot to file\"" );
+	cmd( "tooltip::tooltip $w.b.s.det \"Move to independent window\"" );
 
 	// create context menu and common bindings
 	canvas_binds( cur_plot );
@@ -7483,6 +7618,10 @@ bool create_series( int *choice, bool mc, vector < string > var_names )
 					
 			}
 		}
+
+		cmd( "if { ! [ dict exists serDescrDict %s ] } { \
+				dict set serDescrDict %s \"%s\" \
+			}", vs[ num_var ].label, vs[ num_var ].label, mc ? "Monte Carlo series" : "Created from other series" );
 		
 		if ( mc && new_series == 1 && par_map.find( vs[ num_var ].label ) != par_map.end( ) )
 			cmd( "add_series \"%s %s (%d-%d) #%d\" %s", vs[ num_var ].label, vs[ num_var ].tag, vs[ num_var ].start, vs[ num_var ].end, vs[ num_var ].rank, par_map[ vs[ num_var ].label ].c_str( ) ); 
@@ -7542,6 +7681,7 @@ CREATE_MAVERAG
 ****************************************************/
 bool create_maverag( int *choice )
 {
+	bool done = true;
 	char *lapp, **str, **tag;
 	double xapp, **data;
 	int h, i, j, k, flt, ma_type, *start, *end, *id;
@@ -7563,7 +7703,7 @@ bool create_maverag( int *choice )
 
 	cmd( "ttk::frame .da.s.o" );
 	cmd( "ttk::label .da.s.o.l -text \"Period (cases)\"" );
-	cmd( "ttk::spinbox .da.s.o.th -width 5 -from 1 -to $numc -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 1 && $n <= $numc } { set bido %%P; return 1 } { %%W delete 0 end; %%W insert 0 $bido; return 0 } } -invalidcommand { bell } -justify center" );
+	cmd( "ttk::spinbox .da.s.o.th -width 5 -from 2 -to $numc -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n > 1 && $n <= $numc } { set bido %%P; return 1 } { %%W delete 0 end; %%W insert 0 $bido; return 0 } } -invalidcommand { bell } -justify center" );
 	cmd( ".da.s.o.th insert 0 $bido" ); 
 	cmd( "pack .da.s.o.l .da.s.o.th" );
 	
@@ -7592,10 +7732,7 @@ bool create_maverag( int *choice )
 	cmd( "destroytop .da.s" );
 
 	if ( *choice == 2 )
-	{
-		*choice = 0;
 		return false;
-	}
 
 	flt = get_int( "bido" );
 	ma_type = get_int( "ma_type" );
@@ -7604,7 +7741,6 @@ bool create_maverag( int *choice )
 	if ( flt < 2 )
 	{
 		cmd( "ttk::messageBox -parent .da -type ok -icon error -title Error -message \"Invalid moving average period\" -detail \"Please choose a period larger than one case (time step).\"" );
-		*choice = 0;
 		return false;
 	}
 
@@ -7621,6 +7757,31 @@ bool create_maverag( int *choice )
 	str = new char *[ nv ];
 	tag = new char *[ nv ];
 
+	// prepare for errors and early exit
+	for ( i = 0; i < nv; ++i )
+	{
+		str[ i ] = NULL;
+		tag[ i ] = NULL;
+	}
+	
+	// check for too short series
+	for ( i = 0; i < nv; ++i )
+	{
+		str[ i ] = new char[ MAX_ELEM_LENGTH ];
+		tag[ i ] = new char[ MAX_ELEM_LENGTH ];
+
+		cmd( "set res [ .da.vars.ch.f.v get %d ]", i );
+		lapp = ( char * ) Tcl_GetVar( inter, "res", 0 );
+		sscanf( lapp, "%s %s (%d-%d) #%d", str[ i ], tag[ i ], &start[ i ], &end[ i ], &id[ i ] );
+
+		if ( end[ i ] - start[ i ] + 1 < flt )
+		{
+			cmd( "ttk::messageBox -parent .da -type ok -icon error -title Error -message \"Insufficient series cases\" -detail \"Series '%s' has less cases (%d) than the requested moving average period (%d). Please choose a longer series or a shorter moving average period.\"", lapp, end[ i ] - start[ i ] + 1, flt );
+			done = false;
+			goto end_mvavg;			
+		}
+	}
+		
 	app = new store[ nv + num_var ];
 	for ( i = 0; i < num_var; ++i )
 	{
@@ -7640,14 +7801,10 @@ bool create_maverag( int *choice )
 
 	for ( i = 0; i < nv; ++i )
 	{
-		str[ i ] = new char[ MAX_ELEM_LENGTH ];
-		tag[ i ] = new char[ MAX_ELEM_LENGTH ];
 		data[ i ] = NULL;
 
 		cmd( "set res [ .da.vars.ch.f.v get %d ]", i );
-		lapp = ( char * ) Tcl_GetVar( inter, "res", 0 );
-		strcpy( msg, lapp );
-		sscanf( msg, "%s %s (%d-%d) #%d", str[ i ], tag[ i ], &start[ i ], &end[ i ], &id[ i ] );
+		sscanf( ( char * ) Tcl_GetVar( inter, "res", 0 ), "%s %s (%d-%d) #%d", str[ i ], tag[ i ], &start[ i ], &end[ i ], &id[ i ] );
 
 		sprintf( vs[ num_var + i ].label, "%s_%cma%d", str[ i ], ma_type == 0 ? 's' : 'c', flt );
 		sprintf( vs[ num_var + i ].tag, "C_%s", tag[ i ] );
@@ -7719,6 +7876,10 @@ bool create_maverag( int *choice )
 					vs[ num_var + i ].data[ j - vs[ num_var + i ].start ] = xapp;     
 			}
 		}
+
+		cmd( "if { ! [ dict exists serDescrDict %s ] } { \
+				dict set serDescrDict %s \"Moving average (%d) from '%s'\" \
+			}", vs[ num_var + i ].label, vs[ num_var + i ].label, flt, str[ i ] );
 		
 		cmd( "add_series \"%s %s (%d-%d) #%d\" \"(added)\"", vs[ num_var + i ].label, vs[ num_var + i ].tag, vs[ num_var + i ].start, vs[ num_var + i ].end, vs[ num_var + i ].rank ); 
 	}
@@ -7726,6 +7887,8 @@ bool create_maverag( int *choice )
 	cmd( "update_parent" );
 	num_var += nv; 
 
+	end_mvavg:
+	
 	for ( i = 0; i < nv; ++i )
 	{
 		delete [ ] str[ i ];
@@ -7739,7 +7902,7 @@ bool create_maverag( int *choice )
 	delete [ ] end;
 	delete [ ] id;
 	
-	return true;
+	return done;
 }
 
 
@@ -7769,7 +7932,7 @@ bool add_unsaved( int *choice )
 	
 	cmd( "ttk::frame .da.s.i" );
 	cmd( "ttk::label .da.s.i.l -text \"Element name (or part)\"" );
-	cmd( "ttk::combobox .da.s.i.e -width 20 -justify center -values $unSavElem -validate focusout -validatecommand { set n %%P; if { $n in $unSavElem } { set bidi %%P; return 1 } { %%W delete 0 end; %%W insert 0 $bidi; return 0 } } -invalidcommand { bell }" );
+	cmd( "ttk::combobox .da.s.i.e -width 20 -justify center -values $unSavElem -validate focusout -validatecommand { set n %%P; if { $n in $unSavElem } { set bidi %%P; return 1 } { %%W delete 0 end; %%W insert 0 $bidi; return 0 } }" );
 	cmd( "write_any .da.s.i.e $bidi" );
 	cmd( "pack .da.s.i.l .da.s.i.e" );
 	cmd( "pack .da.s.i -pady 5 -padx 5" );
@@ -8634,6 +8797,7 @@ void plot( int type, int nv, double **data, int *start, int *end, int *id, char 
 	cmd( "$w.b.s.det configure -state normal -text Detach" );
 	cmd( "$w.b.z.b.p configure -state normal" );
 	cmd( "$w.b.z.b.m configure -state normal" );
+	cmd( "tooltip::tooltip $w.b.s.det \"Move to independent window\"" );
 
 	// raise axis, legends & draws to the front and lower grid to the back
 	cmd( "$p raise p" );
@@ -8816,6 +8980,7 @@ void plot( int type, int *start, int *end, char **str, char **tag, int *choice, 
 	cmd( "$w.b.s.det configure -state normal -text Detach" );
 	cmd( "$w.b.z.b.p configure -state normal" );
 	cmd( "$w.b.z.b.m configure -state normal" );
+	cmd( "tooltip::tooltip $w.b.s.det \"Move to independent window\"" );
 
 	// raise axis, legends & draws to the front and lower grid to the back
 	cmd( "$p raise p" );
@@ -9022,7 +9187,7 @@ void plot_canvas( int type, int nv, int *start, int *end, char **str, char **tag
 			if { [ $daptab.tab%d.c.b.s.det cget -text ] eq \"Stop\" } { \
 				set choice 2 \
 			} else { \
-				detach_tab $daptab tab%d c.b.s.det .da %d \
+				detach_tab $daptab tab%d c.b.s.det c.b.s.save .da %d \
 			} \
 		}", cur_plot, cur_plot, MAX_TAB_LEN - 1	);
 	cmd( "pack $w.b.s.save $w.b.s.det -pady 4" );
@@ -9042,8 +9207,15 @@ void plot_canvas( int type, int nv, int *start, int *end, char **str, char **tag
 	cmd( "pack $w.b.c $w.b.o $w.b.pad $w.b.s $w.b.z -padx $pad2 -pady 5 -side left" );
 	cmd( "pack $w.b -side right" );
 
+	cmd( "tooltip::tooltip $w.b.s.save \"Save plot to file\"" );
+	
 	if ( watch )
+	{
 		cmd( "$w.b.s.det configure -state normal -text Stop" );
+		cmd( "tooltip::tooltip $w.b.s.det \"Cancel plot rendering\"" );
+	}
+	else
+		cmd( "tooltip::tooltip $w.b.s.det \"Move to independent window\"" );
 
 	// hack to bring the new plot to the foreground during debugging in macOS
 	cmd( "if { $running && [ string equal [ tk windowingsystem ] aqua ] } { \

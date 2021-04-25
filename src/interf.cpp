@@ -75,7 +75,7 @@ object *initParent = NULL;			// parent of new variable initial setting
 
 
 // list of choices that are bad with existing run data
-int badChoices[ ] = { 1, 2, 3, 6, 7, 12, 19, 21, 22, 27, 28, 30, 31, 32, 33, 36, 43, 57, 58, 59, 62, 63, 64, 65, 68, 69, 71, 72, 74, 75, 76, 77, 78, 79, 80, 81, 83, 88, 90, 91, 92, 93, 94, 95, 96 };
+int badChoices[ ] = { 1, 2, 3, 6, 7, 19, 21, 22, 27, 28, 30, 31, 32, 33, 36, 43, 57, 58, 59, 62, 63, 64, 65, 68, 69, 71, 72, 74, 75, 76, 77, 78, 79, 80, 81, 83, 88, 90, 91, 92, 93, 94, 95, 96 };
 #define NUM_BAD_CHOICES ( sizeof( badChoices ) / sizeof( badChoices[ 0 ] ) )
 
 // list of choices that are run twice (called from another choice)
@@ -94,7 +94,6 @@ void create( void )
 	object *cur;
 
 	Tcl_LinkVar( inter, "strWindowOn", ( char * ) &strWindowOn, TCL_LINK_BOOLEAN );
-	Tcl_LinkVar( inter, "choice_g", ( char * ) &choice_g, TCL_LINK_INT );
 	Tcl_LinkVar( inter, "actual_steps", ( char * ) &actual_steps, TCL_LINK_INT );
 
 	// sort the list of choices with existing run data to use later
@@ -107,7 +106,6 @@ void create( void )
 	cmd( "set itemfocus 0" );
 	cmd( "set itemfirst 0" );
 	cmd( "set c \"\"" );
-	cmd( "if $strWindowOn { set strWindowB active } { set strWindowB normal }" );
 
 	// restore previous object and cursor position in browser, if any
 	cur = restore_pos( root );
@@ -157,7 +155,6 @@ void create( void )
 	}
 
 	Tcl_UnlinkVar( inter, "strWindowOn" );
-	Tcl_UnlinkVar( inter, "choice_g" );
 	Tcl_UnlinkVar( inter, "actual_steps" );
 }
 
@@ -168,7 +165,7 @@ BROWSE
 int browse( object *r, int *choice )
 {
 	bool done, sp_upd;
-	int num;
+	int i, num;
 	bridge *cb;
 	variable *cv;
 
@@ -186,15 +183,14 @@ int browse( object *r, int *choice )
 		cmd( "ttk::scrollbar .l.v.c.v_scroll -command \".l.v.c.var_name yview\"" );
 		cmd( "ttk::listbox .l.v.c.var_name -selectmode browse -yscroll \".l.v.c.v_scroll set\" -dark $darkTheme" );
 		cmd( "mouse_wheel .l.v.c.var_name" );
+		cmd( "tooltip::tooltip clear .l.v.c.var_name*" );
 
 		// populate the variables panel
 		if ( r->v == NULL )
 			cmd( ".l.v.c.var_name insert end \"(none)\"; set nVar 0" );
 		else
 		{
-			cmd( "set app 0" );
-			
-			for ( cv = r->v; cv != NULL; cv = cv->next )
+			for ( cv = r->v, i = 0; cv != NULL; cv = cv->next, ++i )
 			{
 				// special updating scheme?
 				if ( cv->param == 0 && ( cv->delay > 0 || cv->delay_range > 0 || cv->period > 1 || cv->period_range > 0 ) )
@@ -211,19 +207,19 @@ int browse( object *r, int *choice )
 					if ( cv->num_lag == 0 )
 					{
 						cmd( ".l.v.c.var_name insert end \"%s (V$varFlags)\"", cv->label );
-						cmd( ".l.v.c.var_name itemconf $app -fg $colorsTheme(var)" );
+						cmd( ".l.v.c.var_name itemconf %d -fg $colorsTheme(var)", i );
 					}
 					else
 					{
 						cmd( ".l.v.c.var_name insert end \"%s (V_%d$varFlags)\"", cv->label, cv->num_lag );
-						cmd( ".l.v.c.var_name itemconf $app -fg $colorsTheme(lvar)" );
+						cmd( ".l.v.c.var_name itemconf %d -fg $colorsTheme(lvar)", i );
 					}
 				}
 				
 				if ( cv->param == 1 )
 				{
 					cmd( ".l.v.c.var_name insert end \"%s (P$varFlags)\"", cv->label );
-					cmd( ".l.v.c.var_name itemconf $app -fg $colorsTheme(par)" );
+					cmd( ".l.v.c.var_name itemconf %d -fg $colorsTheme(par)", i );
 				}
 				
 				if ( cv->param == 2 )
@@ -231,16 +227,16 @@ int browse( object *r, int *choice )
 					if ( cv->num_lag == 0 )
 					{
 						cmd( " .l.v.c.var_name insert end \"%s (F$varFlags)\"", cv->label );
-						cmd( ".l.v.c.var_name itemconf $app -fg $colorsTheme(fun)" );
+						cmd( ".l.v.c.var_name itemconf %d -fg $colorsTheme(fun)", i );
 					}
 					else
 					{
 						cmd( ".l.v.c.var_name insert end \"%s (F_%d$varFlags)\"", cv->label, cv->num_lag );
-						cmd( ".l.v.c.var_name itemconf $app -fg $colorsTheme(lfun)" );
+						cmd( ".l.v.c.var_name itemconf %d -fg $colorsTheme(lfun)", i );
 					}
 				}
-
-				cmd( "incr app" );
+				
+				set_ttip_descr( ".l.v.c.var_name", cv->label, i );
 			}
 			
 			cmd( "set nVar [ .l.v.c.var_name size ]" );
@@ -513,25 +509,25 @@ int browse( object *r, int *choice )
 		cmd( "ttk::scrollbar .l.s.c.v_scroll -command \".l.s.c.son_name yview\"" );
 		cmd( "ttk::listbox .l.s.c.son_name -selectmode browse -yscroll \".l.s.c.v_scroll set\" -dark $darkTheme" );
 		cmd( "mouse_wheel .l.s.c.son_name" );
+		cmd( "tooltip::tooltip clear .l.s.c.son_name*" );
 
-		// populate the objects panel
 		if ( r->up != NULL )
 		{
 			cmd( ".l.s.c.son_name insert end \"$upSymbol\"" );
-			cmd( "set upObjItem 1" );
-			cmd( "set app 1" );
+			cmd( "tooltip::tooltip .l.s.c.son_name -item 0 \"%s\"", r->up->label );
+			i = 1;
 		}
 		else
-		{
-			cmd( "set upObjItem 0" );
-			cmd( "set app 0" );
-		}
+			i = 0;
+
+		cmd( "set upObjItem %d", i );
 		
 		if ( r->up == NULL && r->b == NULL )
 			cmd( ".l.s.c.son_name insert end \"(none)\"" );
 		else
 		{
-			for ( cb = r->b; cb != NULL; cb = cb->next )
+			// populate the objects panel
+			for ( cb = r->b; cb != NULL; cb = cb->next, ++i )
 			{
 				if ( cb->head != NULL )
 				{
@@ -545,12 +541,13 @@ int browse( object *r, int *choice )
 				}
 				
 				cmd( ".l.s.c.son_name insert end \"%s (#%d%s)\"", cb->blabel, num, done ? "" : "-" );
-				cmd( ".l.s.c.son_name itemconf $app -fg $colorsTheme(obj)" );
-				cmd( "incr app" );
+				cmd( ".l.s.c.son_name itemconf %d -fg $colorsTheme(obj)", i );
+				
+				set_ttip_descr( ".l.s.c.son_name", cb->blabel, i );
 			}
 		}	
 
-		cmd( "ttk::label .l.s.lab -text \"Descending objects ([ expr { $app - $upObjItem } ])\"" );
+		cmd( "ttk::label .l.s.lab -text \"Descending objects ([ expr { %d - $upObjItem } ])\"", i );
 
 		// objects panel context menu (right mouse button)
 		cmd( "ttk::menu .l.s.c.son_name.v -tearoff 0" );
@@ -769,13 +766,10 @@ int browse( object *r, int *choice )
 
 		cmd( "ttk::frame .l.p.tit" );
 		cmd( "ttk::label .l.p.tit.lab -text \"Current object:\" -width 15 -anchor w" );
-		cmd( "ttk::button .l.p.tit.but -width -1 -text \" %s \" -style hlBold.Toolbutton %s", r->label, r->up == NULL ? "" : "-command { set ttip \"\"; set choice 6 }" );
+		cmd( "ttk::button .l.p.tit.but -width -1 -text \" %s \" -style hlBold.Toolbutton %s", r->label, r->up == NULL ? "" : "-command { set choice 6 }" );
 
 		if ( r->up != NULL ) 
-		{
-			cmd( "bind .l.p.tit.but <Enter> { set ttip \"Change...\" }" );
-			cmd( "bind .l.p.tit.but <Leave> { set ttip \"\" }" );
-		}
+			cmd( "tooltip::tooltip .l.p.tit.but \"Change...\"" );
 		else
 			cmd( ".l.p.tit.but configure -state disabled" );
 
@@ -956,7 +950,7 @@ int browse( object *r, int *choice )
 			cmd( "ttk::button .bbar.open -image openImg -style Toolbutton -command { set choice 17 }" );
 			cmd( "ttk::button .bbar.reload -image reloadImg -style Toolbutton -command { set choice 38 }" );
 			cmd( "ttk::button .bbar.save -image saveImg -style Toolbutton -command { set choice 18 }" );
-			cmd( "ttk::button .bbar.struct -image structImg -style Toolbutton -command { set strWindowOn [ expr { ! $strWindowOn } ]; set choice 70 } -state $strWindowB" );
+			cmd( "ttk::button .bbar.struct -image structImg -style Toolbutton -command { set choice 70 }" );
 			cmd( "ttk::button .bbar.find -image findImg -style Toolbutton -command { set choice 50 }" );
 			cmd( "ttk::button .bbar.addvar -image addvarImg -style Toolbutton -command { set param 0; set choice 2 }" );
 			cmd( "ttk::button .bbar.addpar -image addparImg -style Toolbutton -command { set param 1; set choice 2 }" );
@@ -967,38 +961,27 @@ int browse( object *r, int *choice )
 			cmd( "ttk::button .bbar.run -image runImg -style Toolbutton -command { set choice 1 }" );
 			cmd( "ttk::button .bbar.data -image dataImg -style Toolbutton -command { set choice 34 }" );
 			cmd( "ttk::button .bbar.result -image resultImg -style Toolbutton -command { set choice 26 }" );
-			cmd( "ttk::label .bbar.tip -textvariable ttip -style graySmall.TLabel -width 17 -anchor w" );
 
-			cmd( "bind .bbar.open <Enter> { set ttip \"Load...\" }" );
-			cmd( "bind .bbar.open <Leave> { set ttip \"\" }" );
-			cmd( "bind .bbar.reload <Enter> { set ttip \"Reload\" }" );
-			cmd( "bind .bbar.reload <Leave> { set ttip \"\" }" );
-			cmd( "bind .bbar.save <Enter> { set ttip \"Save\" }" );
-			cmd( "bind .bbar.save <Leave> { set ttip \"\" }" );
-			cmd( "bind .bbar.struct <Enter> { if $strWindowOn { set ttip \"Hide structure\" } { set ttip \"Show structure\" } }" );
-			cmd( "bind .bbar.struct <Leave> { set ttip \"\" }" );
-			cmd( "bind .bbar.find <Enter> { set ttip \"Find element...\" }" );
-			cmd( "bind .bbar.find <Leave> { set ttip \"\" }" );
-			cmd( "bind .bbar.addvar <Enter> { set ttip \"Add variable...\" }" );
-			cmd( "bind .bbar.addvar <Leave> { set ttip \"\" }" );
-			cmd( "bind .bbar.addpar <Enter> { set ttip \"Add parameter...\" }" );
-			cmd( "bind .bbar.addpar <Leave> { set ttip \"\" }" );
-			cmd( "bind .bbar.addobj <Enter> { set ttip \"Add object...\" }" );
-			cmd( "bind .bbar.addobj <Leave> { set ttip \"\" }" );
-			cmd( "bind .bbar.init <Enter> { set ttip \"Initial values...\" }" );
-			cmd( "bind .bbar.init <Leave> { set ttip \"\" }" );
-			cmd( "bind .bbar.number <Enter> { set ttip \"Num. objects...\" }" );
-			cmd( "bind .bbar.number <Leave> { set ttip \"\" }" );
-			cmd( "bind .bbar.set <Enter> { set ttip \"Settings...\" }" );
-			cmd( "bind .bbar.set <Leave> { set ttip \"\" }" );
-			cmd( "bind .bbar.run <Enter> { set ttip \"Run\" }" );
-			cmd( "bind .bbar.run <Leave> { set ttip \"\" }" );
-			cmd( "bind .bbar.data <Enter> { set ttip \"Data browse...\" }" );
-			cmd( "bind .bbar.data <Leave> { set ttip \"\" }" );
-			cmd( "bind .bbar.result <Enter> { set ttip \"Analysis...\" }" );
-			cmd( "bind .bbar.result <Leave> { set ttip \"\" }" );
+			cmd( "tooltip::tooltip .bbar.open \"Load...\"" );
+			cmd( "tooltip::tooltip .bbar.reload \"Reload\"" );
+			cmd( "tooltip::tooltip .bbar.save \"Save\"" );
+			cmd( "if { $strWindowOn } { \
+					tooltip::tooltip .bbar.struct \"Hide Structure\" \
+				} else { \
+					tooltip::tooltip .bbar.struct \"Show Sstructure\" \
+				}" );
+			cmd( "tooltip::tooltip .bbar.find \"Find Element...\"" );
+			cmd( "tooltip::tooltip .bbar.addvar \"Add Variable...\"" );
+			cmd( "tooltip::tooltip .bbar.addpar \"Add Parameter...\"" );
+			cmd( "tooltip::tooltip .bbar.addobj \"Add Object...\"" );
+			cmd( "tooltip::tooltip .bbar.init \"Initial Values...\"" );
+			cmd( "tooltip::tooltip .bbar.number \"Number of Objects...\"" );
+			cmd( "tooltip::tooltip .bbar.set \"Settings...\"" );
+			cmd( "tooltip::tooltip .bbar.run \"Run\"" );
+			cmd( "tooltip::tooltip .bbar.data \"Data Browse...\"" );
+			cmd( "tooltip::tooltip .bbar.result \"Analysis of Results...\"" );
 
-			cmd( "pack .bbar.open .bbar.reload .bbar.save .bbar.struct .bbar.find .bbar.addvar .bbar.addpar .bbar.addobj .bbar.init .bbar.number .bbar.set .bbar.run .bbar.data .bbar.result .bbar.tip -side left" );
+			cmd( "pack .bbar.open .bbar.reload .bbar.save .bbar.struct .bbar.find .bbar.addvar .bbar.addpar .bbar.addobj .bbar.init .bbar.number .bbar.set .bbar.run .bbar.data .bbar.result -side left" );
 			cmd( "pack .bbar -padx 3 -anchor w -fill x" );
 		}
 
@@ -1080,7 +1063,6 @@ int browse( object *r, int *choice )
 		}" );
 
 	cmd( "upd_menu_visib" );		// update active menu options
-	cmd( "if $strWindowOn { set strWindowB active } { set strWindowB normal }" );
 	cmd( "set useCurrObj yes" );	// flag to select among the current or the clicked object
 
 	*choice = choice_g = 0;
@@ -1139,7 +1121,7 @@ OPERATE
 object *operate( object *r, int *choice )
 {
 bool saveAs, delVar, renVar, table;
-char observe, initial, *lab1, *lab2, *lab3, *lab4, lab[ TCL_BUFF_STR ], lab_old[ 2 * MAX_PATH_LENGTH ], ch[ 2 * MAX_PATH_LENGTH ], out_file[ MAX_PATH_LENGTH ], out_dir[ MAX_PATH_LENGTH ], out_bat[ MAX_PATH_LENGTH ], win_dir[ MAX_PATH_LENGTH ];
+char observe, initial, *lab1, *lab2, *lab3, *lab4, lab[ TCL_BUFF_STR ], lab_old[ 2 * MAX_PATH_LENGTH ], ch[ 2 * MAX_PATH_LENGTH ], out_file[ MAX_PATH_LENGTH ], out_dir[ MAX_PATH_LENGTH ], out_bat[ MAX_PATH_LENGTH ], win_dir[ MAX_PATH_LENGTH ], buf_descr[ TCL_BUFF_STR + 1 ];
 int sl, done = 0, num, i, j, k, param, save, plot, nature, numlag, lag, fSeq, ffirst, fnext, temp[ 10 ];
 long nLinks;
 double fake = 0;
@@ -1149,7 +1131,7 @@ object *n, *cur, *cur1, *cur2;
 variable *cv, *cv1;
 result *rf;					// pointer for results files (may be zipped or not)
 sense *cs;
-description *cur_descr;
+description *cd;
 struct stat stExe, stMod;
 
 if ( ! redrawReq )
@@ -1172,7 +1154,7 @@ case 11:
 break;
 
 
-// Add a Variable to the current or the pointed object (defined in tcl $vname)
+// Add an element to the current or the pointed object (defined in tcl $vname)
 case 2:
 
 	// check if current or pointed object and save current if needed
@@ -1224,6 +1206,9 @@ case 2:
 			cmd( "ttk::spinbox $T.f.ent_num -width 3 -from 0 -to 99 -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 0 && $n <= 99 } { set num %%P; if { $num > 0 } { $T.b.x configure -state normal } { $T.b.x configure -state disabled }; return 1 } { %%W delete 0 end; %%W insert 0 $num; return 0 } } -command { if { [ $T.f.ent_num get ] > 0 } { $T.b.x configure -state normal } { $T.b.x configure -state disabled } } -invalidcommand { bell } -justify center" );
 			cmd( "write_any $T.f.ent_num $num" );
 			cmd( "pack $T.f.lab_ent $T.f.ent_var $T.f.sp $T.f.lab_num $T.f.ent_num -side left -padx 2" );
+			
+			cmd( "tooltip::tooltip $T.f.ent_num \"Maximum lag used in equations\"" );
+
 			cmd( "bind $T.f.ent_var <KeyRelease> { \
 					if { %%N < 256 } { \
 						set b [ .addelem.f.ent_var index insert ]; \
@@ -1328,6 +1313,9 @@ case 2:
 	cmd( "pack $T.l $T.f $T.d -pady 5" );
 	
 	cmd( "okXhelpcancel $T b \"Initial Values\" { set done 3 } { set done 1 } { LsdHelp $help } { set done 2 }" );
+	
+	cmd( "tooltip::tooltip $T.b.x \"Save and set initial value for element\"" );
+
 	cmd( "if { ! $initValEn } { $T.b.x configure -state disabled }" );
 
 	cmd( "showtop $T topleftW" );
@@ -1375,23 +1363,16 @@ case 2:
 			if ( done == 0 )
 			{
 				cmd( "set text_description [ .addelem.d.f.text get 1.0 end ]" );
-				cmd( "if { $text_description==\"\\n\" } { set text_description \"(no description available)\" }" );
-				lab1 = ( char * ) Tcl_GetVar( inter, "text_description", 0 );
-				if ( param == 1 )
-				{
-					add_description( lab, "Parameter", lab1 );
-					cmd( "lappend modPar %s", lab );
-				}
+				add_description( lab, param, ( char * ) Tcl_GetVar( inter, "text_description", 0 ) );
+				
 				if ( param == 0 )
-				{
-					add_description( lab, "Variable", lab1 );
 					cmd( "lappend modVar %s", lab );
-				}
+
+				if ( param == 1 )
+					cmd( "lappend modPar %s", lab );
+				
 				if ( param == 2 )
-				{
-					add_description( lab, "Function", lab1 );
 					cmd( "lappend modFun %s", lab );
-				}
 				
 				cmd( "lappend modElem %s", lab );
 
@@ -1459,7 +1440,7 @@ case 2:
 break;
 
 
-// Add a Descendent type to the current or the pointed object (defined in tcl $vname)
+// Add a Descendent object to the current or the pointed object (defined in tcl $vname)
 // and assigns the number of its instances.
 case 3:
 
@@ -1553,10 +1534,8 @@ case 3:
 		
 		r->add_obj( lab, 1, 1 );
 		
-		cmd( "set text_description [.addobj.d.f.text get 1.0 end]" );  
-		cmd( "if { $text_description==\"\\n\" || $text_description==\"\" } { set text_description \"(no description available)\" }" );
-		lab1 = ( char * ) Tcl_GetVar( inter, "text_description", 0 );
-		add_description( lab, "Object", lab1 );
+		cmd( "set text_description [ .addobj.d.f.text get 1.0 end ]" );  
+		add_description( lab, 4, ( char * ) Tcl_GetVar( inter, "text_description", 0 ) );
 		cmd( "lappend modObj %s", lab );
 		
 		// update focus memory
@@ -1743,13 +1722,7 @@ case 6:
 		break;
 	}
 
-	cur_descr = search_description( lab_old );
-	if ( cur_descr == NULL )
-	{
-		add_description( lab_old, "Object", "(no description available)" );
-		cur_descr = search_description( lab_old );
-	}
-	
+	cd = search_description( lab_old );
 	skip_next_obj( r, &num );
 	  
 	cmd( "set to_compute %d", r->to_compute ? 1 : 0 );
@@ -1777,6 +1750,11 @@ case 6:
 	cmd( "ttk::button $T.b0.mov -width $butWid -text Move -command { set useCurrObj yes; set choice 32 } -underline 0" );
 	cmd( "ttk::button $T.b0.del -width $butWid -text Delete -command { set choice 74 } -underline 0" );
 	cmd( "pack $T.b0.prop $T.b0.num $T.b0.mov $T.b0.del -padx $butSpc -side left" );
+
+	cmd( "tooltip::tooltip $T.b0.prop \"Change name\"" );
+	cmd( "tooltip::tooltip $T.b0.num \"Change number of instances (copies)\"" );
+	cmd( "tooltip::tooltip $T.b0.mov \"Move to another parent object\"" );
+	cmd( "tooltip::tooltip $T.b0.del \"Remove object\"" );
 
 	cmd( "ttk::frame $T.b1" );
 	cmd( "ttk::checkbutton $T.b1.com -text \"Compute: force the computation of the variables in this object\" -variable to_compute -underline 1" );
@@ -1808,13 +1786,7 @@ case 6:
 	cmd( "showtop $T topleftW" );
 	cmd( "mousewarpto $T.b.ok" );
 
-	for ( i = 0; cur_descr->text[ i ] != ( char ) NULL; ++i )
-		if ( cur_descr->text[ i ] != '[' && cur_descr->text[ i ] != ']' && cur_descr->text[ i ] != '{' && cur_descr->text[ i ] != '}' && cur_descr->text[ i ] != '\"' && cur_descr->text[ i ] != '\\' )
-			cmd( "$w.f.text insert end \"%c\"", cur_descr->text[ i ] );
-		else
-			cmd( "$w.f.text insert end \"\\%c\"", cur_descr->text[ i ] );
-
-	cmd( "$w.f.text delete \"end - 1 char\"" );
+	cmd( "$w.f.text insert end \"%s\"", strtcl( buf_descr, cd->text, TCL_BUFF_STR ) );
 
 	*choice = 0;
 	while ( *choice == 0 )
@@ -1828,9 +1800,7 @@ case 6:
 
 		// save description changes
 		cmd( "set text_description \"[ .objprop.desc.f.text get 1.0 end ]\"" );
-		change_descr_text( lab_old );
-		lab1 = ( char * ) Tcl_GetVar( inter, "text_description", 0 );
-		add_description( lab, "Object", lab1 );
+		change_description( lab_old, NULL, -1, ( char * ) Tcl_GetVar( inter, "text_description", 0 ) );
 
 		cmd( "set choice $to_compute" );
 
@@ -1954,7 +1924,7 @@ case 83:
 					goto here_newname;
 				}
 				
-				change_descr_lab( cur->label, lab, "", "", "" );
+				change_description( cur->label, lab );
 				cur->chg_lab( lab );
 			}
 			else
@@ -1993,21 +1963,10 @@ case 7:
 	lab1 = ( char * ) Tcl_GetVar( inter, "vname", 0 );
 	if ( lab1 == NULL || ! strcmp( lab1, "" ) || ! strcmp( lab1, "(none)" ) )		
 		break;
+	
 	sscanf( lab1, "%99s", lab_old );
 	cv = r->search_var( NULL, lab_old );
-
-	cur_descr = search_description( lab_old );
-	if ( cur_descr == NULL )
-	{
-		if ( cv->param == 0 )
-			add_description( lab_old, "Variable", "(no description available)" );
-		if ( cv->param == 1 )
-			add_description( lab_old, "Parameter", "(no description available)" );  
-		if ( cv->param == 2 )
-			add_description( lab_old, "Function", "(no description available)" );  
-		plog( "\nWarning: description for '%s' not found. New one created.", "", lab_old );
-		cur_descr = search_description( lab_old );
-	} 
+	cd = search_description( lab_old );
 
 	Tcl_LinkVar( inter, "done", ( char * ) &done, TCL_LINK_INT );
 	Tcl_LinkVar( inter, "debug", ( char * ) &num, TCL_LINK_BOOLEAN );
@@ -2022,8 +1981,8 @@ case 7:
 	savei = cv->savei;
 	parallel = cv->parallel;
 
-	cmd( "set observe %d", cur_descr->observe=='y'?1:0 );
-	cmd( "set initial %d", cur_descr->initial=='y'?1:0 );
+	cmd( "set observe %d", cd->observe == 'y' ? 1 : 0 );
+	cmd( "set initial %d", cd->initial == 'y' ? 1 : 0 );
 	cmd( "set vname %s", lab_old );
 
 	cmd( "set T .chgelem" );
@@ -2143,9 +2102,14 @@ case 7:
 		cmd( "bind $T <Control-g> \"$T.b0.upd invoke\"; bind $T <Control-G> \"$T.b0.upd invoke\"" );
 		
 		cmd( "pack $T.b0.prop $T.b0.upd $T.b0.mov $T.b0.del -padx $butSpc -side left" );
+		cmd( "tooltip::tooltip $T.b0.upd \"Define special update timing\"" );
 	}
 	else
 		cmd( "pack $T.b0.prop $T.b0.mov $T.b0.del -padx $butSpc -side left" );
+	
+	cmd( "tooltip::tooltip $T.b0.prop \"Change name, type or lags\"" );
+	cmd( "tooltip::tooltip $T.b0.mov \"Move to another object\"" );
+	cmd( "tooltip::tooltip $T.b0.del \"Remove element\"" );
 
 	cmd( "ttk::frame $T.b1" );
 
@@ -2173,7 +2137,7 @@ case 7:
 			cmd( "bind $T <Control-d> \"$T.b1.deb invoke\"; bind $T <Control-D> \"$T.b1.deb invoke\"" );
 			cmd( "bind $T <Control-p> \"$T.b1.par invoke\"; bind $T <Control-P> \"$T.b1.par invoke\"" );
 	}
-
+	
 	cmd( "pack $T.h $T.b0 $T.b1 -pady 5" );
 
 	cmd( "set Td $T.desc" );
@@ -2205,24 +2169,29 @@ case 7:
 	cmd( "pack $Td.f.int $Td.f.desc" );
 	
 	cmd( "ttk::frame $Td.b" );
-	cmd( "ttk::button $Td.b.eq -width [ expr { $butWid + 2 } ] -text \"View Code\" -command { set done 3 } -underline 3" );
-	cmd( "ttk::button $Td.b.auto_doc -width [ expr { $butWid + 2 } ] -text \"Auto Descr.\" -command { set done 9 } -underline 0" );
+	cmd( "ttk::button $Td.b.eq -width [ expr { $butWid + 2 } ] -text \"Equation\" -command { set done 3 } -underline 1" );
+	cmd( "ttk::button $Td.b.auto_doc -width [ expr { $butWid + 2 } ] -text \"Auto Desc.\" -command { set done 9 } -underline 0" );
 	cmd( "ttk::button $Td.b.us -width [ expr { $butWid + 2 } ] -text \"Using Elem.\" -command { set done 4 } -underline 0" );
 	cmd( "ttk::button $Td.b.using -width [ expr { $butWid + 2 } ] -text \"Elem. Used\" -command { set done  7} -underline 0" );
 	
-	if ( ! strcmp( cur_descr->type, "Parameter" ) )
+	if ( ! strcmp( cd->type, "Parameter" ) )
 		cmd( "pack $Td.b.auto_doc $Td.b.us -padx $butSpc -side left" );
 	else
 	{
 		cmd( "pack $Td.b.eq $Td.b.auto_doc $Td.b.us $Td.b.using -padx $butSpc -side left" );
-		cmd( "bind $T <Control-w> \"$Td.b.eq invoke\"; bind $T <Control-W> \"$Td.b.eq invoke\"" );
+		cmd( "bind $T <Control-q> \"$Td.b.eq invoke\"; bind $T <Control-Q> \"$Td.b.eq invoke\"" );
 		cmd( "bind $T <Control-e> \"$Td.b.using invoke\"; bind $T <Control-E> \"$Td.b.using invoke\"" );
 	}
+
+	cmd( "tooltip::tooltip $Td.b.eq \"Show variable's equation code\"" );
+	cmd( "tooltip::tooltip $Td.b.auto_doc \"Get description from equation file\"" );
+	cmd( "tooltip::tooltip $Td.b.us \"List all variables using this element\"" );
+	cmd( "tooltip::tooltip $Td.b.using \"List all variables and parameters used\"" );
 
 	if ( cv->param == 1 || cv->num_lag > 0 )
 	{
 		cmd( "ttk::frame $Td.i" );
-		cmd( "ttk::label $Td.i.int -text \"Comments on initial values\"" );
+		cmd( "ttk::label $Td.i.int -text \"Initial values\"" );
 
 		cmd( "ttk::frame $Td.i.desc" );
 		cmd( "ttk::scrollbar $Td.i.desc.yscroll -command \"$Td.i.desc.text yview\"" );
@@ -2240,6 +2209,9 @@ case 7:
 		
 		cmd( "pack $Td.opt $Td.f $Td.b $Td.i $Td.b2 -pady 5" );
 	  
+		cmd( "tooltip::tooltip $Td.b2.setall \"Set initial value(s) of this element\"" );
+		cmd( "tooltip::tooltip $Td.b2.sens \"Set sensitivity analysis values for this element \"" );
+	
 		cmd( "bind $T <Control-n> \"$Td.b2.setall invoke\"; bind $T <Control-N> \"$Td.b2.setall invoke\"" );
 		cmd( "bind $T <Control-t> \"$Td.b2.sens invoke\"; bind $T <Control-T> \"$Td.b2.sens invoke\"" );
 
@@ -2249,7 +2221,7 @@ case 7:
 
 	cmd( "pack $Td -pady 5" );
 
-	cmd( "okhelpcancel $T b { set done 1 } { LsdHelp menumodel.html#variables } { set done 2 }" );
+	cmd( "okhelpcancel $T b { set done 1 } { LsdHelp browser.html#changeelement } { set done 2 }" );
 
 	cmd( "bind $T <Control-r> \"$T.b0.prop invoke\"; bind $T <Control-R> \"$T.b0.prop invoke\"" );
 	cmd( "bind $T <Control-m> \"$T.b0.mov invoke\"; bind $T <Control-M> \"$T.b0.mov invoke\"" );
@@ -2264,25 +2236,11 @@ case 7:
 	cmd( "showtop $T topleftW" );
 	cmd( "mousewarpto $T.b.ok" );
 
-	for ( i = 0; cur_descr->text[ i ] != '\0'; ++i )
-		if ( cur_descr->text[ i ] != '[' && cur_descr->text[ i ] != ']' && cur_descr->text[ i ] != '{' && cur_descr->text[ i ] != '}' && cur_descr->text[ i ] != '\"' && cur_descr->text[ i ] != '\\')
-			cmd( "$Td.f.desc.text insert end \"%c\"", cur_descr->text[ i ] );
-		else
-			cmd( "$Td.f.desc.text insert end \"\\%c\"", cur_descr->text[ i ] );
+	cmd( "$Td.f.desc.text insert end \"%s\"", strtcl( buf_descr, cd->text, TCL_BUFF_STR ) );
 
-	cmd( "$Td.f.desc.text delete \"end - 1 char\"" );
+	if ( cv->param == 1 || cv->num_lag > 0 )
+		cmd( "$Td.i.desc.text insert end \"%s\"", strtcl( buf_descr, cd->init, TCL_BUFF_STR ) );
 
-	if ( ( cv->param == 1 || cv->num_lag > 0 ) && cur_descr->init != NULL )
-	{
-		for ( i = 0; cur_descr->init[ i ] != '\0'; ++i )
-			if ( cur_descr->init[ i ] != '[' && cur_descr->init[ i ] != ']' && cur_descr->init[ i ] != '{' && cur_descr->init[ i ] != '}' && cur_descr->init[ i ] != '\"' && cur_descr->text[ i ] != '\\')
-				cmd( "$Td.i.desc.text insert end \"%c\"", cur_descr->init[ i ] );
-			else
-				cmd( "$Td.i.desc.text insert end \"\\%c\"", cur_descr->init[ i ] );
-  
-		cmd( "$Td.i.desc.text delete \"end - 1 char\"" );
-	}
-	
 	cycle_var:
 
 	done = 0;
@@ -2301,18 +2259,12 @@ case 7:
 	if ( done == 9 ) 
 	{
 		cmd( "set text_description \"[ .chgelem.desc.f.desc.text get 1.0 end ]\"" );
-		change_descr_text( lab_old );
+		change_description( lab_old, NULL, -1, ( char * ) Tcl_GetVar( inter, "text_description", 0 ) );
 	  
 		auto_document( choice, lab_old, "ALL", true );
 		cmd( ".chgelem.desc.f.desc.text delete 1.0 end" );
+		cmd( ".chgelem.desc.f.desc.text insert end \"%s\"", strtcl( buf_descr, cd->text, TCL_BUFF_STR ) );
 
-		for ( i = 0; cur_descr->text[ i ] != '\0'; ++i )
-			if ( cur_descr->text[ i ] != '[' && cur_descr->text[ i ] != ']' && cur_descr->text[ i ] != '{' && cur_descr->text[ i ] != '}' && cur_descr->text[ i ] != '\"' && cur_descr->text[ i ] != '\\')
-				cmd( ".chgelem.desc.f.desc.text insert end \"%c\"", cur_descr->text[ i ] );
-			else
-				cmd( ".chgelem.desc.f.desc.text insert end \"\\%c\"", cur_descr->text[ i ] );
-		  
-		cmd( ".chgelem.desc.f.desc.text delete \"end - 1 char\"" );
 		unsaved_change( true );		// signal unsaved change
 	}
 
@@ -2330,8 +2282,8 @@ case 7:
 		*choice == 1 ? observe = 'y' : observe = 'n';
 		cmd( "set choice $initial" );
 		*choice == 1 ? initial = 'y' : initial = 'n';
-		cur_descr->initial = initial;
-		cur_descr->observe = observe;
+		cd->initial = initial;
+		cd->observe = observe;
 	   
 		for ( cur = r; cur != NULL; cur = cur->hyper_next( cur->label ) )
 		{
@@ -2344,12 +2296,13 @@ case 7:
 		   cv->observe = ( observe == 'y' ) ? true : false;
 		}
 		  
-		cmd( "set text_description \"[.chgelem.desc.f.desc.text get 1.0 end]\"" );
-		change_descr_text( lab_old );
+		cmd( "set text_description \"[ .chgelem.desc.f.desc.text get 1.0 end ]\"" );
+		change_description( lab_old, NULL, -1, ( char * ) Tcl_GetVar( inter, "text_description", 0 ) );
+		
 		if ( cv->param == 1 || cv->num_lag > 0 )
 		{
-			cmd( "set text_description \"[.chgelem.desc.i.desc.text get 1.0 end]\"" );
-			change_init_text( lab_old );
+			cmd( "set text_description \"[ .chgelem.desc.i.desc.text get 1.0 end ]\"" );
+			change_description( lab_old, NULL, -1, NULL, ( char * ) Tcl_GetVar( inter, "text_description", 0 ) );
 		}
 	  
 		unsaved_change( true );		// signal unsaved change
@@ -2457,6 +2410,8 @@ case 76:
 		cmd( "$T.n.lag insert 0 $numlag" ); 
 		cmd( "if { $nature != 0 } { $T.n.lag configure -state disabled }" );
 		cmd( "pack $T.n.var $T.n.e $T.n.sp $T.n.l $T.n.lag -side left -padx 2" );
+		
+		cmd( "tooltip::tooltip $T.n.lag \"Maximum lag used in equations\"" );
 
 		cmd( "ttk::frame $T.v" );
 		cmd( "ttk::label $T.v.l -text \"Type\"" );
@@ -2489,7 +2444,8 @@ case 76:
 	while ( *choice == 0 )
 		Tcl_DoOneEvent( 0 );
 
-	cmd( "if [ winfo exists .prop ] { if { $nature == 0 } { set numlag [ .prop.n.lag get ] }; destroytop .prop }" );
+	cmd( "if [ winfo exists .prop ] { if { $nature == 0 } { set numlag [ .prop.n.lag get ] } }" );
+	cmd( "destroytop .prop" );
 
 	if ( *choice == 2 )
 		goto here_endprop;
@@ -2502,24 +2458,39 @@ case 76:
 
 	if ( ! delVar && ( nature != cv->param || numlag != cv->num_lag ) )
 	{
-		if ( nature == 0 )
-			change_descr_lab( lab_old, "", "Variable", "", "" );
-		if ( nature == 1 )
-			change_descr_lab( lab_old, "", "Parameter", "", "" );
-		if ( nature == 2 )
-			change_descr_lab( lab_old, "", "Function", "", "" );
+		if ( nature != 1 && numlag == 0 )
+			change_description( lab_old, NULL, nature, NULL, "" );
+		else
+			change_description( lab_old, NULL, nature );		
 
 		for ( cur = r; cur != NULL; cur = cur->hyper_next( cur->label ) )
 		{ 
 			cv = cur->search_var( NULL, lab_old );
-			cv->num_lag = numlag;
-			delete [ ] cv->val;
+			
+			if ( cv == NULL )
+				continue;
+			
+			double *old_val = cv->val;
 			cv->val = new double[ numlag + 1 ];
-			for ( i = 0; i < numlag + 1; ++i )
+			
+			for ( i = 0; i <= numlag; ++i )
 				cv->val[ i ] = 0;
+			
+			// avoid reseting initial values if not required
+			if ( ( cv->param == 1 && numlag > 0 ) || ( nature == 1 && cv->num_lag > 0 ) )				
+				cv->val[ 0 ] = old_val[ 0 ];		// parameter <-> lagged variable
+			else
+				if ( cv->num_lag > 0 && numlag > 0 )// x-lags variable to y-lags variable?
+					for ( i = 0; i < min( cv->num_lag, numlag ); ++i )
+						cv->val[ i ] = old_val[ i ];
+			
+			delete [ ] old_val;
+			cv->num_lag = numlag;
 			cv->param = nature;
+			
 			if ( cv->param == 1 || cv->num_lag > 0 )
 				cv->data_loaded = '-';
+			
 			if ( cv->param != 0 )
 			{
 				cv->parallel = false;
@@ -2579,7 +2550,7 @@ case 76:
 			if ( cv->param == 2 )
 				cmd( "lappend modFun %s", lab );
 			
-			change_descr_lab( lab_old, lab, "", "", "" );
+			change_description( lab_old, lab );
 		}
 		
 		for ( cur = r; cur != NULL; cur = cur->hyper_next( cur->label ) )
@@ -2898,6 +2869,11 @@ case 96:
 	cmd( "pack $T.f.c $T.f.a $T.f.b $T.f.d -anchor w" );
 
 	cmd( "pack $T.h $T.f -padx 5 -pady 5" );
+	
+	cmd( "tooltip::tooltip $T.f.c \"First time step to compute the variable\"" );
+	cmd( "tooltip::tooltip $T.f.a \"Maximum time step for uniform random first computation\"" );
+	cmd( "tooltip::tooltip $T.f.b \"Period between computations of variable\"" );
+	cmd( "tooltip::tooltip $T.f.d \"Maximum period for uniform random periodic computation\"" );
 
 	cmd( "okhelpcancel $T b { set choice 1 } { LsdHelp browser.html#updating } { set choice 2 }" );
 
@@ -3459,7 +3435,35 @@ case 24:
 
 // Enter the analysis of results module for Monte Carlo analysis
 case 12:
+	// accept analysis after run only if MC data was just produced
+	if ( actual_steps > 0 && res_list.size( ) <= 1 )
+	{
+		cmd( "ttk::messageBox -parent . -title Error -icon error -type ok -message \"Invalid data for Monte Carlo analysis\" -detail \"Last simulation run did not produce adequate data to perform a Monte Carlo experiment analysis.\n\nPlease reload or unload your configuration and select the appropriate results files, or execute a multi-run configuration before using this option.\"" );
+		break;
+	}
 
+	// check if MC results were not just created
+	if ( res_list.size( ) > 1 )
+	{
+		cmd( "set answer [ ttk::messageBox -parent . -type yesnocancel -icon question -default yes -title \"Results Available\" -message \"Use set of results last created?\" -detail \"A set of results files was previously created and can be used to perform the Monte Carlo experiment analysis.\n\nAny configuration or results not saved will be discarded.\n\nPress 'Yes' to confirm, 'No' to select a different set of files, or 'Cancel' to abort.\" ]; switch -- $answer { yes { set choice 1 } no { set choice 0 } cancel { set choice 2 } }" ); 
+	
+		if ( *choice == 2 )
+			break;
+		
+		if ( *choice == 0 )
+			res_list.clear( );
+	}
+	else
+		if ( ! discard_change( ) )		// check for unsaved configuration changes
+			break;
+	
+	// remove existing results from memory before proceeding
+	if ( ! open_configuration( r, true ) )
+	{
+		unload_configuration( true );
+		r = root;
+	}
+	
 	analysis( choice, true );
 	
 break;
@@ -3989,15 +3993,8 @@ case 44:
 break;
 
 
-// Save descriptions
+// (empty)
 case 45:
-
-	lab1 = ( char * ) Tcl_GetVar( inter, "vname", 0 );
-	strncpy( lab, lab1, MAX_PATH_LENGTH - 1 );
-
-	change_descr_text( lab );
-
-	unsaved_change( true );		// signal unsaved change
 
 break;
 
@@ -6172,6 +6169,22 @@ break;
 // toggle the state of the model structure windows, refresh window
 case 70:
 
+	strWindowOn = strWindowOn ? 0 : 1;
+	
+	if ( strWindowOn )
+	{
+		cmd( "tooltip::tooltip .bbar.struct \"Hide structure\"" );
+		redrawStruc = true;
+	}
+	else
+		cmd( "tooltip::tooltip .bbar.struct \"Show structure\"" );
+
+break;
+
+
+// refresh structure windows
+case 23:
+
 	redrawStruc = true;
 
 break;
@@ -6241,7 +6254,7 @@ void show_observe( object *n )
 	for ( cv = n->v; cv != NULL; cv = cv->next )
 	{
 		cd = search_description( cv->label );
-		if ( cd != NULL && cd->observe=='y' )
+		if ( cd->observe=='y' )
 		{
 			if ( cv->param == 1 )
 				plog( "Object: %s \tParameter:\t", "", n->label );
@@ -6269,7 +6282,7 @@ SHOW_INITIAL
 ****************************************************/
 void show_initial( object *n )
 {
-	int i;
+	char buf_descr[ TCL_BUFF_STR + 1 ];
 	bridge *cb;
 	object *co;
 	description *cd;
@@ -6278,7 +6291,7 @@ void show_initial( object *n )
 	for ( cv = n->v; cv != NULL; cv = cv->next )
 	{
 		cd = search_description( cv->label );
-		if ( cd != NULL && cd->initial == 'y' )
+		if ( cd->initial == 'y' )
 		{
 			if ( cv->param == 1 )
 				plog( "Object: %s \tParameter:\t", "", n->label );
@@ -6299,30 +6312,9 @@ void show_initial( object *n )
 				}
 			}
 			else
-			{
-				for ( i = 0; cd->init[ i ] != 0; ++i )
-				{
-					switch ( cd->init[ i ] )
-					{
-						case '[': 
-							plog( "\\\[" );
-							break;
-						case ']': 
-							plog( "]" );
-							break;
-						case '"': 
-							plog( "\\\"" );
-							break;
-						case '{': 
-							plog( "\{" );
-							break;
-						default: 
-							plog( "%c", "", cd->init[ i ] );
-							break;          
-					}
-				}
-			} 
-			plog("\n" );
+				plog( "%s", "", strtcl( buf_descr, cd->init, TCL_BUFF_STR ) );
+
+			plog( "\n" );
 		}
 	}
 
@@ -6541,7 +6533,7 @@ void wipe_out( object *d )
 
 	cmd( "if [ info exists modObj ] { set pos [ lsearch -exact $modObj %s ]; if { $pos >= 0 } { set modObj [ lreplace $modObj $pos $pos ] } }", d->label );
 
-	change_descr_lab( d->label, "", "", "", "" );
+	change_description( d->label );
 
 	for ( cv = d->v; cv != NULL; cv = cv->next )
 	{
@@ -6551,7 +6543,7 @@ void wipe_out( object *d )
 		cmd( "if [ info exists modPar ] { set pos [ lsearch -exact $modPar %s ]; if { $pos >= 0 } { set modPar [ lreplace $modPar $pos $pos ] } }", cv->label );
 		cmd( "if [ info exists modFun ] { set pos [ lsearch -exact $modFun %s ]; if { $pos >= 0 } { set modFun [ lreplace $modFun $pos $pos ] } }", cv->label );
 
-		change_descr_lab( cv->label, "" , "", "", "" );
+		change_description( cv->label );
 	}
 
 	cur = d->hyper_next( d->label );
@@ -6623,7 +6615,7 @@ void set_shortcuts( const char *window )
 	cmd( "bind %s <Control-b> { set choice 34 }; bind %s <Control-B> { set choice 34 }", window, window  );
 	cmd( "bind %s <Control-z> { set choice 37 }; bind %s <Control-Z> { set choice 37 }", window, window  );
 	cmd( "bind %s <Control-w> { set choice 38 }; bind %s <Control-W> { set choice 38 }", window, window  );
-	cmd( "bind %s <Control-Tab> { set strWindowOn [ expr { ! $strWindowOn } ]; set choice 70 }", window  );
+	cmd( "bind %s <Control-Tab> { set choice 70 }", window  );
 }
 
 
@@ -7134,7 +7126,7 @@ bool open_configuration( object *&r, bool reload )
 		case 7:
 		case 8:									// problem from MODELREPORT section
 		case 9:									// problem from DESCRIPTION section
-			autofill_descr( r );
+			reset_description( r );
 			
 		case 10:								// problem from DOCUOBSERVE section
 		case 11:
