@@ -44,5 +44,5 @@ jobs:
       run: | 
         export PATH=$PWD/dev/tush/bin:$PATH 
         cd dev 
-        sudo su tush-check 3_regression_tests.md 
+        sudo tush-check 3_regression_tests.md 
         echo "✔ Regression test completed successfully 🎉"
