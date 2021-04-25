@@ -40,14 +40,9 @@ jobs:
           echo "✅ dependencies successfully installed"
     - name: Check out repository code
       uses: actions/checkout@v2
-    - name: Add tush to path
-      run: |
-        export PATH=$PWD/dev/tush/bin:$PATH
-        echo "Path is ${PATH}".        
-        echo "✅ tush setup complete"
     - name: Run regression test
       run: | 
-        echo "Path is ${PATH}". 
+        export PATH=$PWD/dev/tush/bin:$PATH 
         cd dev 
         tush-check 3_regression_tests.md 
         echo "✔ Regression test completed successfully 🎉"
