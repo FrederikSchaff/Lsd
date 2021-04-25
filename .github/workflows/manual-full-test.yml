@@ -40,12 +40,9 @@ jobs:
           echo "✅ dependencies successfully installed"
     - name: Check out repository code
       uses: actions/checkout@v2
-    - name: Copy tush to bin
+    - name: Add tush to path
       run: |
-        sudo cp dev/tush/bin/overwrite /usr/bin/overwrite
-        sudo cp dev/tush/bin/tush-check /usr/bin/tush-check
-        sudo cp dev/tush/bin/tush-run /usr/bin/tush-run
-        sudo cp dev/tush/bin/tush-run-raw /usr/bin/tush-run-raw
+        PATH=$PWD/tush/bin:$PATH        
         echo "✅ tush setup complete"
     - name: Run regression test
-      run: cd dev && sudo tush-check 3_regression_tests.md
+      run: cd dev && tush-check 3_regression_tests.md && echo "✔ Regression test completed successfully 🎉"
