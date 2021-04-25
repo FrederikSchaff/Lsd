@@ -51,4 +51,4 @@ jobs:
         echo "✅ tush setup complete"
     - name: Run regression test
       run: |
-        cd dev && tush-check 3_regression_tests.md && echo "✔️ regression check ok." || echo "🚨  regression test failed!"
+        sudo cd dev && sudo tush-check 3_regression_tests.md && echo "✔️ regression check ok." || echo "🚨  regression test failed!"
