@@ -48,5 +48,4 @@ jobs:
         sudo cp dev/tush/bin/tush-run-raw /usr/bin/tush-run-raw
         echo "✅ tush setup complete"
     - name: Run regression test
-      run: |
-        sudo cd dev && sudo tush-check 3_regression_tests.md
+      run: cd dev && sudo tush-check 3_regression_tests.md
