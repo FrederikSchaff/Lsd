@@ -46,4 +46,8 @@ jobs:
         echo "Path is ${PATH}".        
         echo "✅ tush setup complete"
     - name: Run regression test
-      run: cd dev && tush-check 3_regression_tests.md && echo "✔ Regression test completed successfully 🎉"
+      run: | 
+        PATH=$PWD/dev/tush/bin:$PATH 
+        cd dev 
+        tush-check 3_regression_tests.md 
+        echo "✔ Regression test completed successfully 🎉"
