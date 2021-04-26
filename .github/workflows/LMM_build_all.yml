@@ -21,10 +21,33 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu, macos, windows]
+      fail-fast: false
 
     runs-on: ${{ matrix.os }}-latest
 
     steps:
+    - name: Install linux dependencies
+      if: {{ matrix.os == "linux" }}
+      run: |
+          sudo apt-get update
+          sudo apt-get install build-essential
+          sudo apt-get install gdb
+          sudo apt-get install gnuplot-qt
+          sudo apt-get install multitail
+          sudo apt-get install zlib1g-dev
+          sudo apt-get install tcl-dev
+          sudo apt-get install tk-dev
+          echo "✅ dependencies successfully installed"
+    - name: Install windows dependencies
+      if: {{ matrix.os == "windows" }}
+      run: |
+          echo "To do..."
+          exit 1
+    - name: Install macos dependencies
+      if: {{ matrix.os == "macos" }}
+      run: |
+          echo "To do..."
+          exit 1
     - name: Checkout and System Info
       uses: actions/checkout@v2
     - name: Get system info
