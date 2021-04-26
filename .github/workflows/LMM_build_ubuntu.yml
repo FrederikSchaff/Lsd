@@ -1,5 +1,5 @@
 # This is a basic workflow that is manually triggered
-name: LMM build
+name: LMM build (ubuntu)
 
 # Controls when the action will run. Workflow runs when manually triggered using the UI
 # or API.
@@ -16,18 +16,12 @@ on:
         required: true
         
 jobs:
-  build_LMM:
+  build_LMM_ubuntu:
   
-    strategy:
-      matrix:
-        os: [ubuntu, macos, windows]
-      fail-fast: false
-
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ubuntu-latest
 
     steps:
     - name: Install linux dependencies
-      if: matrix.os == 'linux'
       run: |
           sudo apt-get update
           sudo apt-get install build-essential
@@ -35,19 +29,9 @@ jobs:
           sudo apt-get install gnuplot-qt
           sudo apt-get install multitail
           sudo apt-get install zlib1g-dev
-          sudo apt-get install tcl-dev
-          sudo apt-get install tk-dev
+          sudo apt-get install tcl8.6-dev
+          sudo apt-get install tk8.6-dev
           echo "✅ dependencies successfully installed"
-    - name: Install windows dependencies
-      if: matrix.os == 'windows'
-      run: |
-          echo "To do..."
-          exit 1
-    - name: Install macos dependencies
-      if: matrix.os == 'macos'
-      run: |
-          echo "To do..."
-          exit 1
     - name: Checkout and System Info
       uses: actions/checkout@v2
     - name: Get system info
@@ -57,6 +41,5 @@ jobs:
       id: build-LMM
       run: |
         cd src
-        make clean -f makefile-${{ matrix.os }}
-        make -f makefile-${{ matrix.os }}
-    
+        make clean -f makefile-linux
+        make -f makefile-linux
