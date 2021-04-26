@@ -28,9 +28,9 @@ jobs:
     - uses: actions/checkout@v2
     - uses: kenchan0130/actions-system-info@master
       id: system-info
+    - name: build LMM
     - run: |
         cd src
         make clean -f makefile-${{ matrix.os }}
         make -f makefile-${{ matrix.os }}
-    - id: make-LMM
     
