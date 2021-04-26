@@ -27,6 +27,7 @@ jobs:
     steps:
     - name: Checkout and System Info
       uses: actions/checkout@v2
+    - name: Get system info
       uses: kenchan0130/actions-system-info@master
       id: system-info
     - name: build LMM
