@@ -25,11 +25,13 @@ jobs:
     runs-on: ${{ matrix.os }}-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: kenchan0130/actions-system-info@master
+    - name: Checkout and System Info
+      uses: actions/checkout@v2
+      uses: kenchan0130/actions-system-info@master
       id: system-info
     - name: build LMM
-    - run: |
+      id: build-LMM
+      run: |
         cd src
         make clean -f makefile-${{ matrix.os }}
         make -f makefile-${{ matrix.os }}
