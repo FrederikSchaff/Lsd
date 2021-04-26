@@ -1,0 +1,36 @@
+# This is a basic workflow that is manually triggered
+name: LMM build
+
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+on:
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      reasonToRun:
+        # Friendly description to be shown in the UI instead of 'name'
+        description: 'Provide a reason for the trigger'
+        # Default value if no value is explicitly provided
+        default: 'Full LMM Build'
+        # Input has to be provided for the workflow to run
+        required: true
+        
+jobs:
+  build LMM:
+  
+    strategy:
+      matrix:
+        os: [ubuntu, macos, windows]
+
+    runs-on: ${{ matrix.os }}-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: kenchan0130/actions-system-info@master
+      id: system-info
+    - run: |
+        cd src
+        make clean -f makefile-${{ matrix.os }}
+        make -f makefile-${{ matrix.os }}
+    - id: make-LMM
+    
