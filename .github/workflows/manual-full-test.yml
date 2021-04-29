@@ -42,15 +42,15 @@ jobs:
       uses: actions/checkout@v2
     - name: Run regression test
       run: |
-        sudo cp src/devlsd/tush/bin/overwrite /usr/local/bin/overwrite
+        sudo cp src/lsddev/tush/bin/overwrite /usr/local/bin/overwrite
         sudo chmod 755 /usr/local/bin/overwrite
-        sudo cp src/devlsd/tush/bin/tush-check /usr/local/bin/tush-check
+        sudo cp src/lsddev/tush/bin/tush-check /usr/local/bin/tush-check
         sudo chmod 755 /usr/local/bin/tush-check
-        sudo cp src/devlsd/tush/bin/tush-run /usr/local/bin/tush-run
+        sudo cp src/lsddev/tush/bin/tush-run /usr/local/bin/tush-run
         sudo chmod 755 /usr/local/bin/tush-run
-        sudo cp src/devlsd/tush/bin/tush-run-raw /usr/local/bin/tush-run-raw
+        sudo cp src/lsddev/tush/bin/tush-run-raw /usr/local/bin/tush-run-raw
         sudo chmod 755 /usr/local/bin/tush-run-raw
         echo "✅ tush setup complete"
-        cd src/devlsd 
+        cd src/lsddev 
         tush-check 3_regression_tests.md
         echo "✔ Regression test completed successfully 🎉"
