@@ -1,3 +1,5 @@
+[![LMM build (ubuntu)](https://github.com/FrederikSchaff/Lsd/actions/workflows/LMM_build_ubuntu.yml/badge.svg)](https://github.com/FrederikSchaff/Lsd/actions/workflows/LMM_build_ubuntu.yml) [![Test LSD build and macros (manually)](https://github.com/FrederikSchaff/Lsd/actions/workflows/manual-full-test.yml/badge.svg)](https://github.com/FrederikSchaff/Lsd/actions/workflows/manual-full-test.yml)
+
 **************************************************************
 
 	LSD 8.0 - March 2021
