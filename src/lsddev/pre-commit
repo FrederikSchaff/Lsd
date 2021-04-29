@@ -32,7 +32,7 @@ if ! ASTYLE=$(which astyle); then
 	exit 1
 fi
 
-ASTYLE_OPTIONS_FILE="src/.astylerc"
+ASTYLE_OPTIONS_FILE="src/lsddev/.astylerc"
 
 test -f ${ASTYLE_OPTIONS_FILE} || {
 	echo "[!] ${ASTYLE_OPTIONS_FILE} cannot be found. Unable to check source file format policy." >&2
@@ -59,7 +59,7 @@ done <${ASTYLE_OPTIONS_FILE}
 
 RETURN=0
 
-FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E "\.(c|cpp|h|hpp)$")
+FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E "src/lsddev/.*\.(c|cpp|h|hpp)$")
 for FILE in ${FILES}; do
 	# echo "DEBUG - The command: ${ASTYLE} ${OPTIONS} --errors-to-stdout --dry-run ${FILE}"
 	# check if the formated file differs from the unformatted file. Do not format here.
@@ -76,7 +76,7 @@ done
 
 if [ ${RETURN} -eq 1 ]; then
 	echo "" >&2
-	echo "Make sure you have run astyle with the following options from file ${ASTYLE_OPTIONS_FILE}:" >&2
+	echo "Make sure you have run astyle on all files inside /src/lsddev with the following options from file ${ASTYLE_OPTIONS_FILE}:" >&2
 	echo "${OPTIONS}" >&2
 fi
 

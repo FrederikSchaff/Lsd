@@ -7,9 +7,12 @@
 *.cpp text
 *.h text
 
-## Explicitly use linux line endings on files that may be used for tush
-/dev/*.md text eol=lf
-test.tush.md text eol=lf 
+## Explicitly use linux line endings on...
+# files that may be used for tush
+/src/lsddev/*.md text eol=lf
+test.tush.md text eol=lf
+# linux shell files
+*.sh text eol=lf
 
 # Declare files that will always have CRLF line endings on checkout.
 *.sln text eol=crlf

@@ -1,7 +1,15 @@
+# This is a special makefile for tush test models. 
+# It is reused by all tush models and should remain one folder on top of the test folders.
+# Parameters that need to be supplied as command line arguments:
+# FUN=fun_test_0001_tush
+# TCL_VERSION=8.6
+
 # Model compilation options
 # LSD options
-TARGET=LSD
-FUN=fun_test_0001_tush
+FUN=$(MODEL)/fun_$(MODEL)
+TARGET=$(MODEL)/lsd
+SUFFIX_TUSH=Tush
+TARGET_TUSH=$(TARGET)$(SUFFIX_TUSH)
 
 # Additional model files
 FUN_EXTRA=
@@ -11,15 +19,11 @@ SWITCH_CC=-O0 -ggdb3
 SWITCH_CC_LNK=
 
 # System compilation options
-# LSD options
-LSDROOT=../..
-SRC=../../src
+# LSD options - we start in `LSD/src/lsddev/Test`
+LSDROOT=../../..
+SRC=../..
 
 # Libraries options
-TCL_VERSION=8.6
-PATH_TCLTK_HEADER=/usr/include/tcl$(TCL_VERSION)
-PATH_TCLTK_LIB=/usr/lib/tcl$(TCL_VERSION)
-TCLTK_LIB=-ltcl$(TCL_VERSION) -ltk$(TCL_VERSION)
 PATH_HEADER=.
 PATH_LIB=.
 LIB=-lz -lpthread
@@ -28,7 +32,6 @@ LIB=-lz -lpthread
 CC=g++
 GLOBAL_CC=-march=native -w
 SSWITCH_CC=-fnon-call-exceptions -O3
-LSDROOT=../..
 
 # Body of makefileNW (from makefile_NW.txt)
 # specify where are the sources of LSD
@@ -41,28 +44,26 @@ INCLUDE=-I$(SRC) -I$(PATH_HEADER)
 COM_DEP=$(SRC_DIR)decl.h $(SRC_DIR)common.h 
 
 # no-window specific variables
-SUFFIX_NW=NW
-LIB_NW=$(LIB) -lpthread
+LIB_NW=-lz -lpthread
 CC_NW=$(CC_CROSS)g++
 SWITCH_CC_NW=$(GLOBAL_CC) $(SWITCH_CC) -DNW -O3 -g0
-TARGET_NW=lsd$(SUFFIX_NW)
 
 # OS command to delete files
 RM=rm -f
 
-# link executable
-$(TARGET_NW): $(FUN)$(SUFFIX_NW).o $(SRC_DIR)common.o $(SRC_DIR)lsdmain.o \
+# link executable - use extra $(SUFFIX_TUSH) to not conflict with regular (manual) model creation.
+$(TARGET_TUSH): $(FUN)$(SUFFIX_TUSH).o $(SRC_DIR)common.o $(SRC_DIR)lsdmain.o \
 $(SRC_DIR)file.o $(SRC_DIR)nets.o $(SRC_DIR)object.o \
 $(SRC_DIR)util.o $(SRC_DIR)variab.o
-	$(CC_NW) $(SWITCH_CC_NW) $(FUN)$(SUFFIX_NW).o $(SRC_DIR)common.o \
+	$(CC_NW) $(SWITCH_CC_NW) $(FUN)$(SUFFIX_TUSH).o $(SRC_DIR)common.o \
 	$(SRC_DIR)lsdmain.o $(SRC_DIR)file.o $(SRC_DIR)nets.o \
 	$(SRC_DIR)object.o $(SRC_DIR)util.o $(SRC_DIR)variab.o \
-	$(SWITCH_CC_LNK) -L$(PATH_LIB) $(LIB_NW) -o $(TARGET_NW)
+	$(SWITCH_CC_LNK) -L$(PATH_LIB) $(LIB_NW) -o $(TARGET_TUSH)
 
 # compile modules
-$(FUN)$(SUFFIX_NW).o: $(FUN).cpp $(FUN_EXTRA) $(SRC_DIR)check.h \
+$(FUN)$(SUFFIX_TUSH).o: $(FUN).cpp $(FUN_EXTRA) $(SRC_DIR)check.h \
 $(SRC_DIR)fun_head.h $(SRC_DIR)decl.h $(SRC_DIR)common.h
-	$(CC_NW) $(SWITCH_CC_NW) $(INCLUDE) -c $(FUN).cpp -o $(FUN)$(SUFFIX_NW).o
+	$(CC_NW) $(SWITCH_CC_NW) $(INCLUDE) -c $(FUN).cpp -o $(FUN)$(SUFFIX_TUSH).o
 
 $(SRC_DIR)common.o: $(SRC_DIR)common.cpp $(SRC_DIR)common.h
 	$(CC_NW) $(SWITCH_CC_NW) $(INCLUDE) -c $(SRC_DIR)common.cpp -o $(SRC_DIR)common.o
@@ -87,4 +88,4 @@ $(SRC_DIR)variab.o: $(SRC_DIR)variab.cpp $(SRC_DIR)decl.h $(SRC_DIR)common.h
 	
 # remove compiled files
 clean:
-	$(RM) $(SRC_DIR)*.o $(FUN)$(SUFFIX_NW).o $(TARGET_NW)*
+	$(RM) $(SRC_DIR)*.o $(FUN)$(SUFFIX_TUSH).o $(TARGET_TUSH)*

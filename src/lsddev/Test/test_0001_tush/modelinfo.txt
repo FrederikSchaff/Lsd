@@ -1,4 +1,4 @@
-Test_0001_tush
+test_0001_tush
 1.0
 17 April, 2021
 420x600+20+20

@@ -6,7 +6,7 @@ It is presumed that you are developing LSD with a Linux machine. However, all th
 
 Please note that all receipes, suggestions, comments, i.e. everything below, is provided WITHOUT ANY WARRANTY WHATSOEVER! Make sure you understand what you do and also check by yourself that this will not break anything.
 
-## Code Formatting
+## Code Formatting (only for newly added files)
 - Copy the `pre-commit` file in this folder into your `LSD/.git/hooks` folder. Thus, before committing, it will be checked that the changed/added 
 files comply with the formatting rules defined in `LSD/src/.astylerc`. No formatting will be done by the pre-commit hook.
 - Install the latest version of [Artistic Style](http://astyle.sourceforge.net/) and make sure that it can be called from the command line.

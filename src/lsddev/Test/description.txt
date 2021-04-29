@@ -1,0 +1,30 @@
+# Test models.
+
+In this place you will find models that test the LSD Macro language.
+
+The models herein serve two issues. Firstly, they are kind of a living 
+documentation of how certain language features (especially Macros) work.
+Secondly, they include specific test-logs, which can be used to confirm 
+that the language does what it is suppossed to do. This allows automatic
+regression testing (using a simple tool caleld tush, see the documentation
+under ../dev/).
+
+For a template, take a look at the model 'test_0001_tush'. 
+There exists a specific test makefile 'makefileNWtush' in this folder, which 
+is called from the tush test scripts. It differs from regular makefiles, 
+for example it uses the core src folder (not a copy), reducing the time when 
+compiling new tests to basically compiling the new file(s) and linking them. 
+
+Lets take the example of the first test model (which does nothing but run 3 steps..)
+You can call the makefile as follows (piping stdout to a trash file):
+
+$ cd .. && make -f makefileNWtush MODEL=test_0001_tush TCL_VERSION=8.6 >> tushLogNull.log
+
+And then you can run the model with:
+
+# Building or manually runing test models
+In the "regular" workflow some of the tcl scripts would be used internally 
+to copy the files and prepare the makefile. If you want to run a test model,
+the easiest is to copy the complete Test folder into the core LSD folder and
+browse it via LSD. Missing files (like makefile) will be generated automatically.
+

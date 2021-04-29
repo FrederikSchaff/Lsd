@@ -1,7 +1,4 @@
-Work/
-trashbin/
-lwi/nbproject/
-SyncToy*
+# General things
 *.err
 *.o
 *.bak
@@ -12,17 +9,15 @@ SyncToy*
 *.csv
 *.pdf
 *.pyc
+# specific to test models run manually
 makefile
 makemessage.txt
 system_options.txt
 lmm_options.txt
 temp.html
-*.Rproj.user
-*.Rdata
-.Rproj.user
-*.Rproj
 elements.txt
-makefileNW
-*.gch
-lsd.exe
-lsdNW.exe
+# Tush testing output
+tush-output
+lsdTush
+tushLogNull.log
+tushTestLog.log

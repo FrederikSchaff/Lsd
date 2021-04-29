@@ -1,0 +1,40 @@
+Model Test_0001_tush (ver. 1.0)
+
+# Description
+This testmodel is a meta-test model. Its purpose is to test the utilities
+that are used within the tush tests.
+
+# Tush Test procedure
+In all cases, we need to go one folder up (leaving the temporary tush folder)
+
+Firstly, we make the specific no window version if it was not already created (i.e. only in single run)
+
+# Get the model name which is the name of the temporary dir (not the path, only the dir)
+# Note: This is test code here. We cannot assign it to a variable here as each $ is a new shell.
+$ cd .. && echo $(pwd | grep -oP '^.*\/\K(\w*)')
+| test_0001_tush
+
+# Compile the executable - looks complicated, but you never need to change it...
+#$ cd .. && { [ -e lsdTush ] &&  { echo "executable already exists" >> tushLogNull.log } || { modelName=$(pwd | grep -oP '^.*\/\K(\w*)') && cd .. && make -f makefileNWtush MODEL=$modelName >> $modelName/tushLogNull.log } }
+$ cd .. && modelName=$(pwd | grep -oP '^.*\/\K(\w*)') && cd .. && $( make -f makefileNWtush MODEL=$modelName >> $modelName/tushLogNull.log )
+
+Secondly, we run the tushTest.lsd and expect it to not fail. Important: Pipe stdout to a trash file, to ignore it.
+Otherwise you would, e.g., include timing issues.
+$ cd .. && ./lsdTush -f tushTest.lsd >> tushLogNull.log
+
+Thirdly, we compare the output with the expected output. Here we use tush explicitly.
+$ cd .. && cat tushTestLog.log
+| Begin of test logs for 'test_0001_tush'
+| 
+| 
+| Test log. Step: 1.
+| Test log. Step: 2.
+| Test log. Step: 3.
+| 
+| 
+| End of test logs for 'test_0001_tush'
+
+Test done.
+
+(PRESS CTRL+E TO EDIT EQUATIONS)
+

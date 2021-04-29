@@ -2,7 +2,7 @@
 
 #include "fun_head_fast.h"
 
-#define TUSH_MODEL "Test_0001_tush"
+#define TUSH_MODEL "test_0001_tush"
 #include "../tush_test_utilities.h"
 
 // do not add Equations in this area
