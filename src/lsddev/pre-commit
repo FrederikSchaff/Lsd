@@ -32,7 +32,7 @@ if ! ASTYLE=$(which astyle); then
 	exit 1
 fi
 
-ASTYLE_OPTIONS_FILE="src/lsddev/.astylerc"
+ASTYLE_OPTIONS_FILE="src/.astylerc"
 
 test -f ${ASTYLE_OPTIONS_FILE} || {
 	echo "[!] ${ASTYLE_OPTIONS_FILE} cannot be found. Unable to check source file format policy." >&2
