@@ -51,6 +51,7 @@ jobs:
         sudo cp src/lsddev/tush/bin/tush-run-raw /usr/local/bin/tush-run-raw
         sudo chmod 755 /usr/local/bin/tush-run-raw
         echo "✅ tush setup complete"
-        cd src/lsddev 
+        cd src/lsddev
+        sudo chmod 755 ./macros_regression_test.sh
         sudo sh -c ./macros_regression_test.sh
         echo "✔ Regression test completed successfully 🎉"
