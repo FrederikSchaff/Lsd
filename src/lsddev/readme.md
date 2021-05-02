@@ -32,4 +32,4 @@ LMM Builds:
 [![LMM build (ubuntu)](https://github.com/FrederikSchaff/Lsd/actions/workflows/LMM_build_ubuntu.yml/badge.svg)](https://github.com/FrederikSchaff/Lsd/actions/workflows/LMM_build_ubuntu.yml) 
 
 Test workflows:
-[![Test LSD build and macros (manually)](https://github.com/FrederikSchaff/Lsd/actions/workflows/manual-full-test.yml/badge.svg)](https://github.com/FrederikSchaff/Lsd/actions/workflows/manual-full-test.yml)
+[![Test LSD build and macros (manually)](https://github.com/FrederikSchaff/Lsd/actions/workflows/manual-full-test.yml/badge.svg)](https://github.com/FrederikSchaff/Lsd/actions/workflows/manual-full-test.yml) [![LSD user macros complete regression test](https://github.com/FrederikSchaff/Lsd/actions/workflows/complete_user_macro_regression.yml/badge.svg)](https://github.com/FrederikSchaff/Lsd/actions/workflows/complete_user_macro_regression.yml)
