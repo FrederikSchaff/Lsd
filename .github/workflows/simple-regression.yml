@@ -1,5 +1,5 @@
 # This is a basic workflow that is manually triggered
-name: Test LSD build and macros (manually)
+name: Test Lmm build and LSD build and run (simple regression)
 
 # Controls when the action will run. Workflow runs when manually triggered using the UI
 # or API.
