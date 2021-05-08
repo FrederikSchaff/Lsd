@@ -52,5 +52,5 @@ jobs:
         sudo chmod 755 /usr/local/bin/tush-run-raw
         echo "✅ tush setup complete"
         cd src/lsddev 
-        tush-check 3_regression_tests.md
+        tush-check tush_local_simple_regression_test.md
         echo "✔ Regression test completed successfully 🎉"
