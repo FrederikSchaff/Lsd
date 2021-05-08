@@ -1,8 +1,7 @@
 # This is a special makefile for tush test models. 
 # It is reused by all tush models and should remain one folder on top of the test folders.
 # Parameters that need to be supplied as command line arguments:
-# FUN=fun_test_0001_tush
-# TCL_VERSION=8.6
+# MODEL=test_0001_tush
 
 # Model compilation options
 # LSD options

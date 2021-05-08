@@ -4,11 +4,11 @@ LSD is an open-source framework and thus can be used and also extended by everyo
 
 LSD uses a DSL (domain specific language) implemented via c preprocessor macros. All core LSD DSL macros reside in [`src/fun_head.h`](../fun_head.h). Any new user facing functionality should follow the standards implicitly provided by these macros, but have their own header file (and source files). 
 
-It is planned to cover, step-by-step, all existing macros in special test models. These test modles are automatically compiled and executed with simple tush scripts (see below). This ensures that a) it is easy for a reviewer to understand, from a user perspective, what those macros accomplish and b) the macros have been tested extensively. This is an additional requirement to a user facing documentation and user facing example models / tutorials.
+It is planned to cover, step-by-step, all existing macros in special test models. These test modles are automatically compiled and executed with simple [Tush](https://github.com/darius/tush) scripts (see below). This ensures that a) it is easy for a reviewer to understand, from a user perspective, what those macros accomplish and b) the macros have been tested extensively. This is an additional requirement to a user facing documentation and user facing example models / tutorials.
 
 A guide and example for "plugin" extensions to LSD will follow in future.
 
-See [developer-setup](developer-setup.md) for detailed instructions on how to setup a developer environment with artistic style (formatting) and tush (DSL testing).
+See [developer-setup](developer-setup.md) for detailed instructions on how to setup a developer environment with artistic style (formatting) and Tush (DSL testing). You need Tush
 
 ## Testing
 
@@ -29,12 +29,4 @@ Github workflows (see [.github/workflows](../../.github/workflows/) ) are implem
 
 It is planned to implement automated workflows for all major platforms. UI testing is currently not planned, as it is more complex, there are less changes expected and the correctness of model runs does not depend on the UI.
 
-For now all workflows require manual actions and run on the main branch of the repository. In future we may change this.
-
-### Status of github workflows:
-
-LMM Builds:
-[![LMM build (ubuntu)](https://github.com/FrederikSchaff/Lsd/actions/workflows/LMM_build_ubuntu.yml/badge.svg)](https://github.com/FrederikSchaff/Lsd/actions/workflows/LMM_build_ubuntu.yml) 
-
-Test workflows:
-[![Test LSD build and macros (manually)](https://github.com/FrederikSchaff/Lsd/actions/workflows/manual-full-test.yml/badge.svg)](https://github.com/FrederikSchaff/Lsd/actions/workflows/manual-full-test.yml) [![LSD user macros complete regression test](https://github.com/FrederikSchaff/Lsd/actions/workflows/complete_user_macro_regression.yml/badge.svg)](https://github.com/FrederikSchaff/Lsd/actions/workflows/complete_user_macro_regression.yml)
+For now all workflows require manual actions and run on the main branch of the repository. In future we may change this and also include status badges.
