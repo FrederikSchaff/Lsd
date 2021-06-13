@@ -15,6 +15,10 @@
     #define TUSH_MODEL "model name missing"
 #endif
 #define TEST_UNCHANGED(ENTRY) LSD_TUSH_TEST_UTILITIES::tushTest.addLog(ENTRY)
+#define TEST_UNCHANGED_PLOG(ENTRY) \
+    std::string __logEntry = std::string(ENTRY); \
+    plog( (__logEntry + "\n").c_str()); \
+    LSD_TUSH_TEST_UTILITIES::tushTest.addLog(__logEntry)
 
 /**************************
  * TushTest allows to print prepared strings to the tush log. 
