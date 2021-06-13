@@ -1,5 +1,5 @@
 # This is a basic workflow that is manually triggered
-name: Test LSD build and macros (manually)
+name: Test Lmm build and LSD build and run (simple regression)
 
 # Controls when the action will run. Workflow runs when manually triggered using the UI
 # or API.
@@ -18,7 +18,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "Test-LSD-Build-And-Macros"
-  Test-LSD-Build-And-Macros:
+  Test-LSD-Simple-Regression:
     # The type of runner that the job will run on
     runs-on: ubuntu-20.04
 
@@ -52,5 +52,5 @@ jobs:
         sudo chmod 755 /usr/local/bin/tush-run-raw
         echo "✅ tush setup complete"
         cd src/lsddev 
-        tush-check 3_regression_tests.md
+        tush-check tush_local_simple_regression_test.md
         echo "✔ Regression test completed successfully 🎉"
