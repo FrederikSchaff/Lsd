@@ -10,6 +10,7 @@
 ## Explicitly use linux line endings on...
 # files that may be used for tush
 /src/lsddev/*.md text eol=lf
+/src/lsddev/*.txt text eol=lf
 test.tush.md text eol=lf
 # linux shell files
 *.sh text eol=lf
