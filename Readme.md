@@ -73,7 +73,7 @@ Depending on the size of the tasks, I may also decide to make use of the issue t
 
 
 ## Test-Automation Status
-
+Tracking the [8.0-beta-test-automation](https://github.com/FrederikSchaff/Lsd/tree/8.0-beta-test-automation) branch.
 _Note_: This may not be up to date! And not all is automated.
 
 | Metric     | Coverage |
