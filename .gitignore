@@ -26,3 +26,6 @@ makefileNW
 *.gch
 lsd.exe
 lsdNW.exe
+
+# ignore the optional symlink to lsd/src/lsddev/Test
+/Test

@@ -1,0 +1,23 @@
+# General things
+*.err
+*.o
+*.bak
+*.res
+*res.gz
+*.tot
+*.tot.gz
+*.csv
+*.pdf
+*.pyc
+# specific to test models run manually
+makefile
+makemessage.txt
+system_options.txt
+lmm_options.txt
+temp.html
+elements.txt
+# Tush testing output
+tush-output
+lsdTush
+tushLogNull.log
+tushTestLog.log

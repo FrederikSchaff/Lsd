@@ -1,0 +1,35 @@
+# This is a special makefile for tush test models. 
+# It is reused by all tush models and should remain one folder on top of the test folders.
+# Parameters that need to be supplied as command line arguments:
+# The MODEL variable is exchanged in the makefile build with the test model name == test model dir name.
+# Then the makefileNW is appended.
+
+# Model compilation options
+MODEL=
+# LSD options
+FUN=fun_$(MODEL)
+TARGET=lsd
+
+# Additional model files
+FUN_EXTRA=
+
+# Compiler options
+SWITCH_CC=-O0 -ggdb3
+SWITCH_CC_LNK=
+
+# System compilation options
+# LSD options - we start in `LSD/src/lsddev/Test/tush_nnnn_xyz`
+LSDROOT=../../../..
+SRC=../../..
+
+# Libraries options
+PATH_HEADER=.
+PATH_LIB=.
+LIB=-lz -lpthread
+
+# Compiler options
+CC=g++
+GLOBAL_CC=-march=native -w
+SSWITCH_CC=-fnon-call-exceptions -O3
+
+# Body of makefileNW (from makefile_NW.txt)

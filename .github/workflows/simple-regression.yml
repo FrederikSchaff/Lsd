@@ -1,0 +1,56 @@
+# This is a basic workflow that is manually triggered
+name: Test Lmm build and LSD build and run (simple regression)
+
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+on:
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      reasonToRun:
+        # Friendly description to be shown in the UI instead of 'name'
+        description: 'Provide a reason for the trigger'
+        # Default value if no value is explicitly provided
+        default: 'Full Test'
+        # Input has to be provided for the workflow to run
+        required: true
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "Test-LSD-Build-And-Macros"
+  Test-LSD-Simple-Regression:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-20.04
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    # Runs a single command using the runners shell
+    - name: Send reason
+      run: echo "Reason for this run ${{ github.event.inputs.reasonToRun }}"
+    - name: Install dependencies
+      run: |
+          sudo apt-get update
+          sudo apt-get install build-essential
+          sudo apt-get install gdb
+          sudo apt-get install gnuplot-qt
+          sudo apt-get install multitail
+          sudo apt-get install zlib1g-dev
+          sudo apt-get install tcl-dev
+          sudo apt-get install tk-dev
+          echo "✅ dependencies successfully installed"
+    - name: Check out repository code
+      uses: actions/checkout@v2
+    - name: Run regression test
+      run: |
+        sudo cp src/lsddev/tush/bin/overwrite /usr/local/bin/overwrite
+        sudo chmod 755 /usr/local/bin/overwrite
+        sudo cp src/lsddev/tush/bin/tush-check /usr/local/bin/tush-check
+        sudo chmod 755 /usr/local/bin/tush-check
+        sudo cp src/lsddev/tush/bin/tush-run /usr/local/bin/tush-run
+        sudo chmod 755 /usr/local/bin/tush-run
+        sudo cp src/lsddev/tush/bin/tush-run-raw /usr/local/bin/tush-run-raw
+        sudo chmod 755 /usr/local/bin/tush-run-raw
+        echo "✅ tush setup complete"
+        cd src/lsddev 
+        tush-check tush_local_simple_regression_test.md
+        echo "✔ Regression test completed successfully 🎉"
