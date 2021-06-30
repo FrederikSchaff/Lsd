@@ -13,9 +13,9 @@ See [Readme.txt](Readme.txt) for details on LSD itself.
 
 ## TL;DR
 
-Adding features to [Laboratory for Simulation Development - LSD rep](https://github.com/marcov64/Lsd) with the aim to improve the rigor and reliability of this in my opinion outstanding agent-based modelling framework at one end (CI-CD, but in a practical manner) and improve its usability for scientists and reviewers (features, model configuration management, automated analysis) on the other hand.
+Adding features to [Laboratory for Simulation Development - LSD repo](https://github.com/marcov64/Lsd) with the aim to improve the rigor and reliability of this, in my opinion outstanding, agent-based modelling framework, at one end (CI-CD, but in a practical manner), and improve its usability for scientists and reviewers (features, model configuration management, automated analysis), on the other hand.
 
-GIS because the geographic representation capabilities are perhaps one of the most missed features in the core LSD and also perhaps the biggest feature that exists as MVP in the GIS-beta branch.
+GIS, because the geographic representation capabilities are perhaps one of the most missed features in the core LSD and also perhaps the biggest feature that exists as MVP in the GIS-beta branch.
 
 ## Background
 
@@ -60,7 +60,16 @@ The idea is to not work on any of the branches directly (except `gis-integration
 - `test-automation/TASK`
 - `hotfix/TASK`
 
-and merging them back in the respective branches via pull requests. Depending on the size of the tasks, I may also decide to make use of the issue tracker and link them via issue numbers. Let's see.
+and merging them back in the respective branches via pull requests. 
+
+commits should have prefixes:
+- `project`: Documentation on project state
+- `test-automation`: adding tests / improving CI-CD
+- `(bug)fix`: fixing something
+- `improvement`: any thing adding new functionality.
+Also, at best at the beginning, link to a feature/improvement with an identifier / unique name.
+
+Depending on the size of the tasks, I may also decide to make use of the issue tracker and link them via issue numbers. Let's see.
 
 
 ## Test-Automation Status
