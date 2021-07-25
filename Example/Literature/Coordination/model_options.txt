@@ -1,0 +1,4 @@
+TARGET=LSD
+FUN=fun_coor
+SWITCH_CC=-g
+

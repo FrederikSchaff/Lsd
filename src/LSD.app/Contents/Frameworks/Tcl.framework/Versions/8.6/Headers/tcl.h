@@ -42,10 +42,6 @@ extern "C" {
  * win/configure.in	(as above)
  * win/tcl.m4		(not patchlevel)
  * README		(sections 0 and 2, with and without separator)
- * macosx/Tcl.pbproj/project.pbxproj (not patchlevel) 1 LOC
- * macosx/Tcl.pbproj/default.pbxuser (not patchlevel) 1 LOC
- * macosx/Tcl.xcode/project.pbxproj (not patchlevel) 2 LOC
- * macosx/Tcl.xcode/default.pbxuser (not patchlevel) 1 LOC
  * macosx/Tcl-Common.xcconfig (not patchlevel) 1 LOC
  * win/README		(not patchlevel) (sections 0 and 2)
  * unix/tcl.spec	(1 LOC patch)
@@ -55,10 +51,10 @@ extern "C" {
 #define TCL_MAJOR_VERSION   8
 #define TCL_MINOR_VERSION   6
 #define TCL_RELEASE_LEVEL   TCL_FINAL_RELEASE
-#define TCL_RELEASE_SERIAL  7
+#define TCL_RELEASE_SERIAL  11
 
 #define TCL_VERSION	    "8.6"
-#define TCL_PATCH_LEVEL	    "8.6.7"
+#define TCL_PATCH_LEVEL	    "8.6.11"
 
 /*
  *----------------------------------------------------------------------------
@@ -388,7 +384,7 @@ typedef long LONG;
  */
 
 #if !defined(TCL_WIDE_INT_TYPE)&&!defined(TCL_WIDE_INT_IS_LONG)
-#   if defined(_WIN32)
+#   if defined(_WIN32) && (!defined(__USE_MINGW_ANSI_STDIO) || !__USE_MINGW_ANSI_STDIO)
 #      define TCL_WIDE_INT_TYPE __int64
 #      ifdef __BORLANDC__
 #         define TCL_LL_MODIFIER	"L"
@@ -444,7 +440,7 @@ typedef unsigned TCL_WIDE_INT_TYPE	Tcl_WideUInt;
 #if defined(_WIN32)
 #   ifdef __BORLANDC__
 	typedef struct stati64 Tcl_StatBuf;
-#   elif defined(_WIN64)
+#   elif defined(_WIN64) || defined(_USE_64BIT_TIME_T)
 	typedef struct __stat64 Tcl_StatBuf;
 #   elif (defined(_MSC_VER) && (_MSC_VER < 1400)) || defined(_USE_32BIT_TIME_T)
 	typedef struct _stati64	Tcl_StatBuf;
@@ -1986,7 +1982,7 @@ typedef struct Tcl_Token {
  * TCL_TOKEN_OPERATOR -		The token describes one expression operator.
  *				An operator might be the name of a math
  *				function such as "abs". A TCL_TOKEN_OPERATOR
- *				token is always preceeded by one
+ *				token is always preceded by one
  *				TCL_TOKEN_SUB_EXPR token for the operator's
  *				subexpression, and is followed by zero or more
  *				TCL_TOKEN_SUB_EXPR tokens for the operator's
@@ -2521,7 +2517,7 @@ EXTERN void		Tcl_GetMemoryInfo(Tcl_DString *dsPtr);
 #   define Tcl_DecrRefCount(objPtr) \
 	do { \
 	    Tcl_Obj *_objPtr = (objPtr); \
-	    if ((_objPtr)->refCount-- <= 1) { \
+	    if (_objPtr->refCount-- <= 1) { \
 		TclFreeObj(_objPtr); \
 	    } \
 	} while(0)
@@ -2622,7 +2618,7 @@ EXTERN void		Tcl_GetMemoryInfo(Tcl_DString *dsPtr);
 #ifndef TCL_NO_DEPRECATED
 /*
  * These function have been renamed. The old names are deprecated, but we
- * define these macros for backwards compatibilty.
+ * define these macros for backwards compatibility.
  */
 
 #   define Tcl_Ckalloc		Tcl_Alloc

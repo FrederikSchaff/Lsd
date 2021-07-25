@@ -1,0 +1,152 @@
+Model Test_0002_basics (ver. 1.0)
+
+# Description
+This testmodel is the first real test model. It will test basic functionality of LSD, like default scheduling, updating of variables, etc.
+
+The basic structure is as follows:
+
+                             root                               
+                   ------------+----------------                
+                  /                             \               
+                 /                               \              
+                A                                B                  : c - child
+      ----------+--------              ----------+--------      
+     /          |        \            /          |        \     
+    AA         AB        AC          BA         BB        BC        : p - parent
+    -+-        -+-       -+-         -+-        -+-       -+-   
+   /   \      /   \     /   \       /   \      /   \     /   \  
+ AAA  AAB   ABA  ABB   ACA  ACB   BAA  BAB   BBA  BBB   BCA  BCB    : g - grandparent
+
+Each item contains a parameter c_name, p_name, g_name which keeps the coded name where: 
+    0=space/empty,1=A,..9=I and in the format CPG. e.g.: 100 = A; 111 = AAA; 231 = BCA.
+Each item contains a set of variables: c1, c2, c3 ; p1, p2, p3; g1, g2, g3.
+
+# Tush Test procedure
+In all cases, we need to go one folder up (leaving the temporary tush folder)
+
+## Preparation
+Firstly, we make the specific no window version if it was not already created (i.e. only in single run)
+
+Get the model name which is the name of the temporary dir (not the path, only the dir)
+Note: This is test code here. We cannot assign it to a variable here as each $ is a new shell.
+$ cd .. && echo $(pwd | grep -oP '^.*\/\K(\w*)')
+| test_0002_basics
+
+### Create the special no window makefile.
+Step 1: Copy content from makefile-tush-settings.txt
+$ cd .. && cat ../makefile-tush-settings.txt > makefileNW
+
+Step 2: Exchange 'MODEL=' with the dir name / model name
+$ cd .. && modelName=$(pwd | grep -oP '^.*\/\K(\w*)') && sed -i s/MODEL=/MODEL=$modelName/g makefileNW
+
+Step 3: Append the file with the content of the makefile-NW.txt
+$ cd .. && cat ../../../makefile-NW.txt >> makefileNW
+
+### Compile the executable - but do not consider std output of compilation in this test
+$ cd .. && if [ -f lsdNW ]; then rm lsdNW; fi
+$ cd .. && make -f makefileNW >> tushLogNull.log
+
+
+## Run Model
+Secondly, we run the tushTest.lsd and expect it to not fail. Important: Pipe stdout to a trash file, to ignore it.
+Otherwise you would, e.g., include timing issues.
+$ cd .. && ./lsdNW -f tushTest.lsd >> tushLogNull.log
+
+## Validate Results
+Thirdly, we compare the output with the expected output. Here we use tush explicitly.
+$ cd .. && cat tushTestLog.log
+| Begin of test logs for 'test_0002_basics'
+| 
+| 
+| Test log. Step: 1.
+| Initialising Agent tree.
+| Added agent 100=100.000000
+| Added parent 110=110.000000
+| Added grandparent 111=111.000000
+| Added grandparent 112=112.000000
+| Added parent 120=120.000000
+| Added grandparent 121=121.000000
+| Added grandparent 122=122.000000
+| Added parent 130=130.000000
+| Added grandparent 131=131.000000
+| Added grandparent 132=132.000000
+| Added agent 200=200.000000
+| Added parent 210=210.000000
+| Added grandparent 211=211.000000
+| Added grandparent 212=212.000000
+| Added parent 220=220.000000
+| Added grandparent 221=221.000000
+| Added grandparent 222=222.000000
+| Added parent 230=230.000000
+| Added grandparent 231=231.000000
+| Added grandparent 232=232.000000
+| Find agent 100=100.000000
+| Find parent 110=110.000000
+| Find grandparent 111=111.000000
+| Find grandparent 112=112.000000
+| Find parent 120=120.000000
+| Find grandparent 121=121.000000
+| Find grandparent 122=122.000000
+| Find parent 130=130.000000
+| Find grandparent 131=131.000000
+| Find grandparent 132=132.000000
+| Find agent 200=200.000000
+| Find parent 210=210.000000
+| Find grandparent 211=211.000000
+| Find grandparent 212=212.000000
+| Find parent 220=220.000000
+| Find grandparent 221=221.000000
+| Find grandparent 222=222.000000
+| Find parent 230=230.000000
+| Find grandparent 231=231.000000
+| Find grandparent 232=232.000000
+| Test log. Step: 2.
+| Find agent 100=100.000000
+| Find parent 110=110.000000
+| Find grandparent 111=111.000000
+| Find grandparent 112=112.000000
+| Find parent 120=120.000000
+| Find grandparent 121=121.000000
+| Find grandparent 122=122.000000
+| Find parent 130=130.000000
+| Find grandparent 131=131.000000
+| Find grandparent 132=132.000000
+| Find agent 200=200.000000
+| Find parent 210=210.000000
+| Find grandparent 211=211.000000
+| Find grandparent 212=212.000000
+| Find parent 220=220.000000
+| Find grandparent 221=221.000000
+| Find grandparent 222=222.000000
+| Find parent 230=230.000000
+| Find grandparent 231=231.000000
+| Find grandparent 232=232.000000
+| Test log. Step: 3.
+| Find agent 100=100.000000
+| Find parent 110=110.000000
+| Find grandparent 111=111.000000
+| Find grandparent 112=112.000000
+| Find parent 120=120.000000
+| Find grandparent 121=121.000000
+| Find grandparent 122=122.000000
+| Find parent 130=130.000000
+| Find grandparent 131=131.000000
+| Find grandparent 132=132.000000
+| Find agent 200=200.000000
+| Find parent 210=210.000000
+| Find grandparent 211=211.000000
+| Find grandparent 212=212.000000
+| Find parent 220=220.000000
+| Find grandparent 221=221.000000
+| Find grandparent 222=222.000000
+| Find parent 230=230.000000
+| Find grandparent 231=231.000000
+| Find grandparent 232=232.000000
+| 
+| 
+| End of test logs for 'test_0002_basics'
+
+Test done.
+
+(PRESS CTRL+E TO EDIT EQUATIONS)
+

@@ -1,0 +1,156 @@
+	
+Label Root
+{
+	Son: child
+	Label child
+	{
+		Son: parent
+		Label parent
+		{
+			Son: grandparent
+			Label grandparent
+			{
+				Param: g
+
+			}
+
+			Param: p
+
+		}
+
+		Param: c
+
+	}
+
+	Var: Test
+	Var: Init
+	Var: CYCLE_TEST
+
+}
+
+
+DATA
+
+Object: Root C	1
+Var: Test 0 n + n n
+Var: Init 0 n + n n
+Var: CYCLE_TEST 0 n + n n
+
+Object: child C	1
+Param: c 0 n + n n	0
+
+Object: parent C	1
+Param: p 0 n + n n	0
+
+Object: grandparent C	1
+Param: g 0 n + n n	0
+
+SIM_NUM 1
+SEED 1
+MAX_STEP 3
+EQUATION test_0002_basics.cpp
+MODELREPORT report_Sim1.html
+
+DESCRIPTION
+
+Object_Root
+
+END_DESCRIPTION
+
+Variable_Test
+Testing.
+END_DESCRIPTION
+
+Variable_Init
+Initialises the model
+END_DESCRIPTION
+
+Variable_CYCLE_TEST
+
+END_DESCRIPTION
+
+Object_child
+child
+END_DESCRIPTION
+
+Parameter_c
+
+_INIT_
+All 1 instances equal to 0
+END_DESCRIPTION
+
+Object_parent
+parent
+END_DESCRIPTION
+
+Parameter_p
+
+_INIT_
+All 1 instances equal to 0
+END_DESCRIPTION
+
+Object_grandparent
+
+END_DESCRIPTION
+
+Parameter_g
+grandparent index
+_INIT_
+All 1 instances equal to 0
+END_DESCRIPTION
+
+
+DOCUOBSERVE
+
+END_DOCUOBSERVE
+
+
+DOCUINITIAL
+
+END_DOCUINITIAL
+
+
+EQ_FILE
+//#define EIGENLIB			// uncomment to use Eigen linear algebra library
+
+#include "fun_head_fast.h"
+#include "../tush_test_utilities.h"
+
+TushTest tushTest;
+
+// do not add Equations in this area
+
+MODELBEGIN
+
+// insert your equations here, ONLY between the MODELBEGIN and MODELEND words
+
+
+
+EQUATION("Test")
+/*
+Comment
+*/
+
+std::string logEntry = "Test log. Step: " + std::to_string(t) + ".";
+tushTest.addLog(logEntry);
+
+RESULT(0)
+
+
+
+
+
+
+
+
+
+MODELEND
+
+// do not add Equations in this area
+
+void close_sim( void )
+{
+	// close simulation special commands go here
+}
+
+END_EQ_FILE

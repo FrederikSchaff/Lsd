@@ -1,0 +1,23 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout.
+*.c text
+*.cpp text
+*.h text
+
+## Explicitly use linux line endings on...
+# files that may be used for tush
+/src/lsddev/*.md text eol=lf
+/src/lsddev/*.txt text eol=lf
+test.tush.md text eol=lf
+# linux shell files
+*.sh text eol=lf
+
+# Declare files that will always have CRLF line endings on checkout.
+*.sln text eol=crlf
+
+# Denote all files that are truly binary and should not be modified.
+*.png binary
+*.jpg binary

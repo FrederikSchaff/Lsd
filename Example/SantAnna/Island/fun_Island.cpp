@@ -1,3 +1,5 @@
+#define NO_POINTER_INIT							// disable pointer checking
+
 #include "fun_head_fast.h"
 
 // colors of lattice markers
@@ -28,6 +30,7 @@ Must be the first variable in the list.
 */
 
 FAST;											// comment to show log/debug messages
+USE_ZERO_INSTANCE;								// enable zero-instance objects
 
 v[0] = v[1] = 0;								// island/known island counters
 v[2] = V( "pi" );								// island probability
@@ -50,7 +53,7 @@ if ( v[7] > 0 && ! V( "latticeOpen" ) )
 {
 	i = min( v[7], 2 * LAST_T ) + 1;			// effective size of the lattice window
 	INIT_LAT( SEA, i, i );						// create lattice window using SEA color
-	WRITES( p->up, "latticeOpen", 1 );			// avoid more than one lattice instance
+	WRITES( PARENT, "latticeOpen", 1 );			// avoid more than one lattice instance
 	WRITE( "seaShown", 1 );						// signal this Sea instance has the lattice
 	k = 1;										// lattice open
 }
@@ -63,13 +66,13 @@ INIT_NET( "KnownIsland", "DISCONNECTED", 1 );
 // handle bounded economies (pi=0)
 if ( v[2] == 0 && v[3] == 2 )
 {
-	add_island( p, 1, 1, &v[0], k, v[7] );		// island at (1, 1)
-	add_island( p, 1, v[4], &v[0], k, v[7] );	// island at (1, l0radius)
+	add_island( THIS, 1, 1, &v[0], k, v[7] );	// island at (1, 1)
+	add_island( THIS, 1, v[4], &v[0], k, v[7] );// island at (1, l0radius)
 }
 else
 {
 	// make sure there is an island at (0, 0)
-	add_island( p, 0, 0, &v[0], k, v[7] );
+	add_island( THIS, 0, 0, &v[0], k, v[7] );
 
 	// create random islands to fill the initial radius plus one
 	for ( i = - v[4] - 1; i <= v[4] + 1; ++i )
@@ -77,7 +80,7 @@ else
 			// draw the existence of an island (except in (0, 0))
 			if ( RND < v[2] && ! ( i == 0 && j == 0 ) )
 				// create island and add to the graphical lattice if required
-				add_island( p, i, j, &v[0], k, v[7] );
+				add_island( THIS, i, j, &v[0], k, v[7] );
 }
 
 // draw the required number of known islands ((0, 0) is always known)
@@ -104,16 +107,16 @@ while( v[1] < v[3] )
 	else
 		cur1 = ADDOBJ( "KnownIsland" );			// add new object instance
 						
-	cur->hook = cur1;							// save pointer to KnownIsland object
-	cur1->hook = cur;							// save pointer to Island object
+	WRITE_SHOOKS( cur, cur1 );					// save pointer to KnownIsland object
+	WRITE_SHOOKS( cur1, cur );					// save pointer to Island object
 				
-	++v[1];							// count the known islands
-	WRITES( cur, "_known", 1 );		// flag island as known
-	WRITES( cur1, "_s", abs( x ) + abs( y ) );// island prod. coeff.
-	WRITES( cur1, "_idKnown", v[1] );	// save known island id
+	++v[1];										// count the known islands
+	WRITES( cur, "_known", 1 );					// flag island as known
+	WRITES( cur1, "_s", abs( x ) + abs( y ) );	// island prod. coeff.
+	WRITES( cur1, "_idKnown", v[1] );			// save known island id
 				
-	neighborhood( cur1, v[5], v[6] );	// create neighborhood network			
-	set_marker( k, x, y, KNOWN, v[7] ); // change island marker
+	neighborhood( cur1, v[5], v[6] );			// create neighborhood network			
+	set_marker( k, x, y, KNOWN, v[7] ); 		// change island marker
 					
 	LOG( "\nKnownIsland=%.0lf at x=%d y=%d", v[1], x, y );				
 }
@@ -139,12 +142,12 @@ for ( i = 0; i < j; ++i )
 		cur1 = ADDOBJ( "Agent" );				// add new agent object instance
 		
 	cur2 = SEARCHS( cur, "Miner" );				// pick existing miner object in island
-	if ( ! ( cur2->hook == NULL ) )				// existing object instance already used?
+	if ( ! ( SHOOKS( cur2 ) == NULL ) )			// existing object instance already used?
 		cur2 = ADDOBJS( cur, "Miner" );			// add new miner object instance
 		
-	cur1->hook = cur2;							// save pointer to agent as miner
-	cur2->hook = cur1;							// save pointer to Agent object
-	cur3 = cur->hook;							// pointer to island
+	WRITE_SHOOKS( cur1, cur2 );					// save pointer to agent as miner
+	WRITE_SHOOKS( cur2, cur1 );					// save pointer to Agent object
+	cur3 = SHOOKS( cur );						// pointer to island
 	
 	WRITES( cur1, "_idAgent", i + 1 );			// save agent id number
 	WRITES( cur1, "_xAgent", VS( cur3, "_xIsland" ) );	// agent x coordinate
@@ -243,7 +246,7 @@ if ( v[8] <= v[4] )
 	WRITE( "westFrontier", --v[4] );			// update the frontier
 	for ( i = v[4], j = v[6]; j <= v[7]; ++j )	// move south -> north
 		if ( RND < v[1] )						// is it an island?
-			add_island( p, i, j, & v[0], v[2], v[3] );
+			add_island( THIS, i, j, & v[0], v[2], v[3] );
 }
 
 // expand to the east if required
@@ -252,7 +255,7 @@ if ( v[9] >= v[5] )
 	WRITE( "eastFrontier", ++v[5] );			// update the frontier
 	for ( i = v[9], j = v[6]; j <= v[7]; ++j )	// move south -> north
 		if ( RND < v[1] )						// is it an island?
-			add_island( p, i, j, & v[0], v[2], v[3] );
+			add_island( THIS, i, j, & v[0], v[2], v[3] );
 }
 
 // expand to the south if required
@@ -261,7 +264,7 @@ if ( v[10] <= v[6] )
 	WRITE( "southFrontier", --v[6] );			// update the frontier
 	for ( j = v[6], i = v[4]; i <= v[5]; ++i )	// move west -> east
 		if ( RND < v[1] )						// is it an island?
-			add_island( p, i, j, & v[0], v[2], v[3] );
+			add_island( THIS, i, j, & v[0], v[2], v[3] );
 }
 
 // expand to the north if required
@@ -270,11 +273,10 @@ if ( v[11] >= v[7] )
 	WRITE( "northFrontier", ++v[7] );			// update the frontier
 	for ( j = v[7], i = v[4]; i <= v[5]; ++i )	// move west -> east
 		if ( RND < v[1] )						// is it an island?
-			add_island( p, i, j, & v[0], v[2], v[3] );
+			add_island( THIS, i, j, & v[0], v[2], v[3] );
 }
 
 RESULT( v[0] )
-
 
 
 //////////////////////////// KNOWNISLAND object equations ////////////////////////////
@@ -289,11 +291,11 @@ v[1] = V( "sizeLattice" );						// size of the lattice window
 
 // update island marker
 if ( v[0] == 0 )
-	set_marker( V( "seaShown" ),  VS( p->hook, "_xIsland" ), 
-				VS( p->hook, "_yIsland" ), KNOWN, v[1] );	
+	set_marker( V( "seaShown" ),  VS( SHOOK, "_xIsland" ), 
+				VS( SHOOK, "_yIsland" ), KNOWN, v[1] );	
 else
-	set_marker( V( "seaShown" ),  VS( p->hook, "_xIsland" ), 
-				VS( p->hook, "_yIsland" ), COLONIZED, v[1] );	
+	set_marker( V( "seaShown" ),  VS( SHOOK, "_xIsland" ), 
+				VS( SHOOK, "_yIsland" ), COLONIZED, v[1] );	
 
 RESULT( v[0] )
 
@@ -321,7 +323,6 @@ else
 RESULT( v[0] )
 
 
-
 /////////////////////////////// MINER object equations ///////////////////////////////
 
 EQUATION( "_Qminer" )
@@ -346,7 +347,7 @@ v[2] = 0;										// best productivity so far
 i = j = 0;										// best island coordinates
 
 // check all network connections of current island for signals
-CYCLE_LINKS( p->up, curl )
+CYCLE_LINKS( PARENT, curl )
 {
 	cur = LINKTO( curl );						// object connected
 	
@@ -360,8 +361,8 @@ CYCLE_LINKS( p->up, curl )
 		if ( v[4] > v[2] )						// is it the best so far?
 		{
 			v[2] = v[4];						// save best productivity
-			i = VS( cur->hook, "_xIsland" );	// and the island coordinates
-			j = VS( cur->hook, "_yIsland" );
+			i = VS( SHOOKS( cur ), "_xIsland" );// and the island coordinates
+			j = VS( SHOOKS( cur ), "_yIsland" );
 		}
 	}
 }
@@ -370,7 +371,6 @@ WRITE( "_xBest", i );							// save best island coordinates
 WRITE( "_yBest", j );
 
 RESULT( v[2] )
-
 
 
 /////////////////////////////// AGENT object equations ///////////////////////////////
@@ -430,9 +430,8 @@ if ( CURRENT > 1 )
 			 h == 1 ? "north" : h == 2 ? "south" : h == 3 ? "east" : "west" );	
 	
 		// check if island exists
-		cur = SEARCH_CNDS( p->up, "_idIsland", ( i + LAST_T ) * 1E6 + ( j + LAST_T ) );
+		cur = SEARCH_CNDS( PARENT, "_idIsland", ( i + LAST_T ) * 1E6 + ( j + LAST_T ) );
 	}
-
 		
 	// if it is an imitator, move straight to the new island
 	if ( CURRENT == 3 )							// it is an imitator?
@@ -446,7 +445,7 @@ if ( CURRENT > 1 )
 			j += copysign( 1, k - j );			// get closer by the y direction
 			
 		if ( i == h && j == k ) 
-			cur = SEARCH_CNDS( p->up, "_idIsland", ( i + LAST_T ) * 1E6 + ( j + LAST_T ) );
+			cur = SEARCH_CNDS( PARENT, "_idIsland", ( i + LAST_T ) * 1E6 + ( j + LAST_T ) );
 		else
 			cur = NULL;
 			
@@ -461,17 +460,18 @@ if ( CURRENT > 1 )
 		if ( ! VS( cur, "_known" ) )			// discovered a new island?
 		{
 			// compute the productivity coefficient of the discovered island
+			// uniform( -sqrt( 3 ), sqrt( 3 ) ) is a r.v. with mean 0 and variance 1
 			v[1] = ( 1 + poisson( V( "lambda" ) ) ) * 
 				   ( abs( i ) + abs( j ) + V( "phi" ) * V( "_Qlast" ) + 
 				   	 uniform( -sqrt( 3 ), sqrt( 3 ) ) );
 		
-			k = COUNTS( p->up, "KnownIsland" );	// last island number
+			k = COUNTS( PARENT, "KnownIsland" );// last island number
 
-			cur1 = ADDOBJS( p->up, "KnownIsland" );	// add new KnownIsland instance
+			cur1 = ADDOBJS( PARENT, "KnownIsland" );	// add new KnownIsland instance
 			cur2 = SEARCHS( cur1, "Miner" );	// pointer to the first existing Miner
 			
-			cur->hook = cur1;					// save pointer to KnownIsland object
-			cur1->hook = cur;					// save pointer to Island object
+			WRITE_SHOOKS( cur, cur1 );			// save pointer to KnownIsland object
+			WRITE_SHOOKS( cur1, cur );			// save pointer to Island object
 			
 			WRITES( cur, "_known", 1 );			// flag island as known
 			WRITES( cur1, "_s", v[1] );			// island prod. coeff.
@@ -481,14 +481,14 @@ if ( CURRENT > 1 )
 		}
 		else
 		{
-			cur1 = cur->hook;					// known island, just pick pointer	
+			cur1 = SHOOKS( cur );				// known island, just pick pointer	
 			cur2 = SEARCHS( cur1, "Miner" );	// check if the first Miner object is unused
 			if ( VS( cur2, "_active" ) )		// an used object points to an existing Agent
 				cur2 = ADDOBJS( cur1, "Miner" );// add new miner object instance
 		}
 		
-		p->hook = cur2;							// save pointer to agent as miner
-		cur2->hook = p;							// save pointer to Agent object
+		WRITE_SHOOK( cur2 );					// save pointer to agent as miner
+		WRITE_SHOOKS( cur2, THIS );				// save pointer to Agent object
 		
 		WRITES( cur2, "_active", 1 );			// flag active Miner
 		WRITES( cur2, "_agentId", V( "_idAgent" ) );// keep pairing numbers between Agent
@@ -496,7 +496,7 @@ if ( CURRENT > 1 )
 		WRITE( "_xTarget", 0 );					// clear target coordinates
 		WRITE( "_yTarget", 0 );
 
-		LOG( "\n Agent=%.0lf mining at x=%.0lf y=%.0lf Known=%.0lf", 
+		LOG( "\n Agent=%.0lf mining at x=%d y=%d Known=%.0lf", 
 			 v[2], i, j, VS( cur1, "_idKnown" ) );
 
 		END_EQUATION( 1 );						// becomes a miner again
@@ -519,49 +519,48 @@ if ( RND < V( "epsilon" ) )
 {
 	LOG( "\n Agent=%.0lf exploring from x=%d y=%d", v[2], i, j );	
 	
-	WRITE( "_Qlast", VLS( p->hook, "_Qminer", 1 ) );	// save last output 
+	WRITE( "_Qlast", VLS( SHOOK, "_Qminer", 1 ) );// save last output 
 		
-	if ( COUNTS( p->hook->up, "Miner" ) > 1 )	// don't delete last object instance
-		DELETE( p->hook );						// or delete associated Miner object
+	if ( COUNTS( PARENTS( SHOOK ), "Miner" ) > 1 )// don't delete last object instance
+		DELETE( SHOOK );						// or delete associated Miner object
 	else
 	{
-		WRITES( p->hook, "_active", 0 );		// or flag inactive Miner
-		WRITES( p->hook, "_agentId", 0 );		// disconnect pairing Miner->Agent
-		p->hook->hook = NULL;					// disconnect Miner from Agent object
+		WRITES( SHOOK, "_active", 0 );			// or flag inactive Miner
+		WRITES( SHOOK, "_agentId", 0 );			// disconnect pairing Miner->Agent
+		WRITE_SHOOKS( SHOOK, NULL );			// disconnect Miner from Agent object
 	}
 			
 	WRITE( "_knownId", 0 );						// disconnect pairing Agent->KnownIsland
-	p->hook = NULL;								// disconnect Agent from Miner object
+	WRITE_SHOOK( NULL );						// disconnect Agent from Miner object
 	
 	END_EQUATION( 2 );							// become explorer
 }
 
 // a miner evaluates becoming an imitator
-if ( VS( p->hook, "_cBest" ) > VLS( p->hook->up, "_c", 1 ) )
+if ( VS( SHOOK, "_cBest" ) > VLS( PARENTS( SHOOK ), "_c", 1 ) )
 {
 	LOG( "\n Agent=%.0lf imitating from x=%d y=%d to x=%.0lf y=%.0lf", 
-		 v[2], i, j, VS( p->hook, "_xBest" ), VS( p->hook, "_yBest" ) );	
+		 v[2], i, j, VS( SHOOK, "_xBest" ), VS( SHOOK, "_yBest" ) );	
 
-	WRITE( "_xTarget", VS( p->hook, "_xBest" ) );// coordinates of new target island
-	WRITE( "_yTarget", VS( p->hook, "_yBest" ) );
+	WRITE( "_xTarget", VS( SHOOK, "_xBest" ) );	// coordinates of new target island
+	WRITE( "_yTarget", VS( SHOOK, "_yBest" ) );
 	
-	if ( COUNTS( p->hook->up, "Miner" ) > 1 )	// don't delete last object instance
-		DELETE( p->hook );						// or delete associated Miner object
+	if ( COUNTS( PARENTS( SHOOK ), "Miner" ) > 1 )// don't delete last object instance
+		DELETE( SHOOK );						// or delete associated Miner object
 	else
 	{
-		WRITES( p->hook, "_active", 0 );		// or flag inactive Miner
-		WRITES( p->hook, "_agentId", 0 );		// disconnect pairing Miner->Agent
-		p->hook->hook = NULL;					// disconnect Miner from Agent object
+		WRITES( SHOOK, "_active", 0 );			// or flag inactive Miner
+		WRITES( SHOOK, "_agentId", 0 );			// disconnect pairing Miner->Agent
+		WRITE_SHOOKS( SHOOK, NULL );			// disconnect Miner from Agent object
 	}
 			
 	WRITE( "_knownId", 0 );						// disconnect pairing Agent->KnownIsland
-	p->hook = NULL;								// disconnect Agent from Miner object
+	WRITE_SHOOK( NULL );						// disconnect Agent from Miner object
 	
 	END_EQUATION( 3 );							// become imitator
 }
 
 RESULT( 1 )										// keep mining
-
 
 
 MODELEND
@@ -578,9 +577,9 @@ object *add_island( object *p, int x, int y, double *count, bool show, int size 
 	j = y + LAST_T;
 
 	if ( *count == 0 )							// first island?
-		cur = SEARCHS( p, "Island" );			// pick existing object
+		cur = SEARCHS( THIS, "Island" );		// pick existing object
 	else	
-		cur = ADDOBJS( p, "Island" );			// add new object instance
+		cur = ADDOBJS( THIS, "Island" );		// add new object instance
 	
 	( *count )++;								// update the islands counter
 	WRITES( cur, "_idIsland", i * 1E6 + j );	// save island id number (coord)
@@ -601,17 +600,17 @@ void neighborhood( object *knownIsland, double rho, double minSgnPrb )
 	object *cur;
 	
 	// get the coordinates of the network hub (new known island) 
-	x = VS( knownIsland->hook, "_xIsland" );
-	y = VS( knownIsland->hook, "_yIsland" );
+	x = VS( SHOOKS( knownIsland ), "_xIsland" );
+	y = VS( SHOOKS( knownIsland ), "_yIsland" );
 	
 	// run over all known islands to create network links
-	CYCLES( knownIsland->up, cur, "KnownIsland" )
+	CYCLES( PARENTS( knownIsland ), cur, "KnownIsland" )
 		// check if the link already exists (no link to self)
 		if ( cur != knownIsland && SEARCH_LINKS( knownIsland, V_NODEIDS( cur ) ) == NULL )
 		{
 			// coordinates of the current network spoke (existing known island) 
-			xj = VS( cur->hook, "_xIsland" );
-			yj = VS( cur->hook, "_yIsland" );
+			xj = VS( SHOOKS( cur ), "_xIsland" );
+			yj = VS( SHOOKS( cur ), "_yIsland" );
 	
 			// calculate the maximum signal probability (intensity)
 			maxSgnPrb = exp( - rho * ( abs( x - xj ) + abs( y - yj ) ) );

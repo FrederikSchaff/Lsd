@@ -1,0 +1,45 @@
+# This is a basic workflow that is manually triggered
+name: LMM build (ubuntu)
+
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+on:
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      reasonToRun:
+        # Friendly description to be shown in the UI instead of 'name'
+        description: 'Provide a reason for the trigger'
+        # Default value if no value is explicitly provided
+        default: 'Full LMM Build'
+        # Input has to be provided for the workflow to run
+        required: true
+        
+jobs:
+  build_LMM_ubuntu:
+  
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install linux dependencies
+      run: |
+          sudo apt-get update
+          sudo apt-get install build-essential
+          sudo apt-get install gdb
+          sudo apt-get install gnuplot-qt
+          sudo apt-get install multitail
+          sudo apt-get install zlib1g-dev
+          sudo apt-get install tcl8.6-dev
+          sudo apt-get install tk8.6-dev
+          echo "✅ dependencies successfully installed"
+    - name: Checkout and System Info
+      uses: actions/checkout@v2
+    - name: Get system info
+      uses: kenchan0130/actions-system-info@master
+      id: system-info
+    - name: build LMM
+      id: build-LMM
+      run: |
+        cd src
+        make clean -f makefile-linux
+        make -f makefile-linux

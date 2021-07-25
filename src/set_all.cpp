@@ -1,29 +1,32 @@
 /*************************************************************
 
-	LSD 7.1 - May 2018
+	LSD 8.0 - May 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
-	Copyright Marco Valente
+	Copyright Marco Valente and Marcelo Pereira
 	LSD is distributed under the GNU General Public License
+	
+	See Readme.txt for copyright information of
+	third parties' code used in LSD
 	
  *************************************************************/
 
-/****************************************************
+/*************************************************************
 SETALL.CPP
 It contains the routine called from the edit_dat file for setting all the
 values of a variable with a function, instead of inserting manually.
 
 The functions contained in this file are:
 
--void set_all(int *choice, object *r, char *lab, int lag )
+- void set_all( int *choice, object *r, char *lab, int lag )
 it allows 5 options to set all values. It uses one value entered by the user
 in this window and, for some option, the first value for this variable in the
 model. That is, the value for this variable contained in the first object of this
 type.
 The options are the following:
 1) set all values equal to the entered value
-2) the first value is not changed and all the others are computed as the previous
+2 ) the first value is not changed and all the others are computed as the previous
 plus the entered object.
 3) as before, but instead of producing a ever increasing series, it re-initialize
 any new group.
@@ -31,1007 +34,716 @@ any new group.
 and max is the inserted value
 5) random numbers, drawn by a normal whose mean is the first value and
 standard deviation is the inserted value.
-
-
-
--object *create(object *root)
-The main cycle for the Browser, from which it exits only to run a simulation
-or to quit the program. The cycle is just once call to browsw followed by
-a call to operate.
-
-- int browse(object *r, int *choice);
-build the browser window and waits for an action (on the form of
-values for choice or choice_g different from 0)
-
-- object *operate(int *choice, object *r);
-takes the value of choice and operate the relative command on the
-object r. See the switch for the complete list of the available commands
-
-- void clean_debug(object *n);
-remove all the flags to debug from any variable in the model
-
-- void clean_save(object *n);
-remove all the flags to save from any variable in the model
-
-- void clean_plot(object *n);
-remove all the flags to plot from any variable in the model
-
-
-Functions used here from other files are:
-
-- void cmd(char *cc);
-UTIL.CPP Standard routine to send the message string cc to the interp
-Basically it makes a simple Tcl_Eval, but controls also that the interpreter
-did not issue an error message.
-
-- double norm(double mean, double dev)
-UTIL.CPP returns a random number drawn from a normal with mean mean and standard deviation\
-dev.
-
-- double rnd( void ) ;
-UTIL.CPP return the uniform value. Now is only implemented using the internal
-random generator, but it can be (and should...) linked with a serious random
-generator.
-****************************************************/
+*************************************************************/
 
 #include "decl.h"
-#include "nolh.h"
 
 
 /****************************************************
 SET_ALL
-
 ****************************************************/
 
-void set_all(int *choice, object *original, char *lab, int lag )
+void set_all( int *choice, object *original, char *lab, int lag )
 {
-char *l, ch[MAX_ELEM_LENGTH];
-int res, i, kappa, cases_from=1, cases_to=0, to_all, update_description, fill=0;
-bool exist;
-object *cur, *r;
-double value, value1, value2, step, counter;
-variable *cv;
-FILE *f;
-description *cd; 
-sense *cs;
-
-if (original->up != NULL )
-	for (r=original->up; r->up!=NULL; r=r->up);//go for the root
-else
-	r=original; 
-
-r=r->search(original->label);//select the first instance
-cv=r->search_var(NULL, lab);
-if ( cv == NULL )
-	return;
-
-Tcl_LinkVar( inter, "res", ( char * ) &res, TCL_LINK_INT );
-Tcl_LinkVar( inter, "value1", ( char * ) &value1, TCL_LINK_DOUBLE );
-Tcl_LinkVar( inter, "value2", ( char * ) &value2, TCL_LINK_DOUBLE );
-
-// preload the existing value of the first object
-if ( cv->param == 0 )
-	value1 = cv->val [ lag ];
-else
-	value1 = cv->val[ 0 ];
-
-// default values
-res = 1;
-value2 = 0;
-cmd( "set value 1" ); 	// method
-cmd( "set to_all 1" );
-cmd( "set step_in 1" );
-cmd( "set cases_from 1; set cases_to 10000" );
-cmd( "set rnd_seed 1" );
-cmd( "set use_seed 0" );
-cmd( "set update_d 1" );
-
-cmd( "newtop .sa \"Set All Objects Initialization\" { set choice 2 }" );
-
-// heading
-cmd( "frame .sa.head" );
-cmd( "label .sa.head.lg -text \"Set initial values for every copy of\"" );
-
-cmd( "frame .sa.head.l" );
-if ( cv->param != 0 )
-{
-  if ( cv->param == 2 )
-	cmd( "label .sa.head.l.c -text \"Function: \"" );
-  else
-	cmd( "label .sa.head.l.c -text \"Parameter: \"" );
-  cmd( "label .sa.head.l.n -text \"%s\" -fg red", lab  );
-  cmd( "pack .sa.head.l.c .sa.head.l.n -side left" );
-}
-else
-{
-  cmd( "label .sa.head.l.c -text \"Variable: \"" );
-  cmd( "label .sa.head.l.n1 -text \"%s  \" -fg red", lab );
-  cmd( "label .sa.head.l.n2 -text \"\\[  lag \"" );
-  cmd( "label .sa.head.l.n3 -text \"%d\" -fg red", t - cv->last_update + lag + 1  );
-  cmd( "label .sa.head.l.n4 -text \"\\]\"" );
-  cmd( "pack .sa.head.l.c .sa.head.l.n1 .sa.head.l.n2 .sa.head.l.n3 .sa.head.l.n4 -side left" );
-}
-  
-
-cmd( "frame .sa.head.lo" );
-cmd( "label .sa.head.lo.l -text \"Contained in object: \"" );
-cmd( "label .sa.head.lo.o -text \"%s\" -fg red", cv->up->label  );
-cmd( "pack .sa.head.lo.l .sa.head.lo.o -side left" );
-
-cmd( "pack .sa.head.lg .sa.head.l .sa.head.lo" );
-
-// main content
-cmd( "frame .sa.m" );
-
-// left column
-cmd( "frame .sa.m.f1" );
-
-cmd( "frame .sa.m.f1.val" );
-cmd( "label .sa.m.f1.val.l -text \"Initialization data\"" );
-
-cmd( "frame .sa.m.f1.val.i -relief groove -bd 2" );
-
-
-cmd( "frame .sa.m.f1.val.i.l1" );
-cmd( "label .sa.m.f1.val.i.l1.l1 -text \"Equal to\"" );
-cmd( "entry .sa.m.f1.val.i.l1.e1 -validate focusout -vcmd { if [ string is double -strict %%P ] { set value1 %%P; return 1 } { %%W delete 0 end; %%W insert 0 $value1; return 0 } } -invcmd { bell } -justify center" );
-cmd( "pack .sa.m.f1.val.i.l1.l1 .sa.m.f1.val.i.l1.e1" );
-
-cmd( "frame .sa.m.f1.val.i.l2" );
-cmd( "label .sa.m.f1.val.i.l2.l2 -text \"(none)\"" );
-cmd( "entry .sa.m.f1.val.i.l2.e2 -validate focusout -vcmd { if [ string is double -strict %%P ] { set value2 %%P; return 1 } { %%W delete 0 end; %%W insert 0 $value2; return 0 } } -invcmd { bell } -justify center -state disabled" );
-cmd( "pack .sa.m.f1.val.i.l2.l2 .sa.m.f1.val.i.l2.e2" );
-
-cmd( "pack .sa.m.f1.val.i.l1 .sa.m.f1.val.i.l2 -expand yes -fill x  -ipadx 5 -ipady 2" );
-
-cmd( "pack .sa.m.f1.val.l .sa.m.f1.val.i" );
-
-
-cmd( "frame .sa.m.f1.rd" );
-cmd( "label .sa.m.f1.rd.l -text \"Initialization method\"" );
-
-cmd( "frame .sa.m.f1.rd.i -relief groove -bd 2" );
-cmd( "radiobutton .sa.m.f1.rd.i.r1 -text \"Equal to\" -variable res -value 1 -command { .sa.m.f1.val.i.l1.l1 conf -text \"Value\"; .sa.m.f1.val.i.l1.e1 conf -state normal; .sa.m.f1.val.i.l2.l2 conf -text \"(none)\"; .sa.m.f1.val.i.l2.e2 conf -state disabled }" );
-cmd( "bind .sa.m.f1.rd.i.r1 <Down> {focus .sa.m.f1.rd.i.r9; .sa.m.f1.rd.i.r9 invoke}" );
-cmd( "bind .sa.m.f1.rd.i.r1 <Return> { .sa.m.f1.val.i.l1.e1 selection range 0 end; focus .sa.m.f1.val.i.l1.e1}" );
-
-cmd( "radiobutton .sa.m.f1.rd.i.r9 -text \"Range\" -variable res -value 9 -command { .sa.m.f1.val.i.l1.l1 conf -text \"Minimum\"; .sa.m.f1.val.i.l1.e1 conf -state normal; .sa.m.f1.val.i.l2.l2 conf -text \"Maximum\"; .sa.m.f1.val.i.l2.e2 conf -state normal }" );
-cmd( "bind .sa.m.f1.rd.i.r9 <Down> {focus .sa.m.f1.rd.i.r2; .sa.m.f1.rd.i.r2 invoke}" );
-cmd( "bind .sa.m.f1.rd.i.r9 <Up> {focus .sa.m.f1.rd.i.r1; .sa.m.f1.rd.i.r1 invoke}" );
-cmd( "bind .sa.m.f1.rd.i.r9 <Return> { .sa.m.f1.val.i.l1.e1 selection range 0 end; focus .sa.m.f1.val.i.l1.e1}" );
-
-cmd( "radiobutton .sa.m.f1.rd.i.r2 -text \"Increasing\" -variable res -value 2 -command { .sa.m.f1.val.i.l1.l1 conf -text \"Start\"; .sa.m.f1.val.i.l1.e1 conf -state normal; .sa.m.f1.val.i.l2.l2 conf -text \"Step\"; .sa.m.f1.val.i.l2.e2 conf -state normal }" );
-cmd( "bind .sa.m.f1.rd.i.r2 <Down> {focus .sa.m.f1.rd.i.r4; .sa.m.f1.rd.i.r4 invoke}" );
-cmd( "bind .sa.m.f1.rd.i.r2 <Up> {focus .sa.m.f1.rd.i.r9; .sa.m.f1.rd.i.r9 invoke}" );
-cmd( "bind .sa.m.f1.rd.i.r2 <Return> { .sa.m.f1.val.i.l1.e1 selection range 0 end; focus .sa.m.f1.val.i.l1.e1}" );
-
-cmd( "radiobutton .sa.m.f1.rd.i.r4 -text \"Increasing (groups)\" -variable res -value 4 -command {.sa.m.f1.val.i.l1.l1 conf -text \"Start\"; .sa.m.f1.val.i.l1.e1 conf -state normal; .sa.m.f1.val.i.l2.l2 conf -text \"Step\"; .sa.m.f1.val.i.l2.e2 conf -state normal }" );
-cmd( "bind .sa.m.f1.rd.i.r4 <Up> {focus .sa.m.f1.rd.i.r2; .sa.m.f1.rd.i.r2 invoke}" );
-cmd( "bind .sa.m.f1.rd.i.r4 <Down> {focus .sa.m.f1.rd.i.r3; .sa.m.f1.rd.i.r3 invoke}" );
-cmd( "bind .sa.m.f1.rd.i.r4 <Return> { .sa.m.f1.val.i.l1.e1 selection range 0 end; focus .sa.m.f1.val.i.l1.e1}" );
-
-cmd( "radiobutton .sa.m.f1.rd.i.r3 -text \"Random (uniform)\" -variable res -value 3 -command { .sa.m.f1.val.i.l1.l1 conf -text \"Minimum\"; .sa.m.f1.val.i.l1.e1 conf -state normal; .sa.m.f1.val.i.l2.l2 conf -text \"Maximum\"; .sa.m.f1.val.i.l2.e2 conf -state normal }" );
-cmd( "bind .sa.m.f1.rd.i.r3 <Up> {focus .sa.m.f1.rd.i.r4; .sa.m.f1.rd.i.r4 invoke}" );
-cmd( "bind .sa.m.f1.rd.i.r3 <Down> {focus .sa.m.f1.rd.i.r8; .sa.m.f1.rd.i.r8 invoke}" );
-cmd( "bind .sa.m.f1.rd.i.r3 <Return> { .sa.m.f1.val.i.l1.e1 selection range 0 end; focus .sa.m.f1.val.i.l1.e1}" );
-
-cmd( "radiobutton .sa.m.f1.rd.i.r8 -text \"Random integer (uniform)\" -variable res -value 8 -command { .sa.m.f1.val.i.l1.l1 conf -text \"Minimum\"; .sa.m.f1.val.i.l1.e1 conf -state normal; .sa.m.f1.val.i.l2.l2 conf -text \"Maximum\"; .sa.m.f1.val.i.l2.e2 conf -state normal }" );
-cmd( "bind .sa.m.f1.rd.i.r8 <Up> {focus .sa.m.f1.rd.i.r3; .sa.m.f1.rd.i.r3 invoke}" );
-cmd( "bind .sa.m.f1.rd.i.r8 <Down> {focus .sa.m.f1.rd.i.r5; .sa.m.f1.rd.i.r5 invoke}" );
-cmd( "bind .sa.m.f1.rd.i.r8 <Return> { .sa.m.f1.val.i.l1.e1 selection range 0 end; focus .sa.m.f1.val.i.l1.e1}" );
-
-cmd( "radiobutton .sa.m.f1.rd.i.r5 -text \"Random (normal)\" -variable res -value 5 -command {.sa.m.f1.val.i.l1.l1 conf -text \"Mean\"; .sa.m.f1.val.i.l1.e1 conf -state normal; .sa.m.f1.val.i.l2.l2 conf -text \"Std. deviation\"; .sa.m.f1.val.i.l2.e2 conf -state normal }" );
-cmd( "bind .sa.m.f1.rd.i.r5 <Up> {focus .sa.m.f1.rd.i.r8; .sa.m.f1.rd.i.r8 invoke}" );
-cmd( "bind .sa.m.f1.rd.i.r5 <Down> {focus .sa.m.f1.rd.i.r7; .sa.m.f1.rd.i.r7 invoke}" );
-cmd( "bind .sa.m.f1.rd.i.r5 <Return> { .sa.m.f1.val.i.l1.e1 selection range 0 end; focus .sa.m.f1.val.i.l1.e1}" );
-
-cmd( "radiobutton .sa.m.f1.rd.i.r7 -text \"Import from data file\" -variable res -value 7 -command { .sa.m.f1.val.i.l1.l1 conf -text \"(none)\"; .sa.m.f1.val.i.l1.e1 conf -state disabled; .sa.m.f1.val.i.l2.l2 conf -text \"(none)\"; .sa.m.f1.val.i.l2.e2 conf -state disabled }" );
-cmd( "bind .sa.m.f1.rd.i.r7 <Up> {focus .sa.m.f1.rd.i.r5; .sa.m.f1.rd.i.r5 invoke}" );
-cmd( "bind .sa.m.f1.rd.i.r7 <Return> {.sa.m.f1.val.i.l1.e1 selection range 0 end; focus .sa.m.f1.val.i.l1.e1}" );
-
-cmd( "pack .sa.m.f1.rd.i.r1 .sa.m.f1.rd.i.r9 .sa.m.f1.rd.i.r2 .sa.m.f1.rd.i.r4 .sa.m.f1.rd.i.r3 .sa.m.f1.rd.i.r8 .sa.m.f1.rd.i.r5 .sa.m.f1.rd.i.r7 -anchor w -padx 2" );
-
-cmd( "pack .sa.m.f1.rd.l .sa.m.f1.rd.i" );
-
-cmd( "pack .sa.m.f1.val .sa.m.f1.rd -expand yes -fill x  -padx 5 -pady 5" );
-
-// right column
-cmd( "frame .sa.m.f2" );
-
-cmd( "frame .sa.m.f2.s" );
-cmd( "label .sa.m.f2.s.tit -text \"Object instances selection\"" );
-
-cmd( "frame .sa.m.f2.s.i -relief groove -bd 2" );
-
-cmd( "frame .sa.m.f2.s.i.l" );
-
-cmd( "frame .sa.m.f2.s.i.l.a" );
-cmd( "label .sa.m.f2.s.i.l.a.l -text \"Apply every\"" );
-cmd( "entry .sa.m.f2.s.i.l.a.e -width 5 -validate focusout -vcmd { if [ string is integer -strict %%P ] { set step_in %%P; return 1 } { %%W delete 0 end; %%W insert 0 $step_in; return 0 } } -invcmd { bell } -justify center" );
-cmd( "label .sa.m.f2.s.i.l.a.l1 -text \"instance(s)\"" );
-cmd( "pack .sa.m.f2.s.i.l.a.l .sa.m.f2.s.i.l.a.e .sa.m.f2.s.i.l.a.l1 -side left -padx 1" );
-
-cmd( "checkbutton .sa.m.f2.s.i.l.f -text \"Fill-in\" -variable fill" );
-cmd( "pack  .sa.m.f2.s.i.l.a .sa.m.f2.s.i.l.f -padx 5 -side left" );
-cmd( "pack  .sa.m.f2.s.i.l -pady 2" );
-
-cmd( "frame .sa.m.f2.s.i.sel -relief groove -bd 2" );
-cmd( "radiobutton .sa.m.f2.s.i.sel.all -text \"Apply to all instances\" -variable to_all -value 1 -command { .sa.m.f2.s.i.sel2.c.to conf -state disabled; .sa.m.f2.s.i.sel2.c.from conf -state disabled; bind .sa.m.f2.s.i.sel2.c.from <Button-3> { }; bind .sa.m.f2.s.i.sel2.c.to <Button-3> { }; bind .sa.m.f2.s.i.sel2.c.from <Button-2> { }; bind .sa.m.f2.s.i.sel2.c.to <Button-2> { } }" );
-cmd( "radiobutton .sa.m.f2.s.i.sel.sel -text \"Apply to a range of instances\" -variable to_all -value 2 -command { .sa.m.f2.s.i.sel2.c.to conf -state normal; .sa.m.f2.s.i.sel2.c.from conf -state normal; bind .sa.m.f2.s.i.sel2.c.from <Button-3> {set choice 9}; bind .sa.m.f2.s.i.sel2.c.to <Button-3> { set choice 10 }; bind .sa.m.f2.s.i.sel2.c.from <Button-2> {set choice 9}; bind .sa.m.f2.s.i.sel2.c.to <Button-2> { set choice 10 } }" );
-cmd( "pack .sa.m.f2.s.i.sel.all .sa.m.f2.s.i.sel.sel -anchor w" );
-cmd( "pack .sa.m.f2.s.i.sel -pady 2" );
-
-cmd( "frame .sa.m.f2.s.i.sel2" );
-
-cmd( "frame .sa.m.f2.s.i.sel2.c" );
-cmd( "label .sa.m.f2.s.i.sel2.c.lfrom -text \"From\"" );
-cmd( "entry .sa.m.f2.s.i.sel2.c.from -width 5 -state disabled -state disabled -validate focusout -vcmd { if [ string is integer -strict %%P ] { set cases_from %%P; return 1 } { %%W delete 0 end; %%W insert 0 $cases_from; return 0 } } -invcmd { bell } -justify center" );
-cmd( "label .sa.m.f2.s.i.sel2.c.lto -text \"to\"" );
-cmd( "entry .sa.m.f2.s.i.sel2.c.to -width 5 -state disabled -validate focusout -vcmd { if [ string is integer -strict %%P ] { set cases_to %%P; return 1 } { %%W delete 0 end; %%W insert 0 $cases_to; return 0 } } -invcmd { bell } -justify center" );
-cmd( "pack .sa.m.f2.s.i.sel2.c.lfrom .sa.m.f2.s.i.sel2.c.from .sa.m.f2.s.i.sel2.c.lto .sa.m.f2.s.i.sel2.c.to -side left -pady 1" );
-
-cmd( "label .sa.m.f2.s.i.sel2.obs -text \"(use right button on cells for options)\"" );
-cmd( "pack .sa.m.f2.s.i.sel2.c .sa.m.f2.s.i.sel2.obs" );
-cmd( "pack .sa.m.f2.s.i.sel2 -pady 2" );
-
-cmd( "pack .sa.m.f2.s.tit .sa.m.f2.s.i" );
-
-cmd( "pack .sa.m.f2.s" );
-
-cmd( "frame .sa.m.f2.rnd" );
-cmd( "label .sa.m.f2.rnd.l -text \"Random number generator\"" );
-
-cmd( "frame .sa.m.f2.rnd.i -relief groove -bd 2" );
-
-cmd( "frame .sa.m.f2.rnd.i.le" );
-cmd( "checkbutton .sa.m.f2.rnd.i.le.f -text \"Reset the generator\" -variable use_seed -command { if $use_seed { .sa.m.f2.rnd.i.le.s.e1 conf -state normal } { .sa.m.f2.rnd.i.le.s.e1 conf -state disabled } }" );
-cmd( "frame .sa.m.f2.rnd.i.le.s" );
-cmd( "label .sa.m.f2.rnd.i.le.s.l1 -text \"Seed\"" );
-cmd( "entry .sa.m.f2.rnd.i.le.s.e1 -width 5 -state disabled -validate focusout -vcmd { if [ string is integer -strict %%P ] { set rnd_seed %%P; return 1 } { %%W delete 0 end; %%W insert 0 $rnd_seed; return 0 } } -invcmd { bell } -justify center" );
-cmd( "pack .sa.m.f2.rnd.i.le.s.l1 .sa.m.f2.rnd.i.le.s.e1 -side left -padx 1" );
-
-cmd( "pack .sa.m.f2.rnd.i.le.f .sa.m.f2.rnd.i.le.s -side left -padx 5" );
-
-cmd( "pack .sa.m.f2.rnd.i.le -pady 2" );
-
-cmd( "pack .sa.m.f2.rnd.l .sa.m.f2.rnd.i" );
-
-cmd( "checkbutton .sa.m.f2.ud -text \"Update initialization comments\" -variable update_d" );
-
-cmd( "pack .sa.m.f2.s .sa.m.f2.rnd .sa.m.f2.ud -anchor w -expand yes -fill x" );
-
-cmd( "pack .sa.m.f1 .sa.m.f2 -side left -expand yes -fill both -padx 5 -pady 5" );
-cmd( "pack .sa.head .sa.m -pady 5" );
-
-cmd( "okhelpcancel .sa b { set choice 1 } { LsdHelp menudata_init.html#setall } { set choice 2 }" );
-
-cmd( "bind .sa.m.f1.rd.i <Return> {  if [ string equal [ .sa.m.f1.val.i.l2.e2 cget -state ] normal ] { .sa.m.f1.val.i.l1.e1 selection range 0 end; focus .sa.m.f1.val.i.l1.e1 } }" );
-cmd( "bind .sa.m.f1.val.i.l1.e1 <Return> { if [ string equal [ .sa.m.f1.val.i.l2.e2 cget -state ] normal ] { focus .sa.m.f1.val.i.l2.e2; .sa.m.f1.val.i.l2.e2 selection range 0 end } { set choice 1 } }" );
-cmd( "bind .sa.m.f1.val.i.l2.e2 <Return> { set choice 1 }" );
-cmd( "bind .sa.m.f2.s.i.l.a.e <Return> {focus .sa.m.f2.s.i.sel.all; .sa.m.f2.s.i.sel.all invoke}" );
-cmd( "bind .sa.m.f2.s.i.sel.all <Return> {focus .sa.b.ok}" );
-cmd( "bind .sa.m.f2.s.i.sel.sel <Return> {focus .sa.m.f2.s.i.sel2.c.from; .sa.m.f2.s.i.sel2.c.from selection range 0 end }" );
-cmd( "bind .sa.m.f2.s.i.sel2.c.from <Return> {focus .sa.m.f2.s.i.sel2.c.to; .sa.m.f2.s.i.sel2.c.from selection range 0 end }" );
-cmd( "bind .sa.m.f2.s.i.sel2.c.to <Return> {focus .sa.b.ok}" );
-cmd( "bind .sa.m.f2.rnd.i.le.s.e1 <Return> {focus .sa.b.ok}" );
-
-cmd( "showtop .sa topleftW" );
-bool selFocus = true;
-
-here_setall:
-
-// update current linked variables values
-cmd( "write_any .sa.m.f1.val.i.l1.e1 $value1" ); 
-cmd( "write_any .sa.m.f1.val.i.l2.e2 $value2" );
-cmd( "write_any .sa.m.f2.s.i.l.a.e $step_in" ); 
-cmd( "write_any .sa.m.f2.s.i.sel2.c.from $cases_from" ); 
-cmd( "write_any .sa.m.f2.s.i.sel2.c.to $cases_to" ); 
-cmd( "write_any .sa.m.f2.rnd.i.le.s.e1 $rnd_seed" ); 
-
-if ( selFocus )
-{
-	cmd( "focus .sa.m.f1.val.i.l1.e1; .sa.m.f1.val.i.l1.e1 selection range 0 end" );	// speed-up data entry focusing first data field
-	selFocus = false;
-}
-
-*choice = 0;
-while ( *choice == 0 )
-  Tcl_DoOneEvent( 0 );
-
-if (*choice==9)
-{//search instance from
- i=compute_copyfrom(original, choice);
- cmd( "set cases_from %d", i );
- goto here_setall;
-}
-
-if (*choice==10)
-{
- //search instance to
- i=compute_copyfrom(original, choice);
- cmd( "set cases_to %d", i );
- goto here_setall;
-}
-
-// save current linked variables values before closing
-cmd( "set value1 [ .sa.m.f1.val.i.l1.e1 get ]" ); 
-cmd( "set value2 [ .sa.m.f1.val.i.l2.e2 get ]" ); 
-cmd( "set cases_from [ .sa.m.f2.s.i.sel2.c.from get ]" ); 
-cmd( "set cases_to [ .sa.m.f2.s.i.sel2.c.to get ]" ); 
-cmd( "set step_in [ .sa.m.f2.s.i.l.a.e get ]" ); 
-cmd( "set rnd_seed [ .sa.m.f2.rnd.i.le.s.e1 get ]" ); 
-
-cmd( "destroytop .sa" );
-
-if ( (*choice==1 && res != 0 ) || *choice==9 || *choice==10)
-{
-cmd( "set choice $use_seed" );
-if ( *choice == 1 )
- {
-  cmd( "set choice $rnd_seed" );
-  init_random(*choice);
- }
-cmd( "set choice $to_all" );
-to_all=*choice;
-cmd( "set choice $cases_from" );
-cases_from=*choice;
-cmd( "set choice $cases_to" );
-cases_to=*choice;
-cmd( "set choice $update_d" );
-update_description=*choice;
-
-switch (res)
-{
-//Equal 
-case 1:
-     cmd( "set choice $fill" );
-     fill=*choice;
-     cmd( "set choice $step_in" );
-      
-     for (i=1,cur=r, step=0; cur!=NULL; cur=cur->hyper_next(r->label), ++i )
-      {
-      if ((to_all==1 || (cases_from<=i && cases_to>=i)) && (fill==1 || ((i-cases_from)%(*choice) == 0 )))
-       {
-        cv=cur->search_var(NULL, lab);
-  			cv->data_loaded='+';
-  			if (cv->param == 0 )
-  			  cv->val[lag]=value1;
-  			else
-  			  cv->val[ 0 ]=value1;
-       }
-		  }
-      if ( update_description == 1 )
-      {
-      cd=search_description(lab);
-    
-      if (cd == NULL )
-      {  cv=r->search_var(NULL, lab);
-       if (cv->param == 0 )
-         add_description(lab, "Variable", "(no description available)");
-       if (cv->param == 1 )
-         add_description(lab, "Parameter", "(no description available)");  
-       if (cv->param==2)
-         add_description(lab, "Function", "(no description available)");  
-       plog( "\nWarning: description for '%s' not found. New one created.", "", lab );
-       cd=search_description(lab);
-      } 
-    
-      if (to_all == 1 )
-        {sprintf( msg, "All %d instances equal to %g.", i-1, value1);
-         change_descr_lab(lab, "", "", "", msg);      
-        } 
-      else
-        {
-         if (cd->init != NULL )
-           sprintf( msg, "%s Instances from %d to %d equal to %g.",cd->init, cases_from, cases_to, value1);
-         else
-           sprintf( msg, "Instances from %d to %d equal to %g.", cases_from, cases_to, value1);  
-         change_descr_lab(lab, "", "", "", msg);
-        }  
-       } 
-  		unsaved_change( true );		// signal unsaved change
-		  break;
-
-//Range
-case 9:
-     cmd( "set choice $fill" );
-     fill=*choice;
-     cmd( "set choice $step_in" );
-     counter=-1;
-     for (i=1,cur=r, step=0; cur!=NULL; cur=cur->hyper_next(r->label), ++i )
-      {
-      if ((to_all==1 || (cases_from<=i && cases_to>=i)) && (((i-cases_from)%(*choice) == 0 )))
-       {
-         //here the counter
-         counter++;
-       }
-		  }
-     value=(value2-value1)/counter;
-     counter=0; 
-     for (i=1,cur=r, step=0; cur!=NULL; cur=cur->hyper_next(r->label), ++i )
-      {
-      if ((to_all==1 || (cases_from<=i && cases_to>=i)) && (fill==1 || ((i-cases_from)%(*choice) == 0 )))
-       {
-        cv=cur->search_var(NULL, lab);
-  			cv->data_loaded='+';
-  			if (cv->param == 0 )
-  			  cv->val[lag]=value1+value*counter;
-  			else
-  			  cv->val[ 0 ]=value1+value*counter;
-       }
-      if (i>=cases_from && ((i-cases_from+1)% (*choice)) == 0 )
-        counter++; 
-
-		  }
-      if ( update_description == 1 )
-      {
-      cd=search_description(lab);
-    
-      if (cd == NULL )
-      {  cv=r->search_var(NULL, lab);
-       if (cv->param == 0 )
-         add_description(lab, "Variable", "(no description available)");
-       if (cv->param == 1 )
-         add_description(lab, "Parameter", "(no description available)");  
-       if (cv->param==2)
-         add_description(lab, "Function", "(no description available)");  
-       plog( "\nWarning: description for '%s' not found. New one created.", "", lab );
-       cd=search_description(lab);
-      } 
-      
-      if (to_all == 1 )
-        {sprintf( msg, "All %d instances set ranging from %g to %g (i.e. increments of %g).", i-1, value1, value2, value);
-         change_descr_lab(lab, "", "", "", msg);      
-        } 
-      else
-        {
-         if (cd->init != NULL )
-           sprintf( msg, "%s Instances from %d to %d ranging from %g to %g (i.e. increments of %g).",cd->init, cases_from, cases_to, value1, value2, value);
-         else
-           sprintf( msg, "Instances from %d to %d ranging from %g to %g (i.e. increments of %g).", cases_from, cases_to, value1, value2, value);  
-         change_descr_lab(lab, "", "", "", msg);
-        }  
-       } 
-  		unsaved_change( true );		// signal unsaved change
-		  break;
-
-case 2: //increasing
-     
-     cv=r->search_var(NULL, lab);
-  	  cv->data_loaded='+';
-     cmd( "set choice $fill" );
-     fill=*choice;
-     cmd( "set choice $step_in" );
-     
-      for (i=1,cur=r, step=0; cur!=NULL; cur=cur->hyper_next(r->label), ++i )
-        {
-        if ((to_all==1 || (cases_from<=i && cases_to>=i)) && (fill==1 || ((i-cases_from)%(*choice) == 0 )))
-        {
-         cv=cur->search_var(NULL, lab);
-         cv->data_loaded='+';
-         if (cv->param == 0 )
-           cv->val[lag]=value1 +step*value2;
-         else
-           cv->val[ 0 ]=value1 +step*value2;
-        }
-        if (i>=cases_from && ((i-cases_from+1)% (*choice)) == 0 )
-          step+=1;
-        }
-      if ( update_description == 1 )
-      {
-      cd=search_description(lab);
-    
-      if (cd == NULL )
-      {  cv=r->search_var(NULL, lab);
-       if (cv->param == 0 )
-         add_description(lab, "Variable", "(no description available)");
-       if (cv->param == 1 )
-         add_description(lab, "Parameter", "(no description available)");  
-       if (cv->param==2)
-         add_description(lab, "Function", "(no description available)");  
-       plog( "\nWarning: description for '%s' not found. New one created.", "", lab );
-       cd=search_description(lab);
-      } 
-      
-      if (to_all == 1 )
-        {sprintf( msg, "All %d instances increasing from %g with steps %g. The value is increased every %d instances.", i-1, value1, value2, *choice);
-         change_descr_lab(lab, "", "", "", msg);
-        }
-      else
-        {
-         if (cd->init != NULL )
-           sprintf( msg, "%s Instances from %d to %d increasing from %g with steps %g. The value is increased every %d instances.",cd->init, cases_from, cases_to, value1, value2, *choice);
-         else
-           sprintf( msg, "Instances from %d to %d increasing from %g with steps %g. The value is increased every %d instances.", cases_from, cases_to, value1, value2, *choice);            
-         change_descr_lab(lab, "", "", "", msg);
-        }  
-        }
-  		unsaved_change( true );		// signal unsaved change
-        break;
+	bool selFocus = true;
+	char *l, ch[ MAX_ELEM_LENGTH ], action[ MAX_ELEM_LENGTH ];
+	double value, value1, value2, step, counter;
+	int res, i, j, kappa, to_all, update_d, cases_from, cases_to, fill, use_seed, rnd_seed, step_in;
+	description *cd; 
+	object *cur, *r;
+	variable *cv;
+	FILE *f;
+
+	r = root->search( original->label );		// select the first instance
+	cv = r->search_var( NULL, lab );
+	if ( cv == NULL )
+		return;
+
+	if ( cv->param == 1 )
+		lag = 0;
+	
+	Tcl_LinkVar( inter, "res", ( char * ) &res, TCL_LINK_INT );
+	Tcl_LinkVar( inter, "value1", ( char * ) &value1, TCL_LINK_DOUBLE );
+	Tcl_LinkVar( inter, "value2", ( char * ) &value2, TCL_LINK_DOUBLE );
+
+	// default values
+	res = 1;
+	value1 = cv->val [ lag ];					// preload the existing value of the first object
+	value2 = 0;
+	cmd( "set value 1" ); 						// method
+	cmd( "set fill 0" );
+	cmd( "set to_all 1" );
+	cmd( "set step_in 1" );
+	cmd( "set cases_from 1" );
+	cmd( "set cases_to 1000" );
+	cmd( "set rnd_seed 1" );
+	cmd( "set use_seed 0" );
+	cmd( "set update_d 1" );
+
+	// define the correct parent window
+	cmd( "switch %d { 0 { set parWnd . } 3 { set parWnd .deb } 4 { set parWnd .inid } default { set parWnd . } }", *choice );
+	cmd( "if { [ string equal $parWnd . ] } { \
+			set _w .sa \
+		} else { \
+			set _w $parWnd.sa \
+		}" );
 		
-case 4: 
-		cv=r->search_var(NULL, lab);
-		  for (i=1,cur=r, step=0; cur!=NULL; cur=cur->hyper_next(r->label), ++i )
-        {
-      if (to_all==1 || (cases_from<=i && cases_to>=i))
-      {
-        cv=cur->search_var(NULL, lab);
-        cv->data_loaded='+';
-        if (cv->param == 0 )
-           cv->val[lag]=value1 +step*value2;
-		   	else
-           cv->val[ 0 ]=value1 +step*value2;
-        if (cur->next!=cur->hyper_next(r->label))
-          step=-1;
-        step+=1;
+	cmd( "newtop $_w \"Set All Objects Initialization\" { set choice 2 } $parWnd" );
 
-        }
-       } 
+	cmd( "ttk::frame $_w.head" );					// heading
+	cmd( "ttk::label $_w.head.lg -text \"Set initial values for\"" );
 
-      if ( update_description == 1 )
-      {
-      cd=search_description(lab);
-    
-      if (cd == NULL )
-      {  cv=r->search_var(NULL, lab);
-       if (cv->param == 0 )
-         add_description(lab, "Variable", "(no description available)");
-       if (cv->param == 1 )
-         add_description(lab, "Parameter", "(no description available)");  
-       if (cv->param==2)
-         add_description(lab, "Function", "(no description available)");  
-       plog( "\nWarning: description for '%s' not found. New one created.", "", lab );
-       cd=search_description(lab);
-      } 
-      
-      if (to_all == 1 )
-        {sprintf( msg, "All %d instances increasing from %g with steps %g re-starting for each group of objects.", i-1, value1, value2);
-         change_descr_lab(lab, "", "", "", msg);      
-        } 
-      else
-        {
-         if (cd->init != NULL )
-           sprintf( msg, "%s Instances from %d to %d increasing from %g with steps %g re-starting for each group of objects.",cd->init, cases_from, cases_to, value1, value2);
-         else
-           sprintf( msg, "Instances from %d to %d increasing from %g with steps %g re-starting for each group of objects.", cases_from, cases_to, value1, value2);
-           
-         change_descr_lab(lab, "", "", "", msg);        
-        }  
-       }
-  		unsaved_change( true );		// signal unsaved change
+	cmd( "ttk::frame $_w.head.l" );
+	if ( cv->param != 0 )
+	{
+		if ( cv->param == 2 )
+			cmd( "ttk::label $_w.head.l.c -text \"Function: \"" );
+		else
+			cmd( "ttk::label $_w.head.l.c -text \"Parameter: \"" );
+		
+		cmd( "ttk::label $_w.head.l.n -text \"%s\" -style hl.TLabel", lab  );
+		cmd( "pack $_w.head.l.c $_w.head.l.n -side left" );
+	}
+	else
+	{
+		cmd( "ttk::label $_w.head.l.c -text \"Variable: \"" );
+		cmd( "ttk::label $_w.head.l.n1 -text \"%s  \" -style hl.TLabel", lab );
+		cmd( "ttk::label $_w.head.l.n2 -text \"\\[  lag \"" );
+		cmd( "ttk::label $_w.head.l.n3 -text \"%d\" -style hl.TLabel", t - cv->last_update + lag + 1  );
+		cmd( "ttk::label $_w.head.l.n4 -text \"\\]\"" );
+		cmd( "pack $_w.head.l.c $_w.head.l.n1 $_w.head.l.n2 $_w.head.l.n3 $_w.head.l.n4 -side left" );
+	}
 
-        break;
+	cmd( "ttk::frame $_w.head.lo" );
+	cmd( "ttk::label $_w.head.lo.l -text \"Contained in object: \"" );
+	cmd( "ttk::label $_w.head.lo.o -text \"%s\" -style hl.TLabel", cv->up->label  );
+	cmd( "pack $_w.head.lo.l $_w.head.lo.o -side left" );
 
-case 3: 
-     cmd( "set choice $fill" );
-     fill=*choice;
-     cmd( "set choice $step_in" );
-      
-     for (i=1,cur=r, step=0; cur!=NULL; cur=cur->hyper_next(r->label), ++i )
-      {
-      if ((to_all==1 || (cases_from<=i && cases_to>=i)) && (fill==1 || ((i-cases_from)%(*choice) == 0 )))
-       {
-       cv=cur->search_var(NULL, lab);
-       cv->data_loaded='+';
-       if (cv->param == 0 )
- 			  cv->val[lag]=value1+RND*(value2-value1);
- 			else
- 			  cv->val[ 0 ]=value1+RND*(value2-value1);
-       }
-      }
+	cmd( "pack $_w.head.lg $_w.head.l $_w.head.lo" );
 
-      if ( update_description == 1 )
-      {
-      cd=search_description(lab);
-    
-      if (cd == NULL )
-      {  cv=r->search_var(NULL, lab);
-       if (cv->param == 0 )
-         add_description(lab, "Variable", "(no description available)");
-       if (cv->param == 1 )
-         add_description(lab, "Parameter", "(no description available)");  
-       if (cv->param==2)
-         add_description(lab, "Function", "(no description available)");  
-       plog( "\nWarning: description for '%s' not found. New one created.", "", lab );
-       cd=search_description(lab);
-      } 
-      
-      if (to_all == 1 )
-        {sprintf( msg, "All %d instances set to random values drawn from a uniform in the range [%g,%g].", i-1, value1, value2);
-         change_descr_lab(lab, "", "", "", msg);      
-        } 
-      else
-        {
+	cmd( "ttk::frame $_w.m" );			
 
-         if (cd->init != NULL )
-           sprintf( msg, "%s Instances from %d to %d set to random values drawn from a uniform in the range [%g,%g].", cd->init, cases_from, cases_to, value1, value2);
-         else
-           sprintf( msg, "Instances from %d to %d set to random values drawn from a uniform in the range [%g,%g].", cases_from, cases_to, value1, value2);         
-         change_descr_lab(lab, "", "", "", msg);        
-        }  
-       }
+	cmd( "ttk::frame $_w.m.f1" );					// left column
 
-  		unsaved_change( true );		// signal unsaved change
+	cmd( "ttk::frame $_w.m.f1.val" );
+	cmd( "ttk::label $_w.m.f1.val.l -text \"Initialization data\"" );
 
-		  break;
-		  
-case 5: 
-     cmd( "set choice $fill" );
-     fill=*choice;
-     cmd( "set choice $step_in" );
-      
-     for (i=1,cur=r, step=0; cur!=NULL; cur=cur->hyper_next(r->label), ++i )
-      {
-      if ((to_all==1 || (cases_from<=i && cases_to>=i)) && (fill==1 || ((i-cases_from)%(*choice) == 0 )))
-       {
-			cv=cur->search_var(NULL, lab);
-         cv->data_loaded='+';
-			if (cv->param == 0 )
-			  cv->val[lag]=norm(value1, value2);
+	cmd( "ttk::frame $_w.m.f1.val.i" );
+
+	cmd( "ttk::frame $_w.m.f1.val.i.l1" );
+	cmd( "ttk::label $_w.m.f1.val.i.l1.l1 -text \"Equal to\"" );
+	cmd( "ttk::entry $_w.m.f1.val.i.l1.e1 -validate focusout -validatecommand { set n %%P; if { [ string is double -strict $n ] } { set value1 %%P; return 1 } { %%W delete 0 end; %%W insert 0 $value1; set err $_w.m.f1.val.i.l1.e1; set choice 1; return 0 } } -invalidcommand { bell } -justify center" );
+	cmd( "pack $_w.m.f1.val.i.l1.l1 $_w.m.f1.val.i.l1.e1" );
+
+	cmd( "ttk::frame $_w.m.f1.val.i.l2" );
+	cmd( "ttk::label $_w.m.f1.val.i.l2.l2 -text \"(none)\"" );
+	cmd( "ttk::entry $_w.m.f1.val.i.l2.e2 -validate focusout -validatecommand { set n %%P; if { [ string is double -strict $n ] } { set value2 %%P; return 1 } { %%W delete 0 end; %%W insert 0 $value2; set err $_w.m.f1.val.i.l2.e2; set choice 1; return 0 } } -invalidcommand { bell } -justify center -state disabled" );
+	cmd( "pack $_w.m.f1.val.i.l2.l2 $_w.m.f1.val.i.l2.e2" );
+
+	cmd( "pack $_w.m.f1.val.i.l1 $_w.m.f1.val.i.l2 -expand yes -fill x  -ipadx 5 -ipady 2" );
+
+	cmd( "pack $_w.m.f1.val.l $_w.m.f1.val.i" );
+
+	cmd( "ttk::frame $_w.m.f1.rd" );
+	cmd( "ttk::label $_w.m.f1.rd.l -text \"Initialization method\"" );
+
+	cmd( "ttk::frame $_w.m.f1.rd.i -relief solid -borderwidth 1 -padding [ list $frPadX $frPadY ]" );
+	cmd( "ttk::radiobutton $_w.m.f1.rd.i.r1 -text \"Equal to\" -variable res -value 1 -command { $_w.m.f1.val.i.l1.l1 conf -text \"Value\"; $_w.m.f1.val.i.l1.e1 conf -state normal; $_w.m.f1.val.i.l2.l2 conf -text \"(none)\"; $_w.m.f1.val.i.l2.e2 conf -state disabled; $_w.m.f2.s.i.l.a.e conf -state normal; $_w.m.f2.s.i.l.f conf -state normal; set use_seed 0; $_w.m.f2.rnd.i.le.f conf -state disabled; $_w.m.f2.rnd.i.le.s.e1 conf -state disabled }" );
+	cmd( "bind $_w.m.f1.rd.i.r1 <Down> { focus $_w.m.f1.rd.i.r9; $_w.m.f1.rd.i.r9 invoke }" );
+	cmd( "bind $_w.m.f1.rd.i.r1 <Return> { $_w.m.f1.val.i.l1.e1 selection range 0 end; focus $_w.m.f1.val.i.l1.e1 }" );
+
+	cmd( "ttk::radiobutton $_w.m.f1.rd.i.r9 -text \"Range\" -variable res -value 9 -command { $_w.m.f1.val.i.l1.l1 conf -text \"Minimum\"; $_w.m.f1.val.i.l1.e1 conf -state normal; $_w.m.f1.val.i.l2.l2 conf -text \"Maximum\"; $_w.m.f1.val.i.l2.e2 conf -state normal; $_w.m.f2.s.i.l.a.e conf -state normal; $_w.m.f2.s.i.l.f conf -state normal; set use_seed 0; $_w.m.f2.rnd.i.le.f conf -state disabled; $_w.m.f2.rnd.i.le.s.e1 conf -state disabled }" );
+	cmd( "bind $_w.m.f1.rd.i.r9 <Down> { focus $_w.m.f1.rd.i.r2; $_w.m.f1.rd.i.r2 invoke }" );
+	cmd( "bind $_w.m.f1.rd.i.r9 <Up> { focus $_w.m.f1.rd.i.r1; $_w.m.f1.rd.i.r1 invoke }" );
+	cmd( "bind $_w.m.f1.rd.i.r9 <Return> { $_w.m.f1.val.i.l1.e1 selection range 0 end; focus $_w.m.f1.val.i.l1.e1 }" );
+
+	cmd( "ttk::radiobutton $_w.m.f1.rd.i.r2 -text \"Increasing\" -variable res -value 2 -command { $_w.m.f1.val.i.l1.l1 conf -text \"Start\"; $_w.m.f1.val.i.l1.e1 conf -state normal; $_w.m.f1.val.i.l2.l2 conf -text \"Step\"; $_w.m.f1.val.i.l2.e2 conf -state normal; $_w.m.f2.s.i.l.a.e conf -state normal; $_w.m.f2.s.i.l.f conf -state normal; set use_seed 0; $_w.m.f2.rnd.i.le.f conf -state disabled; $_w.m.f2.rnd.i.le.s.e1 conf -state disabled }" );
+	cmd( "bind $_w.m.f1.rd.i.r2 <Down> { focus $_w.m.f1.rd.i.r4; $_w.m.f1.rd.i.r4 invoke }" );
+	cmd( "bind $_w.m.f1.rd.i.r2 <Up> { focus $_w.m.f1.rd.i.r9; $_w.m.f1.rd.i.r9 invoke }" );
+	cmd( "bind $_w.m.f1.rd.i.r2 <Return> { $_w.m.f1.val.i.l1.e1 selection range 0 end; focus $_w.m.f1.val.i.l1.e1 }" );
+
+	cmd( "ttk::radiobutton $_w.m.f1.rd.i.r4 -text \"Increasing (groups)\" -variable res -value 4 -command { $_w.m.f1.val.i.l1.l1 conf -text \"Start\"; $_w.m.f1.val.i.l1.e1 conf -state normal; $_w.m.f1.val.i.l2.l2 conf -text \"Step\"; $_w.m.f1.val.i.l2.e2 conf -state normal; set step_in 1; $_w.m.f2.s.i.l.a.e conf -state disabled; $_w.m.f2.s.i.l.f conf -state disabled; set use_seed 0; $_w.m.f2.rnd.i.le.f conf -state disabled; $_w.m.f2.rnd.i.le.s.e1 conf -state disabled }" );
+	cmd( "bind $_w.m.f1.rd.i.r4 <Up> { focus $_w.m.f1.rd.i.r2; $_w.m.f1.rd.i.r2 invoke }" );
+	cmd( "bind $_w.m.f1.rd.i.r4 <Down> { focus $_w.m.f1.rd.i.r3; $_w.m.f1.rd.i.r3 invoke }" );
+	cmd( "bind $_w.m.f1.rd.i.r4 <Return> { $_w.m.f1.val.i.l1.e1 selection range 0 end; focus $_w.m.f1.val.i.l1.e1 }" );
+
+	cmd( "ttk::radiobutton $_w.m.f1.rd.i.r3 -text \"Random (uniform)\" -variable res -value 3 -command { $_w.m.f1.val.i.l1.l1 conf -text \"Minimum\"; $_w.m.f1.val.i.l1.e1 conf -state normal; $_w.m.f1.val.i.l2.l2 conf -text \"Maximum\"; $_w.m.f1.val.i.l2.e2 conf -state normal; $_w.m.f2.s.i.l.a.e conf -state normal; $_w.m.f2.s.i.l.f conf -state normal; $_w.m.f2.rnd.i.le.f conf -state normal }" );
+	cmd( "bind $_w.m.f1.rd.i.r3 <Up> { focus $_w.m.f1.rd.i.r4; $_w.m.f1.rd.i.r4 invoke }" );
+	cmd( "bind $_w.m.f1.rd.i.r3 <Down> { focus $_w.m.f1.rd.i.r8; $_w.m.f1.rd.i.r8 invoke }" );
+	cmd( "bind $_w.m.f1.rd.i.r3 <Return> { $_w.m.f1.val.i.l1.e1 selection range 0 end; focus $_w.m.f1.val.i.l1.e1 }" );
+
+	cmd( "ttk::radiobutton $_w.m.f1.rd.i.r8 -text \"Random integer (uniform)\" -variable res -value 8 -command { $_w.m.f1.val.i.l1.l1 conf -text \"Minimum\"; $_w.m.f1.val.i.l1.e1 conf -state normal; $_w.m.f1.val.i.l2.l2 conf -text \"Maximum\"; $_w.m.f1.val.i.l2.e2 conf -state normal; $_w.m.f2.s.i.l.a.e conf -state normal; $_w.m.f2.s.i.l.f conf -state normal; $_w.m.f2.rnd.i.le.f conf -state normal }" );
+	cmd( "bind $_w.m.f1.rd.i.r8 <Up> { focus $_w.m.f1.rd.i.r3; $_w.m.f1.rd.i.r3 invoke }" );
+	cmd( "bind $_w.m.f1.rd.i.r8 <Down> { focus $_w.m.f1.rd.i.r5; $_w.m.f1.rd.i.r5 invoke }" );
+	cmd( "bind $_w.m.f1.rd.i.r8 <Return> { $_w.m.f1.val.i.l1.e1 selection range 0 end; focus $_w.m.f1.val.i.l1.e1 }" );
+
+	cmd( "ttk::radiobutton $_w.m.f1.rd.i.r5 -text \"Random (normal)\" -variable res -value 5 -command { $_w.m.f1.val.i.l1.l1 conf -text \"Mean\"; $_w.m.f1.val.i.l1.e1 conf -state normal; $_w.m.f1.val.i.l2.l2 conf -text \"Std. deviation\"; $_w.m.f1.val.i.l2.e2 conf -state normal; $_w.m.f2.s.i.l.a.e conf -state normal; $_w.m.f2.s.i.l.f conf -state normal; $_w.m.f2.rnd.i.le.f conf -state normal }" );
+	cmd( "bind $_w.m.f1.rd.i.r5 <Up> { focus $_w.m.f1.rd.i.r8; $_w.m.f1.rd.i.r8 invoke }" );
+	cmd( "bind $_w.m.f1.rd.i.r5 <Down> { focus $_w.m.f1.rd.i.r7; $_w.m.f1.rd.i.r7 invoke }" );
+	cmd( "bind $_w.m.f1.rd.i.r5 <Return> { $_w.m.f1.val.i.l1.e1 selection range 0 end; focus $_w.m.f1.val.i.l1.e1 }" );
+
+	cmd( "ttk::radiobutton $_w.m.f1.rd.i.r7 -text \"Import from data file\" -variable res -value 7 -command { $_w.m.f1.val.i.l1.l1 conf -text \"(none)\"; $_w.m.f1.val.i.l1.e1 conf -state disabled; $_w.m.f1.val.i.l2.l2 conf -text \"(none)\"; $_w.m.f1.val.i.l2.e2 conf -state disabled; set step_in 1; $_w.m.f2.s.i.l.a.e conf -state disabled; $_w.m.f2.s.i.l.f conf -state disabled; set use_seed 0; $_w.m.f2.rnd.i.le.f conf -state disabled; $_w.m.f2.rnd.i.le.s.e1 conf -state disabled }" );
+	cmd( "bind $_w.m.f1.rd.i.r7 <Up> { focus $_w.m.f1.rd.i.r5; $_w.m.f1.rd.i.r5 invoke }" );
+	cmd( "bind $_w.m.f1.rd.i.r7 <Return> { $_w.m.f1.val.i.l1.e1 selection range 0 end; focus $_w.m.f1.val.i.l1.e1 }" );
+
+	cmd( "pack $_w.m.f1.rd.i.r1 $_w.m.f1.rd.i.r9 $_w.m.f1.rd.i.r2 $_w.m.f1.rd.i.r4 $_w.m.f1.rd.i.r3 $_w.m.f1.rd.i.r8 $_w.m.f1.rd.i.r5 $_w.m.f1.rd.i.r7 -anchor w" );
+	
+	cmd( "tooltip::tooltip $_w.m.f1.rd.i.r1 \"Every instance set to the same Value\"" );
+	cmd( "tooltip::tooltip $_w.m.f1.rd.i.r9 \"Linear range from Minimum to Maximum\"" );
+	cmd( "tooltip::tooltip $_w.m.f1.rd.i.r2 \"From Start plus Increasing for each instance\"" );
+	cmd( "tooltip::tooltip $_w.m.f1.rd.i.r4 \"From Start in each group plus Increasing for each instance\"" );
+	cmd( "tooltip::tooltip $_w.m.f1.rd.i.r3 \"Uniform random real draw from Minimum to Maximum\"" );
+	cmd( "tooltip::tooltip $_w.m.f1.rd.i.r8 \"Uniform random integer draw from Minimum to Maximum\"" );
+	cmd( "tooltip::tooltip $_w.m.f1.rd.i.r5 \"Random draw from normal distribution with Mean and Standard deviation\"" );
+	cmd( "tooltip::tooltip $_w.m.f1.rd.i.r7 \"Read initialization data from disk file\"" );
+
+	cmd( "pack $_w.m.f1.rd.l $_w.m.f1.rd.i" );
+
+	cmd( "pack $_w.m.f1.val $_w.m.f1.rd -expand yes -fill x -padx 5 -pady 5" );
+
+	cmd( "ttk::frame $_w.m.f2" );					// right column
+
+	cmd( "ttk::frame $_w.m.f2.s" );
+	cmd( "ttk::label $_w.m.f2.s.tit -text \"Object instance selection\"" );
+
+	cmd( "ttk::frame $_w.m.f2.s.i" );
+
+	cmd( "ttk::frame $_w.m.f2.s.i.l" );
+
+	cmd( "ttk::frame $_w.m.f2.s.i.l.a" );
+	cmd( "ttk::label $_w.m.f2.s.i.l.a.l -text \"Apply every\"" );
+	cmd( "ttk::spinbox $_w.m.f2.s.i.l.a.e -width 5 -from 1 -to 9999 -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 1 } { set step_in %%P; return 1 } { %%W delete 0 end; %%W insert 0 $step_in; set err $_w.m.f2.s.i.l.a.e; set choice 1; return 0 } } -invalidcommand { bell } -justify center" );
+	cmd( "ttk::label $_w.m.f2.s.i.l.a.l1 -text \"instance( s)\"" );
+	cmd( "pack $_w.m.f2.s.i.l.a.l $_w.m.f2.s.i.l.a.e $_w.m.f2.s.i.l.a.l1 -side left -padx 1" );
+
+	cmd( "ttk::checkbutton $_w.m.f2.s.i.l.f -text \"Fill-in\" -variable fill" );
+	cmd( "pack  $_w.m.f2.s.i.l.a $_w.m.f2.s.i.l.f -padx 5 -side left" );
+	cmd( "pack  $_w.m.f2.s.i.l -pady 2" );
+	
+	cmd( "tooltip::tooltip $_w.m.f2.s.i.l.a \"Number of instances to skip from initializing\"" );
+	cmd( "tooltip::tooltip $_w.m.f2.s.i.l.f \"Fill intermediate instances with same value\"" );
+
+	cmd( "ttk::frame $_w.m.f2.s.i.sel -relief solid -borderwidth 1 -padding [ list $frPadX $frPadY ]" );
+	cmd( "ttk::radiobutton $_w.m.f2.s.i.sel.all -text \"Apply to all instances\" -variable to_all -value 1 -command { $_w.m.f2.s.i.sel2.c.to conf -state disabled; $_w.m.f2.s.i.sel2.c.from conf -state disabled; bind $_w.m.f2.s.i.sel2.c.from <Button-3> { }; bind $_w.m.f2.s.i.sel2.c.to <Button-3> { }; bind $_w.m.f2.s.i.sel2.c.from <Button-2> { }; bind $_w.m.f2.s.i.sel2.c.to <Button-2> { } }" );
+	cmd( "ttk::radiobutton $_w.m.f2.s.i.sel.sel -text \"Apply to a range of instances\" -variable to_all -value 0 -command { $_w.m.f2.s.i.sel2.c.to conf -state normal; $_w.m.f2.s.i.sel2.c.from conf -state normal; bind $_w.m.f2.s.i.sel2.c.from <Button-3> { set choice 9 }; bind $_w.m.f2.s.i.sel2.c.to <Button-3> { set choice 10 }; bind $_w.m.f2.s.i.sel2.c.from <Button-2> { set choice 9 }; bind $_w.m.f2.s.i.sel2.c.to <Button-2> { set choice 10 } }" );
+	cmd( "pack $_w.m.f2.s.i.sel.all $_w.m.f2.s.i.sel.sel -anchor w" );
+	
+	cmd( "tooltip::tooltip $_w.m.f2.s.i.sel.all \"Apply initialization to all instances\"" );
+	cmd( "tooltip::tooltip $_w.m.f2.s.i.sel.sel \"Apply initialization to a range of instances\"" );
+
+	cmd( "pack $_w.m.f2.s.i.sel -pady 2" );
+
+	cmd( "ttk::frame $_w.m.f2.s.i.sel2" );
+
+	cmd( "ttk::frame $_w.m.f2.s.i.sel2.c" );
+	cmd( "ttk::label $_w.m.f2.s.i.sel2.c.lfrom -text \"From\"" );
+	cmd( "ttk::spinbox $_w.m.f2.s.i.sel2.c.from -width 5 -from 1 -to 9999 -state disabled -state disabled -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 1 } { set cases_from %%P; return 1 } { %%W delete 0 end; %%W insert 0 $cases_from; set err $_w.m.f2.s.i.sel2.c.from; set choice 1; return 0 } } -invalidcommand { bell } -justify center" );
+	cmd( "ttk::label $_w.m.f2.s.i.sel2.c.lto -text \"to\"" );
+	cmd( "ttk::spinbox $_w.m.f2.s.i.sel2.c.to -width 5 -from 1 -to 9999 -state disabled -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 1 } { set cases_to %%P; return 1 } { %%W delete 0 end; %%W insert 0 $cases_to; set err $_w.m.f2.s.i.sel2.c.to; set choice 1; return 0 } } -invalidcommand { bell } -justify center" );
+	cmd( "pack $_w.m.f2.s.i.sel2.c.lfrom $_w.m.f2.s.i.sel2.c.from $_w.m.f2.s.i.sel2.c.lto $_w.m.f2.s.i.sel2.c.to -side left -pady 1" );
+
+	cmd( "ttk::label $_w.m.f2.s.i.sel2.obs -text \"(use right button on cells for options)\"" );
+	cmd( "pack $_w.m.f2.s.i.sel2.c $_w.m.f2.s.i.sel2.obs" );
+	cmd( "pack $_w.m.f2.s.i.sel2 -pady 2" );
+	
+	cmd( "tooltip::tooltip $_w.m.f2.s.i.sel2 \"Select first and last instance to initialize\"" );
+
+	cmd( "pack $_w.m.f2.s.tit $_w.m.f2.s.i" );
+
+	cmd( "pack $_w.m.f2.s" );
+
+	cmd( "ttk::frame $_w.m.f2.rnd" );
+	cmd( "ttk::label $_w.m.f2.rnd.l -text \"Random number generator\"" );
+
+	cmd( "ttk::frame $_w.m.f2.rnd.i" );
+
+	cmd( "ttk::frame $_w.m.f2.rnd.i.le" );
+	cmd( "ttk::checkbutton $_w.m.f2.rnd.i.le.f -text \"Reset the generator\" -variable use_seed -state disabled -command { if $use_seed { $_w.m.f2.rnd.i.le.s.e1 conf -state normal } { $_w.m.f2.rnd.i.le.s.e1 conf -state disabled } }" );
+	cmd( "ttk::frame $_w.m.f2.rnd.i.le.s" );
+	cmd( "ttk::label $_w.m.f2.rnd.i.le.s.l1 -text \"Seed\"" );
+	cmd( "ttk::spinbox $_w.m.f2.rnd.i.le.s.e1 -width 5 -from 1 -to 9999 -state disabled -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 1 } { set rnd_seed %%P; return 1 } { %%W delete 0 end; %%W insert 0 $rnd_seed; set err $_w.m.f2.rnd.i.le.s.e1; set choice 1; return 0 } } -invalidcommand { bell } -justify center" );
+	cmd( "pack $_w.m.f2.rnd.i.le.s.l1 $_w.m.f2.rnd.i.le.s.e1 -side left -padx 1" );
+
+	cmd( "pack $_w.m.f2.rnd.i.le.f $_w.m.f2.rnd.i.le.s -side left -padx 5" );
+
+	cmd( "pack $_w.m.f2.rnd.i.le -pady 2" );
+	
+	cmd( "tooltip::tooltip $_w.m.f2.rnd.i.le.f \"Ensure the generator starts from a known condition\"" );
+	cmd( "tooltip::tooltip $_w.m.f2.rnd.i.le.s \"Choose the random number generator seed\"" );
+
+	cmd( "pack $_w.m.f2.rnd.l $_w.m.f2.rnd.i" );
+
+	cmd( "ttk::frame $_w.m.f2.ud" );
+	cmd( "ttk::checkbutton $_w.m.f2.ud.c -text \"Update initialization description\" -variable update_d" );
+	cmd( "pack $_w.m.f2.ud.c" );
+
+	cmd( "pack $_w.m.f2.s $_w.m.f2.rnd $_w.m.f2.ud -expand yes -fill x" );
+
+	cmd( "pack $_w.m.f1 $_w.m.f2 -side left -expand yes -fill both -padx 5 -pady 5" );
+	cmd( "pack $_w.head $_w.m -pady 5" );
+
+	cmd( "okhelpcancel $_w b { set choice 1 } { LsdHelp menudata_init.html#setall } { set choice 2 }" );
+
+	cmd( "bind $_w.m.f1.rd.i <Return> { if [ string equal [ $_w.m.f1.val.i.l2.e2 cget -state ] normal ] { $_w.m.f1.val.i.l1.e1 selection range 0 end; focus $_w.m.f1.val.i.l1.e1 } }" );
+	cmd( "bind $_w.m.f1.val.i.l1.e1 <Return> { if [ string equal [ $_w.m.f1.val.i.l2.e2 cget -state ] normal ] { focus $_w.m.f1.val.i.l2.e2; $_w.m.f1.val.i.l2.e2 selection range 0 end } { set choice 1 } }" );
+	cmd( "bind $_w.m.f1.val.i.l2.e2 <Return> { set choice 1 }" );
+	cmd( "bind $_w.m.f2.s.i.l.a.e <Return> { focus $_w.m.f2.s.i.sel.all; $_w.m.f2.s.i.sel.all invoke }" );
+	cmd( "bind $_w.m.f2.s.i.sel.all <Return> { focus $_w.b.ok }" );
+	cmd( "bind $_w.m.f2.s.i.sel.sel <Return> { focus $_w.m.f2.s.i.sel2.c.from; $_w.m.f2.s.i.sel2.c.from selection range 0 end }" );
+	cmd( "bind $_w.m.f2.s.i.sel2.c.from <Return> { focus $_w.m.f2.s.i.sel2.c.to; $_w.m.f2.s.i.sel2.c.from selection range 0 end }" );
+	cmd( "bind $_w.m.f2.s.i.sel2.c.to <Return> { focus $_w.b.ok }" );
+	cmd( "bind $_w.m.f2.rnd.i.le.s.e1 <Return> { focus $_w.b.ok }" );
+	
+	cmd( "set err \"\"" );
+
+	cmd( "showtop $_w centerW" );
+	cmd( "mousewarpto $_w.b.ok" );
+
+	here_setall:
+
+	// update current linked variables values
+	cmd( "write_any $_w.m.f1.val.i.l1.e1 $value1" ); 
+	cmd( "write_any $_w.m.f1.val.i.l2.e2 $value2" );
+	cmd( "write_any $_w.m.f2.s.i.l.a.e $step_in" ); 
+	cmd( "write_any $_w.m.f2.s.i.sel2.c.from $cases_from" ); 
+	cmd( "write_any $_w.m.f2.s.i.sel2.c.to $cases_to" ); 
+	cmd( "write_any $_w.m.f2.rnd.i.le.s.e1 $rnd_seed" ); 
+	
+	if ( selFocus )
+	{
+		cmd( "if { $err == \"\" } { $_w.m.f1.val.i.l1.e1 selection range 0 end; focus $_w.m.f1.val.i.l1.e1 } { $err selection range 0 end; focus $err; set err \"\" }" );
+		selFocus = false;
+	}
+
+	*choice = 0;
+	while ( *choice == 0 )
+		Tcl_DoOneEvent( 0 );
+
+	if ( *choice == 9 )
+	{
+		// search instance from
+		i = compute_copyfrom( original, choice, "$_w" );
+		cmd( "set cases_from %d", i );
+		goto here_setall;
+	}
+
+	if ( *choice == 10 )
+	{
+		// search instance to
+		i = compute_copyfrom( original, choice, "$_w" );
+		cmd( "set cases_to %d", i );
+		goto here_setall;
+	}
+
+	// save current linked variables values before closing
+	cmd( "if [ string is double -strict [ $_w.m.f1.val.i.l1.e1 get ] ] { set value1 [ $_w.m.f1.val.i.l1.e1 get ] } { set err $_w.m.f1.val.i.l1.e1 }" );
+	cmd( "if [ string is double -strict [ $_w.m.f1.val.i.l2.e2 get ] ] { set value2 [ $_w.m.f1.val.i.l2.e2 get ] } { set err $_w.m.f1.val.i.l2.e2 }" ); 
+	cmd( "if { [ string is integer -strict [ $_w.m.f2.s.i.l.a.e get ] ] && [ $_w.m.f2.s.i.l.a.e get ] > 0 } { set step_in [ $_w.m.f2.s.i.l.a.e get ] } { set err $_w.m.f2.s.i.l.a.e }" ); 
+	cmd( "if { [ string is integer -strict [ $_w.m.f2.s.i.sel2.c.from get ] ] && [ $_w.m.f2.s.i.sel2.c.from get ] > 0 } { set cases_from [ $_w.m.f2.s.i.sel2.c.from get ] } { set err $_w.m.f2.s.i.sel2.c.from }" ); 
+	cmd( "if { [ string is integer -strict [ $_w.m.f2.s.i.sel2.c.to get ] ] && [ $_w.m.f2.s.i.sel2.c.to get ] > $cases_from } { set cases_to [ $_w.m.f2.s.i.sel2.c.to get ] } { set err $_w.m.f2.s.i.sel2.c.to }" ); 
+	cmd( "if { [ string is integer -strict [ $_w.m.f2.rnd.i.le.s.e1 get ] ] && [ $_w.m.f2.rnd.i.le.s.e1 get ] > 0 } { set rnd_seed [ $_w.m.f2.rnd.i.le.s.e1 get ] } { set err $_w.m.f2.rnd.i.le.s.e1 }" ); 
+
+	cmd( "if { $err != \"\" } { \
+			ttk::messageBox -parent $_w -title Error -icon error -type ok -message \"Invalid value\" -detail \"Values must be numeric only and decimal numbers must use the point ('.') as the decimal separator. Choose a different value and try again.\"; \
+			set choice 0 \
+		}" );
+		
+	if ( *choice == 0 )
+	{
+		selFocus = true;
+		goto here_setall;
+	}
+	
+	cmd( "destroytop $_w" );
+
+	Tcl_UnlinkVar( inter, "value1" );
+	Tcl_UnlinkVar( inter, "value2" );
+	Tcl_UnlinkVar( inter, "res" );
+	
+	if ( *choice == 2 )
+		return;
+
+	step_in = get_int( "step_in" );
+	fill = get_int( "fill" );
+	to_all = get_int( "to_all" );
+	cases_from = get_int( "cases_from" );
+	cases_to = get_int( "cases_to" );
+	use_seed = get_int( "use_seed" );
+	rnd_seed = get_int( "rnd_seed" );
+	update_d = get_int( "update_d" );
+
+	if ( use_seed )
+		init_random( ( unsigned ) rnd_seed );
+	
+	j = 0;
+
+	switch ( res )
+	{
+		// equal to
+		case 1:							
+			for ( i = 1, cur = r, step = 0; cur != NULL; cur = cur->hyper_next( r->label ), ++i )
+				if ( ( to_all == 1 || ( cases_from <= i && cases_to >= i ) ) && ( fill == 1 || ( ( i - cases_from ) % step_in == 0 ) ) )
+				{
+					cv = cur->search_var( NULL, lab );
+					cv->val[ lag ] = value1;
+					cv->data_loaded = '+';
+					++j;
+				}
+			
+			sprintf( action, "equal to %g", value1 );
+			break;
+
+		// range
+		case 9:	
+			for ( i = 1, cur = r, counter = -1; cur != NULL; cur = cur->hyper_next( r->label ), ++i )
+				if ( ( to_all == 1 || ( cases_from <= i && cases_to >= i ) ) && ( ( ( i - cases_from ) % step_in == 0 ) ) )
+					counter++;
+
+			value = ( value2 - value1 ) / counter;
+
+			for ( i = 1, cur = r, step = 0; cur != NULL; cur = cur->hyper_next( r->label ), ++i )
+			{
+				if ( ( to_all == 1 || ( cases_from <= i && cases_to >= i ) ) && ( fill == 1 || ( ( i - cases_from ) % step_in == 0 ) ) )
+				{
+					cv = cur->search_var( NULL, lab );
+					cv->val[ lag ] = value1 + value * step;
+					cv->data_loaded = '+';
+					++j;
+				}
+				
+				if ( i >= cases_from && ( ( i - cases_from + 1 ) % step_in ) == 0 )
+					++step; 
+			}
+			
+			sprintf( action, "ranging from %g to %g (increments of %g)", value1, value2, value );
+			break;
+
+
+		// increasing	
+		case 2:  
+			for ( i = 1, cur = r, step = 0; cur != NULL; cur = cur->hyper_next( r->label ), ++i )
+			{
+				if ( ( to_all == 1 || ( cases_from <= i && cases_to >= i ) ) && ( fill == 1 || ( ( i - cases_from ) % step_in == 0 ) ) )
+				{
+					cv = cur->search_var( NULL, lab );
+					cv->val[ lag ] = value1 + step * value2;
+					cv->data_loaded = '+';
+					++j;
+				}
+				
+				if ( i >= cases_from && ( ( i - cases_from + 1 ) % step_in ) == 0 )
+					++step;
+			}
+			
+			sprintf( action, "increasing from %g with step %g", value1, value2 );
+			break;
+				
+		
+		// increasing (groups)
+		case 4: 
+			for ( i = 1, cur = r, step = 0; cur != NULL; cur = cur->hyper_next( r->label ), ++i )
+				if ( to_all == 1 || ( cases_from <= i && cases_to >= i ) )
+				{
+					cv = cur->search_var( NULL, lab );
+					cv->val[ lag ] = value1 + step * value2;
+					cv->data_loaded = '+';
+					++j;
+					++step;        
+					
+					if ( cur->next != cur->hyper_next( r->label ) )
+						step = 0;
+				}
+			
+			sprintf( action, "increasing from %g with step %g for each group of objects", value1, value2 );
+			break;
+
+
+		// random (uniform)
+		case 3: 
+			for ( i = 1, cur = r, step = 0; cur != NULL; cur = cur->hyper_next( r->label ), ++i )
+				if ( ( to_all == 1 || ( cases_from <= i && cases_to >= i ) ) && ( fill == 1 || ( ( i - cases_from ) % step_in == 0 ) ) )
+				{
+					cv = cur->search_var( NULL, lab );
+					cv->val[ lag ] = uniform( value1, value2 );
+					cv->data_loaded = '+';
+					++j;
+				}
+			
+			sprintf( action, "drawn from uniform distribution between %g and %g", value1, value2 );
+			break;
+			  
+		
+		// random integer (uniform)
+		case 8:
+			for ( i = 1, cur = r, step = 0; cur != NULL; cur = cur->hyper_next( r->label ), ++i )
+				if ( ( to_all == 1 || ( cases_from <= i && cases_to >= i ) ) && ( fill == 1 || ( ( i - cases_from ) % step_in == 0 ) ) )
+				{
+					cv = cur->search_var( NULL, lab );
+					cv->val[ lag ] = uniform_int( round( value1 ), round( value2 ) );
+					cv->data_loaded = '+';
+					++j;
+				}
+			
+			sprintf( action, "drawn from integer uniform distribution between %g and %g", round( value1 ), round( value2 ) );
+			break;
+			
+			
+		// random (normal)
+		case 5: 
+			for ( i = 1, cur = r, step = 0; cur != NULL; cur = cur->hyper_next( r->label ), ++i )
+				if ( ( to_all == 1 || ( cases_from <= i && cases_to >= i ) ) && ( fill == 1 || ( ( i - cases_from ) % step_in == 0 ) ) )
+				{
+					cv = cur->search_var( NULL, lab );
+					cv->val[ lag ] = norm( value1, value2 );
+					cv->data_loaded = '+';
+					++j;
+				}
+			
+			sprintf( action, "drawn from normal distribution of mean %g and s.d. %g", value1, value2 );
+			break;
+			
+
+		// import from data file
+		case 7:
+			cmd( "set oldpath [ pwd ]" );
+			cmd( "set filename [ tk_getOpenFile -parent . -title \"File to Import Data\" -filetypes { { {Text Files} {.txt} } { {All Files} {*} } } ]" );
+			l = ( char * ) Tcl_GetVar( inter, "filename", 0 );
+			
+			if ( l == NULL || ! strcmp( l, "" ) )
+				return;
+
+			cmd( "cd [ file dirname $filename ]" );
+			cmd( "set fn [ file tail $filename ]" );
+			l = ( char * ) Tcl_GetVar( inter, "fn", 0 );
+			f = fopen( l, "r" );
+			cmd( "cd $oldpath" );
+			
+			if ( f == NULL )
+				return;
+
+			if ( fscanf( f, "%99s", ch ) == EOF )				// the label
+				return;
+				
+			for ( i = 1, cur = r; cur != NULL; cur = cur->hyper_next( r->label ), ++i )
+				if ( to_all == 1 || ( cases_from <= i && cases_to >= i ) )
+				{
+					kappa = fscanf( f, "%lf", &value );
+					if ( kappa == EOF )
+						break;
+					
+					cv = cur->search_var( NULL, lab );
+					cv->val[ lag ] = value;
+					cv->data_loaded = '+';
+					++j;
+				}
+			
+			if ( cur != NULL || kappa == EOF )
+				cmd( "ttk::messageBox -parent $_w -title Error -icon error -type ok -message \"Incomplete data\" -detail \"Problem loading data from file '%s', the file contains fewer values compared to the number of instances to set.\"", l );
+			
+			sprintf( action, "set with data from file %s", l );
+			break;
+			
+
+		default:
+			error_hard( "invalid option for setting values", 
+						"internal problem in LSD", 
+						"if error persists, please contact developers",
+						true );
+			myexit( 22 );
+	}
+	
+	if ( update_d )
+	{
+		cd = search_description( lab );
+		
+		if ( step_in > 1 )
+			sprintf( ch, " (every %d instances)", step_in );
+		else
+			strcpy( ch, "" );
+		
+		if ( to_all )
+			if ( step_in > 1 )
+				if ( cd->init != NULL )
+					sprintf( msg, "%s\n%d instances %s%s", cd->init, j, action, ch );
+				else
+					sprintf( msg, "%d instances %s%s", j, action, ch );
 			else
-			  cv->val[ 0 ]=norm(value1, value2);
-		  }
-      }
-
-      if ( update_description == 1 )
-      {
-      cd=search_description(lab);
-    
-      if (cd == NULL )
-      {  cv=r->search_var(NULL, lab);
-       if (cv->param == 0 )
-         add_description(lab, "Variable", "(no description available)");
-       if (cv->param == 1 )
-         add_description(lab, "Parameter", "(no description available)");  
-       if (cv->param==2)
-         add_description(lab, "Function", "(no description available)");  
-       plog( "\nWarning: description for '%s' not found. New one created.", "", lab );
-       cd=search_description(lab);
-      } 
-      
-      if (to_all == 1 )
-        {sprintf( msg, "All %d instances set to random values drawn from a normal with mean=%g and std. deviation=%g.", i-1, value1, value2);
-         change_descr_lab(lab, "", "", "", msg);      
-        } 
-      else
-        {
-
-         if (cd->init != NULL )
-           sprintf( msg, "%s Instances from %d to %d set to random values drawn from a normal with mean=%g and std. deviation=%g",cd->init, cases_from, cases_to, value1, value2);
-         else
-           sprintf( msg, "Instances from %d to %d set to random values drawn from a normal with mean=%g and std. deviation=%g", cases_from, cases_to, value1, value2);         
-           change_descr_lab(lab, "", "", "", msg);        
-        }  
-       }
-  		unsaved_change( true );		// signal unsaved change
-
-		  break;
-
-case 6: 
-		cv=r->search_var(NULL, lab);
-		cv->data_loaded='+';
-        for (i=1,cur=r, step=0; cur!=NULL; cur=cur->hyper_next(r->label), ++i )
-        {
-       if (to_all==1 || (cases_from<=i && cases_to>=i))
-        {
-         cv=cur->search_var(NULL, lab);
-         cv->data_loaded='+';
-         if (step==value2)
-          {if (cv->param == 0 )
-            cv->val[lag]=value1;
-           else
-            cv->val[ 0 ]=value1;
-           step=0;
-          }
-         else
-           step++;
-
-        }
-        }
-
-      if ( update_description == 1 )
-      {
-      cd=search_description(lab);
-    
-      if (cd == NULL )
-      {  cv=r->search_var(NULL, lab);
-       if (cv->param == 0 )
-         add_description(lab, "Variable", "(no description available)");
-       if (cv->param == 1 )
-         add_description(lab, "Parameter", "(no description available)");  
-       if (cv->param==2)
-         add_description(lab, "Function", "(no description available)");  
-       plog( "\nWarning: description for '%s' not found. New one created.", "", lab );
-       cd=search_description(lab);
-      } 
-      
-      if (to_all == 1 )
-        {sprintf( msg, "All %d instances set to %g skipping %g instances.", i-1, value1, value2);
-         change_descr_lab(lab, "", "", "", msg);      
-        } 
-      else
-        {
-         if (cd->init != NULL )
-           sprintf( msg, "%s Instances from %d to %d set to %g skipping %g instances.",cd->init, cases_from, cases_to, value1, value2);
-         else
-           sprintf( msg, "Instances from %d to %d set to %g skipping %g instances.", cases_from, cases_to, value1, value2);         
-         change_descr_lab(lab, "", "", "", msg);        
-        }  
-       }
-  		unsaved_change( true );		// signal unsaved change
-
-        break;
-
-
-case 7:
-  cmd( "set oldpath [pwd]" );
-  cmd( "set filename [ tk_getOpenFile -parent . -title \"File to Import Data\" -filetypes { { {Text Files} {.txt} } { {All Files} {*} }} ]" );
-  l = ( char * ) Tcl_GetVar( inter, "filename", 0 );
-  if ( l != NULL && strcmp( l, "" ) )
- { cmd( "cd [file dirname $filename]" );
-   cmd( "set fn [file tail $filename]" );
-   l=( char * ) Tcl_GetVar( inter, "fn", 0 );
-   f = fopen(l, "r");
-   cmd( "cd $oldpath" );
-   if (f != NULL )
-    {
-    fscanf(f, "%99s", ch); //the label
-    kappa=fscanf(f, "%lf", &value);
-    for (i=1,cur=r; cur!=NULL && kappa!=EOF; cur=cur->hyper_next(r->label), ++i )
-		  {
-      if (to_all==1 || (cases_from<=i && cases_to>=i))
-      {
-      cv=cur->search_var(NULL, lab);
-			cv->data_loaded='+';
-			if (cv->param == 0 )
-			  cv->val[lag]=value;
+				sprintf( msg, "All %d instances %s%s", j, action, ch );
+		else
+			if ( cd->init != NULL )
+				sprintf( msg, "%s\nInstances from %d to %d %s%s", cd->init, cases_from, cases_to, action, ch );
 			else
-			  cv->val[ 0 ]=value;
-      kappa=fscanf(f, "%lf", &value);
-		  }
-     }
-     if (cur!=NULL || kappa!=EOF)
-      plog("\nWarning: problem loading data, the file may contain a different number\nof values compared to the objects to initialize");
-      if ( update_description == 1 )
-      {
-      cd=search_description(lab);
-    
-      if (cd == NULL )
-      {  cv=r->search_var(NULL, lab);
-       if (cv->param == 0 )
-         add_description(lab, "Variable", "(no description available)");
-       if (cv->param == 1 )
-         add_description(lab, "Parameter", "(no description available)");  
-       if (cv->param==2)
-         add_description(lab, "Function", "(no description available)");  
-       plog( "\nWarning: description for '%s' not found. New one created.", "", lab );
-       cd=search_description(lab);
-      } 
-      
-      if (to_all == 1 )
-        {sprintf( msg, "All %d instances set with data from file %s.", i-1, l);
-         change_descr_lab(lab, "", "", "", msg);      
-        } 
-      else
-        {
-
-         if (cd->init != NULL )
-         sprintf( msg, "%s Instances from %d to %d with data from file %s", cd->init, cases_from, cases_to, l);
-         else
-           sprintf( msg, "Instances from %d to %d with data from file %s", cases_from, cases_to, l);         
-         change_descr_lab(lab, "", "", "", msg);        
-        }  
-       }
-
-    
-    }
-  unsaved_change( true );		// signal unsaved change
-   }
-break;
-
-case 8:
-     cmd( "set choice $fill" );
-     fill=*choice;
-     cmd( "set choice $step_in" );
-      
-     for (i=1,cur=r, step=0; cur!=NULL; cur=cur->hyper_next(r->label), ++i )
-      {
-      if ((to_all==1 || (cases_from<=i && cases_to>=i)) && (fill==1 || ((i-cases_from)%(*choice) == 0 )))
-       {
-       cv=cur->search_var(NULL, lab);
-       cv->data_loaded='+';
-       if (cv->param == 0 )
- 			  cv->val[lag]=uniform_int(value1,value2);
- 			else
- 			  cv->val[ 0 ]=uniform_int(value1,value2);
-       }
-      }
-
-      if ( update_description == 1 )
-      {
-      cd=search_description(lab);
-    
-      if (cd == NULL )
-      {  cv=r->search_var(NULL, lab);
-       if (cv->param == 0 )
-         add_description(lab, "Variable", "(no description available)");
-       if (cv->param == 1 )
-         add_description(lab, "Parameter", "(no description available)");  
-       if (cv->param==2)
-         add_description(lab, "Function", "(no description available)");  
-       plog( "\nWarning: description for '%s' not found. New one created.", "", lab );
-       cd=search_description(lab);
-      } 
-
-      if (to_all == 1 )
-        {sprintf( msg, "All %d instances set to integer random values drawn from a uniform in the range [%g,%g].", i-1, value1, value2);
-         change_descr_lab(lab, "", "", "", msg);      
-        } 
-      else
-        {
-
-         if (cd->init != NULL )
-           sprintf( msg, "%s Instances from %d to %d set to integer random values drawn from a uniform in the range [%g,%g].", cd->init, cases_from, cases_to, value1, value2);
-         else
-           sprintf( msg, "Instances from %d to %d set to integer random values drawn from a uniform in the range [%g,%g].", cases_from, cases_to, value1, value2);         
-         change_descr_lab(lab, "", "", "", msg);        
-        }  
-       }
-
-  		unsaved_change( true );		// signal unsaved change
-
-		  break;
-
-
-default:
-		error_hard( "invalid option for setting values", 
-					"internal error", 
-					"if error persists, please contact developers" );
-		myexit( 22 );
-}
-}
-
-Tcl_UnlinkVar( inter, "value1");
-Tcl_UnlinkVar( inter, "value2");
-Tcl_UnlinkVar( inter, "res");
+				sprintf( msg, "Instances from %d to %d %s%s", cases_from, cases_to, action, ch );  
+								
+		change_description( lab, NULL, -1, NULL, msg );
+	}
+	
+	unsaved_change( true );				// signal unsaved change
 }
 
 
-object *sensitivity_parallel(object *o, sense *s )
-{
-/*
-This function fills the initial values according to the sensitivity analysis system performed by parallel simulations: 1 single run over many independent configurations
-descending in parallel from Root.
+/*******************************************************************************
+SENSITIVITY_PARALLEL
+This function fills the initial values according to the sensitivity analysis 
+system performed by parallel simulations: 1 single run over many independent 
+configurations descending in parallel from Root.
 
-Users can set one or more elements to be part of the sensitivity analysis. For each element the user has to provide the number of values to be explored and their values.
-When all elements involved in the sensitivity analysis are configured, the user must launch the command Sensitivity from menu Data in the main LSD Browser. This command generates as many copies as the product of all values for all elements in the s.a. It then kicks off the initialization of all elements involved so that each combination of parameters is assigned to one branch of the model.
+Users can set one or more elements to be part of the sensitivity analysis. For 
+each element the user has to provide the number of values to be explored and 
+their values. When all elements involved in the sensitivity analysis are 
+configured, the user must launch the command Sensitivity from menu Data in the 
+main LSD Browser. This command generates as many copies as the product of all 
+values for all elements in the s.a. It then kicks off the initialization of all 
+elements involved so that each combination of parameters is assigned to one 
+branch of the model.
 
 The user is supposed then to save the resulting configuration.
 
-Options concerning initialization for sensitivity analysis are not saved into the model configuration files, and are therefore lost when closing the LSD model program if not saved in a .sa file. 
+Options concerning initialization for sensitivity analysis are not saved into 
+the model configuration files, and are therefore lost when closing the LSD model
+program if not saved in a .sa file. 
+*******************************************************************************/
+object *sensitivity_parallel( object *o, sense *s )
+{
+	int i;
+	sense *cs;
+	object *cur = o;
+	variable *cvar;
 
-*/
-int i;
-sense *cs;
-object *cur;
-variable *cvar;
+	if ( s->next != NULL )
+	{
+		for ( i = 0; i < s->nvalues; ++i )
+		{
+			s->i = i;
+			cur = sensitivity_parallel( cur, s->next );
+		}
+		
+		return cur;
+	}
 
-cur=o;
+	for ( i = 0; i < s->nvalues; ++i )
+	{
+		s->i = i;
+		for ( cs = rsense; cs != NULL; cs = cs->next ) 
+		{
+			cvar = cur->search_var( cur, cs->label );
+			if ( cs->param == 0 )				// handle lags > 0
+				cvar->val[ cs->lag ] = cs->v[ cs->i ];
+			else
+				cvar->val[ 0 ] = cs->v[ cs->i ];
+		}
+		
+		cur = cur->hyper_next( cur->label );
+	}
 
-if (s->next != NULL )
- {
-  for ( i = 0; i<s->nvalues; ++i )
-   {
-    s->i=i;
-    cur=sensitivity_parallel(cur,s->next);
-   }
- return cur;
- }
-
-
-for ( i = 0; i<s->nvalues; ++i )
-  {
-   s->i=i;
-   for (cs=rsense; cs!=NULL; cs=cs->next) 
-   {
-    cvar=cur->search_var(cur, cs->label);
-	if (cs->param == 0 )				// handle lags > 0
-      cvar->val[cs->lag]=cs->v[cs->i];
-	else
-	  cvar->val[ 0 ]=cs->v[cs->i];
-   }
-   cur=cur->hyper_next(cur->label);
-  }
-
-return cur;
- 
+	return cur;
 }
 
 
-void sensitivity_sequential(int *findex, sense *s, double probSampl)
+/*******************************************************************************
+SENSITIVITY_SEQUENTIAL
+This function fills the initial values according to the sensitivity analysis 
+system performed by sequential simulations: each run executes one configuration 
+labelled with sequential labels.
+
+Contrary to parallel sensitivity settings, this function initialize all elements 
+in the configuration with the specified label.
+
+Users can set one or more elements to be part of the sensitivity analysis. For 
+each element the user has to provide the number of values to be explored and 
+their values. When all elements involved in the sensitivity analysis are 
+configured, the user must launch the command Sensitivity from menu Data in the 
+main LSD Browser.
+
+Options concerning initialization for sensitivity analysis are saved into model 
+configuration files, to be executed with a No Window version of the LSD model. 
+One configuration file is created for each possible combination of the 
+sensitivity analysis values (parameters and initial conditions). Optionally, it 
+is possible to define the parameter "probSampl" with the (uniform) probability 
+of a given point in the sensitivity analysis space is saved as configuration 
+file. In practice, this allows for the Monte Carlo sampling of the parameter 
+space, which is often necessary when the s.a. space is too big to be analyzed 
+in its entirety.
+*******************************************************************************/
+void sensitivity_sequential( int *findex, sense *s, double probSampl )
 {
-/*
-This function fills the initial values according to the sensitivity analysis system performed by sequential simulations: each run executes one configuration labelled with sequential labels.
-
-Contrary to parallel sensitivity settings, this function initialize all elements in the configuration with the specified label.
-
-Users can set one or more elements to be part of the sensitivity analysis. For each element the user has to provide the number of values to be explored and their values.
-When all elements involved in the sensitivity analysis are configured, the user must launch the command Sensitivity from menu Data in the main LSD Browser.
-
-Options concerning initialization for sensitivity analysis are saved into model configuration files, to be executed with a No Window version of the LSD model. 
-One configuration file is created for each possible combination of the sensitivity analysis values (parameters and initial conditions). Optionally, it is possible
-to define the parameter "probSampl" with the (uniform) probability of a given point in the sensitivity analysis space is saved as configuration file. In practice,
-this allows for the Monte Carlo sampling of the parameter space, which is often necessary when the s.a. space is too big to be analyzed in its entirety.
-
-*/
-int i,nv;
-sense *cs;
-object *cur;
-variable *cvar;
-char *fname;
-FILE *f;
-
-
-description *cur_descr; 
-if (s->next != NULL )
- {
-  for ( i = 0; i<s->nvalues; ++i )
-   {
-    s->i=i;
-    sensitivity_sequential(findex,s->next,probSampl);
-   }
- return;
- }
-
-
-for ( i = 0; i<s->nvalues; ++i )
-{
-   s->i=i;
-   for (nv=1,cs=rsense; cs!=NULL; cs=cs->next) 
-   {
-    nv*=cs->nvalues;
-    cvar=root->search_var(root, cs->label);
-    for (cur=cvar->up; cur!=NULL; cur=cur->hyper_next(cur->label) )
-    {
-      cvar=cur->search_var(cur, cs->label); 
-	  if (cs->param == 1 )				// handle lags > 0
-		cvar->val[ 0 ]=cs->v[cs->i];
-	  else
-        cvar->val[cs->lag]=cs->v[cs->i];
-    }
-
-   }
-
- if (probSampl == 1.0 || RND <= probSampl)		// if required draw if point will be sampled
- {
-	if ( ! save_configuration( root, *findex ) )
+	int i, nv;
+	sense *cs;
+	object *cur;
+	variable *cvar;
+	
+	if ( s->next != NULL )
 	{
-		cmd( "tk_messageBox -parent . -type ok -icon error -title Error -message \"Configuration files cannot be saved\" -detail \"Check if the drive or the current directory is set READ-ONLY, select a drive/directory with write permission and try again.\"" );
+		for ( i = 0; i < s->nvalues && ! stop; ++i )
+		{
+			s->i = i;
+			sensitivity_sequential( findex, s->next, probSampl );
+		}
+		
 		return;
 	}
-	*findex=*findex+1;
- }
-}
- 
+	
+	for ( i = 0; i < s->nvalues && ! stop; ++i )
+	{
+		s->i = i;
+		for ( nv = 1, cs = rsense; cs != NULL; cs = cs->next ) 
+		{
+			nv *= cs->nvalues;
+			cvar = root->search_var( root, cs->label );
+			
+			for ( cur = cvar->up; cur != NULL; cur = cur->hyper_next( cur->label ) )
+			{
+				cvar = cur->search_var( cur, cs->label ); 
+				if ( cs->param == 1 )				// handle lags > 0
+					cvar->val[ 0 ] = cs->v[ cs->i ];
+				else
+					cvar->val[ cs->lag ] = cs->v[ cs->i ];
+			}
+
+		}
+
+		if ( probSampl == 1.0 || ran1( ) <= probSampl )	// if required draw if point will be sampled
+		{
+			if ( ! save_configuration( *findex ) )
+			{
+				plog( "Aborted\n" );
+				cmd( "ttk::messageBox -parent . -type ok -icon error -title Error -message \"Configuration files cannot be saved\" -detail \"Check if the drive or the current directory is set READ-ONLY, select a drive/directory with write permission and try again.\"" );
+				return;
+			}
+			
+			if ( ( *findex + 1 ) % 10 == 0 )
+				cmd( "prgboxupdate .psa %d", *findex );
+			
+			*findex = *findex + 1;
+		}
+	}
 }
 
 
-// calculates the sensitivity space size
+/*****************************************************************************
+NUM_SENSITIVITY_POINTS
+Calculate the sensitivity space size
+******************************************************************************/
 long num_sensitivity_points( sense *rsens )	
 {
 	long nv;
 	sense *cs;
+	
 	for ( nv = 1, cs = rsens; cs != NULL; cs = cs->next )	// scan the linked-list
 		nv *= cs->nvalues;	// update the number of variables
 	return nv;
 }
 
 
-// calculates the number of variables to test
+/*****************************************************************************
+NUM_SENSITIVITY_VARIABLES
+Calculate the number of variables to test
+******************************************************************************/
 int num_sensitivity_variables( sense *rsens )	
 {
 	int nv;
 	sense *cs;
+	
 	for ( nv = 0, cs = rsens; cs != NULL; cs = cs->next)								
 		if ( cs->nvalues > 1 )				// count variables with 2 or more values
 			nv++;
@@ -1039,195 +751,214 @@ int num_sensitivity_variables( sense *rsens )
 }
 
 			
-// try to get values for sensitivity analysis (true: values are ok)
-
-#define SEP	" ,;|/#\t\n"					// sensitivity data valid separators
-
-void dataentry_sensitivity(int *choice, sense *s, int nval = 0)
+/*****************************************************************************
+DATAENTRY_SENSITIVITY
+Try to get values for sensitivity analysis
+******************************************************************************/
+void dataentry_sensitivity( int *choice, sense *s, int nval )
 {
+	int i, j, nPar, samples, integerV;
+	double start, end;
+	char *sss = NULL, *tok = NULL, type;
 
-int i, j, nPar, samples, integerV;
-double start, end;
-char *lab, *sss = NULL, *tok = NULL, type;
-FILE *f;
+	// reset random number generator 
+	init_random( seed );
 
-Tcl_LinkVar( inter, "integerV", ( char * ) &integerV, TCL_LINK_BOOLEAN );
-integerV = s->entryOk ? s->integer : false;
+	Tcl_LinkVar( inter, "integerV", ( char * ) &integerV, TCL_LINK_BOOLEAN );
+	integerV = s->entryOk ? s->integer : false;
 
-cmd( "set sens .sens" );
-cmd( "newtop .sens \"Sensitivity Analysis\" { set choice 2 }" );
+	cmd( "set sens .sens" );
+	cmd( "newtop .sens \"Sensitivity Analysis\" { set choice 2 }" );
 
-cmd( "frame .sens.lab" );
-if ( nval > 0)								// number of values defined (0=no)?
-	cmd( "label .sens.lab.l1 -text \"Enter n=%d values for:\"", s->nvalues );
-else
-	cmd( "label .sens.lab.l1 -text \"Enter the desired values (at least 2) for:\"" );
+	cmd( "ttk::frame .sens.lab" );
+	if ( nval > 0)								// number of values defined (0=no)?
+		cmd( "ttk::label .sens.lab.l1 -text \"Enter n=%d values for:\"", s->nvalues );
+	else
+		cmd( "ttk::label .sens.lab.l1 -text \"Enter the desired values (at least 2) for:\"" );
 
-cmd( "label .sens.lab.l2 -fg red -text \"%s\"", s->label );
-cmd( "pack .sens.lab.l1 .sens.lab.l2 -side left -padx 2" );
+	cmd( "ttk::label .sens.lab.l2 -style hl.TLabel -text \"%s\"", s->label );
+	cmd( "pack .sens.lab.l1 .sens.lab.l2 -side left -padx 2" );
 
-cmd( "label .sens.obs -text \"Paste of clipboard data is allowed, most separators are accepted\n\nUse a \'=BEGIN:END@SAMPLES%%TYPE\' clause to specify a number of samples within a range.\nSpaces are not allowed within clauses. TYPE values are \'L\' for linear and \'R\' for random samples.\"" );
-cmd( "pack .sens.lab .sens.obs -pady 5" );
+	cmd( "ttk::label .sens.obs1 -text \"Paste of clipboard data is allowed, most separators are accepted\"" );
+	cmd( "ttk::label .sens.obs2 -text \"Use a \'=BEGIN:END@SAMPLES%%TYPE\' clause\nto specify a number of samples within a range.\nSpaces are not allowed within clauses.\nTYPE values are \'L\' for linear and \'R\' for random samples.\" -justify center" );
+	cmd( "pack .sens.lab .sens.obs1 .sens.obs2 -pady 5" );
 
-cmd( "text .sens.t -undo 1 -height 12 -width 60 -font \"$font_normal\"" ); 
-cmd( "pack .sens.t" ); 
-
-cmd( "frame .sens.fb" );
-cmd( "button .sens.fb.paste -width [ expr $butWid + 3 ] -text \"Paste Clipboard\" -command {tk_textPaste .sens.t}" );
-cmd( "button .sens.fb.del -width [ expr $butWid + 3 ] -text \"Delete Values\" -command {.sens.t delete 0.0 end}" );
-cmd( "button .sens.fb.rem -width [ expr $butWid + 3 ] -text \"Remove\" -command {set choice 3}" );
-cmd( "checkbutton .sens.fb.int -variable integerV -text \"Round to integer\"" );
-cmd( "pack .sens.fb.paste .sens.fb.del .sens.fb.rem .sens.fb.int -padx 10 -pady 10 -side left" );
-cmd( "pack .sens.fb" );
-
-cmd( "okhelpcancel .sens fb2 { set choice 1 } { LsdHelp menudata_sa.html#entry } { set choice 2 }" );
-cmd( "bind .sens.fb2.ok <KeyPress-Return> { set choice 1 }" );
-cmd( "focus .sens.t" );
-
-if ( s->entryOk )	// is there valid data from a previous data entry?
-{
-	sss = new char[ 26 * s->nvalues + 1];	// allocate space for string
-	tok = new char[ 26 + 1 ];				
-	strcpy( sss, "" );
-	for ( i = 0; i < s->nvalues; i++ )		// pass existing data as a string
-	{
-		sprintf( tok, "%.15g ", s->v[ i ] );	// add each value
-		strcat( sss, tok );					// to the string
-	}
-	Tcl_SetVar( inter, "sss", sss, 0 ); 	// pass string to Tk window
-	cmd( ".sens.t insert 0.0 $sss" );		// insert string in entry window
-	delete [ ] tok; 
-	delete [ ] sss;
-}
-
-cmd( "showtop .sens topleftW" );
-
-*choice = 0;
-
-do			// finish only after reading all values
-{
-
-while ( *choice == 0 )
-  Tcl_DoOneEvent( 0 );
-
-if ( *choice == 3 )	// force error to delete variable from list
-{
-	s->entryOk = false;
-	*choice = 2; 
-}
-
-if ( *choice == 2 )
-	goto end;
-
-cmd( "set sss [.sens.t get 0.0 end]" );
-sss=( char* ) Tcl_GetVar( inter,"sss", 0 );
-
-if ( nval == 0 )					// undefined number of values?
-{	
-	double temp;
-	char *tss, *ss = new char[ strlen( sss ) + 1 ];
-	tss = ss;						// save original pointer to gc
-	strcpy( ss, sss );				// make a draft copy
+	cmd( "ttk::frame .sens.t" );
+	cmd( "ttk::scrollbar .sens.t.v_scroll -command \".sens.t.t yview\"" );
+	cmd( "ttk::text .sens.t.t -height 8 -width 50 -yscroll \".sens.t.v_scroll set\" -dark $darkTheme -style smallFixed.TText" ); 
+	cmd( "pack .sens.t.t .sens.t.v_scroll -side left -fill y" ); 
+	cmd( "mouse_wheel .sens.t.t" );
+	cmd( "pack .sens.t" );
 	
-	i = 0;							// count number of values
-	do
-	{
-		tok = strtok( ss, SEP );	// accepts several separators
-		if ( tok == NULL )			// finished?
-			break;
-		ss = NULL;
-		
-		// is it a clause to be expanded?
-		nPar = sscanf( tok, "=%lf:%lf@%u%%%c", &start, &end, &samples, &type );
-		if ( nPar == 4 )			// all values are required
-			i += samples;			// samples to create
-		else						// no, read as regular double float
-			i += sscanf( tok, "%lf", &temp );	// count valid doubles only
-	 }
-	 while ( tok != NULL );
-	 
-	 if ( i < 2 )					// invalid number of elements?
-		i = 2;						// minimum is 2
-		
-	 if ( s->nvalues < i )			// is there insufficient space already alloc'd?
-	 {
-		 delete [ ] s->v;			// free old and reallocate enough space
-		 s->v = new double[ i ];
-	 }
-	 s->nvalues = i;				// update # of values
-	 
-	 delete [ ] tss;
-}
+	cmd( "ttk::frame .sens.pad" );
+	cmd( "pack .sens.pad -pady 5" );
 
-for ( i = 0; i<s->nvalues;)
- {
-  tok=strtok(sss, SEP);		// accepts several separators
-  if (tok == NULL )		// finished too early?
-  {
-	  cmd( "tk_messageBox -parent . -title \"Sensitivity Analysis\" -icon error -type ok -message \"Less values than required\" -detail \"Please insert the correct number of values.\"" );
-	  *choice = 0;
-	  cmd( "focus .sens.t" );
-	  break;
-  }
-  sss=NULL;
-  // is it a clause to be expanded?
-  nPar = sscanf( tok, "=%lf:%lf@%u%%%c", &start, &end, &samples, &type );
-  if ( nPar == 4 )								// all values are required
-  {
-	if ( toupper( type ) == 'L' && samples > 0 )// linear sampling
+	cmd( "ttk::frame .sens.fb" );
+	cmd( "ttk::checkbutton .sens.fb.int -variable integerV -text \"Round to integer\"" );
+	cmd( "ttk::button .sens.fb.paste -width $butWid -text Paste -command { tk_textPaste .sens.t.t }" );
+	cmd( "ttk::button .sens.fb.del -width $butWid -text Delete -command { .sens.t.t delete 0.0 end }" );
+	cmd( "ttk::button .sens.fb.rem -width $butWid -text Remove -command { set choice 3 }" );
+	cmd( "pack .sens.fb.int .sens.fb.paste .sens.fb.del .sens.fb.rem -padx $butSpc -side left" );
+	cmd( "pack .sens.fb -padx $butPad -anchor e" );
+	
+	cmd( "tooltip::tooltip .sens.fb.int \"Force rounding to integer values\"" );
+	cmd( "tooltip::tooltip .sens.fb.paste \"Insert the content of clipboard\"" );
+	cmd( "tooltip::tooltip .sens.fb.del \"Delete all current values\"" );
+	cmd( "tooltip::tooltip .sens.fb.rem \"Remove variable from sensitivity analysis\"" );
+
+	cmd( "okhelpcancel .sens fb2 { set choice 1 } { LsdHelp menudata_sa.html#entry } { set choice 2 }" );
+	cmd( "bind .sens.fb2.ok <KeyPress-Return> { set choice 1 }" );
+
+	cmd( "showtop .sens topleftW" );
+	cmd( "mousewarpto .sens.fb2.ok" );
+
+	if ( s->entryOk )	// is there valid data from a previous data entry?
 	{
-		s->v[ i++ ] = integerV ? round( fmin( start, end ) ) : fmin( start, end );
-		for ( int j = 1; j < samples; ++j, ++i )
+		sss = new char[ 26 * s->nvalues + 1];	// allocate space for string
+		tok = new char[ 26 + 1 ];				
+		strcpy( sss, "" );
+		for ( i = 0; i < s->nvalues; i++ )		// pass existing data as a string
 		{
-			s->v[ i ] = s->v[ i - 1 ] + ( fmax( start, end ) - fmin( start, end ) ) / ( samples - 1 );
-			s->v[ i ] = integerV ? round( s->v[ i ] ) : s->v[ i ];
+			sprintf( tok, "%.15g ", s->v[ i ] );	// add each value
+			strcat( sss, tok );					// to the string
+		}
+		Tcl_SetVar( inter, "sss", sss, 0 ); 	// pass string to Tk window
+		cmd( ".sens.t.t insert 0.0 $sss" );		// insert string in entry window
+		delete [ ] tok; 
+		delete [ ] sss;
+	}
+
+	cmd( "focus .sens.t.t" );
+
+	*choice = 0;
+
+	do										// finish only after reading all values
+	{
+		while ( *choice == 0 )
+			Tcl_DoOneEvent( 0 );
+	
+		if ( *choice == 3 )					// force error to delete variable from list
+		{
+			s->entryOk = false;
+			*choice = 2; 
+		}
+	
+		if ( *choice == 2 )
+			goto end;
+	
+		cmd( "set sss [ .sens.t.t get 0.0 end ]" );
+		sss=( char* ) Tcl_GetVar( inter,"sss", 0 );
+	
+		if ( nval == 0 )					// undefined number of values?
+		{	
+			double temp;
+			char *tss, *ss = new char[ strlen( sss ) + 1 ];
+			tss = ss;						// save original pointer to gc
+			strcpy( ss, sss );				// make a draft copy
+			
+			i = 0;							// count number of values
+			do
+			{
+				tok = strtok( ss, SENS_SEP );	// accepts several separators
+				if ( tok == NULL )			// finished?
+					break;
+				ss = NULL;
+				
+				// is it a clause to be expanded?
+				nPar = sscanf( tok, "=%lf:%lf@%u%%%c", &start, &end, &samples, &type );
+				if ( nPar == 4 )			// all values are required
+					i += samples;			// samples to create
+				else						// no, read as regular double float
+					i += sscanf( tok, "%lf", &temp );	// count valid doubles only
+			}
+			while ( tok != NULL );
+			
+			if ( i < 2 )					// invalid number of elements?
+				i = 2;						// minimum is 2
+				
+			if ( s->nvalues < i )			// is there insufficient space already alloc'd?
+			{
+				delete [ ] s->v;			// free old and reallocate enough space
+				s->v = new double[ i ];
+			}
+			s->nvalues = i;					// update # of values
+			
+			delete [ ] tss;
+		}
+	
+		for ( i = 0; i < s->nvalues; )
+		{
+			tok = strtok( sss, SENS_SEP );	// accepts several separators
+			if ( tok == NULL )				// finished too early?
+			{
+				cmd( "ttk::messageBox -parent .sens -title \"Sensitivity Analysis\" -icon error -type ok -message \"Invalid or less than required values\" -detail \"Decimal numbers must use the point ('.') as the decimal separator. Insert the correct number of values.\"" );
+				*choice = 0;
+				cmd( "focus .sens.t.t" );
+				break;
+			}
+			
+			sss = NULL;
+			
+			// is it a clause to be expanded?
+			nPar = sscanf( tok, "=%lf:%lf@%u%%%c", &start, &end, &samples, &type );
+			
+			if ( nPar == 4 )				// all values are required
+			{
+				if ( toupper( type ) == 'L' && samples > 0 )// linear sampling
+				{
+					s->v[ i++ ] = integerV ? round( fmin( start, end ) ) : fmin( start, end );
+					for ( int j = 1; j < samples; ++j, ++i )
+					{
+						s->v[ i ] = s->v[ i - 1 ] + ( fmax( start, end ) - fmin( start, end ) ) / ( samples - 1 );
+						s->v[ i ] = integerV ? round( s->v[ i ] ) : s->v[ i ];
+					}
+				}
+				if ( toupper( type ) == 'R' && samples > 0 )// random sampling 
+					for ( int j = 0; j < samples; ++j, ++i )
+					{
+						s->v[ i ] = fmin( start, end ) + ran1( ) * ( fmax( start, end ) - fmin( start, end ) );
+						s->v[ i ] = integerV ? round( s->v[ i ] ) : s->v[ i ];
+					}
+			}
+			else											// no, read as regular double float
+			{
+				j = i;
+				i += sscanf( tok, "%lf", &( s->v[ i ] ) );	// count valid doubles only
+				s->v[ j ] = integerV ? round( s->v[ j ] ) : s->v[ j ];
+			}
 		}
 	}
-	if ( toupper( type ) == 'R' && samples > 0 )// random sampling 
-		for ( int j = 0; j < samples; ++j, ++i )
-		{
-			s->v[ i ] = fmin( start, end ) + RND * ( fmax( start, end ) - fmin( start, end ) );
-			s->v[ i ] = integerV ? round( s->v[ i ] ) : s->v[ i ];
-		}
-  }
-  else											// no, read as regular double float
-  {
-	j = i;
-	i += sscanf( tok, "%lf", &( s->v[ i ] ) );	// count valid doubles only
-	s->v[ j ] = integerV ? round( s->v[ j ] ) : s->v[ j ];
-  }
- }
-}
-while ( tok == NULL || i < 2 );	// require enough values (if more, extra ones are discarded)
+	while ( tok == NULL || i < 2 );	// require enough values (if more, extra ones are discarded)
 
-s->integer = integerV;			// save integer restriction flag
-s->entryOk = true;				// flag valid data
+	s->integer = integerV;			// save integer restriction flag
+	s->entryOk = true;				// flag valid data
 
-end:
-cmd( "destroytop .sens" );
-Tcl_UnlinkVar( inter, "integerV" );
+	end:
+	cmd( "destroytop .sens" );
+	Tcl_UnlinkVar( inter, "integerV" );
 }
 
 
-/*
-	Calculate a Near Orthogonal Latin Hypercube (NOLH) design for sampling.
-	Include tables to up to 29 variables (Sanchez 2009, Cioppa and Lucas 2007).
-	Returns the number of samples (n) required for the calculated design and a pointer
-	to the matrix n x k, where k is the number of factors (variables).
+/*******************************************************************************
+NOLH_TABLE
+Calculate a Near Orthogonal Latin Hypercube (NOLH) design for sampling.
+Include tables to up to 29 variables ( sanchez 2009, Cioppa and Lucas 2007).
+Returns the number of samples (n) required for the calculated design and a 
+pointer 	to the matrix n x k, where k is the number of factors ( variables).
 
-	It is possible to load one additional design table from disk (file NOLH.csv in
-	the same folder as the configuration file .lsd). The table should be formed
-	by positive integers only, in the n (rows) x k (columns), separated by commas,
-	one row per text line and no empty lines. The table can be loaded manually
-	(NOLH_load function) or automatically as needed during sampling (NOLH_sampler).
-*/
+It is possible to load one additional design table from disk ( file NOLH.csv in
+the same folder as the configuration file .lsd). The table should be formed
+by positive integers only, in the n (rows) x k ( columns), separated by commas,
+one row per text line and no empty lines. The table can be loaded manually
+(NOLH_load function) or automatically as needed during sampling (NOLH_sampler).
+*******************************************************************************/
 
 int **NOLH_0 = NULL;				// pointer to the design loaded from file
 
 // function to get the index to the default NOLH design table or -1 otherwise
 int NOLH_table( int k )				
 {
-	for ( int i = 0; i < ( ( sizeof NOLH ) / sizeof NOLH[ 0 ] ); ++i )
+	for ( unsigned int i = 0; i < ( ( sizeof NOLH ) / sizeof NOLH[ 0 ] ); ++i )
 		if ( k >= NOLH[ i ].kMin && k <= NOLH[ i ].kMax )
 			return i;
 	
@@ -1235,25 +966,35 @@ int NOLH_table( int k )
 }
 
 
-// determine the valid NOLH tables for the number of factors
+/*****************************************************************************
+NOLH_VALID_TABLES
+Determine the valid NOLH tables for the number of factors
+******************************************************************************/
 char *NOLH_valid_tables( int k, char* ch )	
 {
 	int min_tab = NOLH_table( k );
+	char buff[ MAX_ELEM_LENGTH ];
 	
 	if ( min_tab <= 0 )
 		strcpy( ch, "External only" );
 	else
 	{
 		strcpy( ch, "" );
-		for ( int i = min_tab; i < ( ( sizeof NOLH ) / sizeof NOLH[ 0 ] ); ++i )
-			sprintf( ch, "%s \"%d\u00D7%d\u00D7%d\"", ch, NOLH[ i ].kMax, NOLH[ i ].n1, NOLH[ i ].n2 );
+		for ( int i = min_tab; ( unsigned ) i < ( ( sizeof NOLH ) / sizeof NOLH[ 0 ] ); ++i )
+		{
+			sprintf( buff, " \"%d\u00D7%d\u00D7%d\"", NOLH[ i ].kMax, NOLH[ i ].n1, NOLH[ i ].n2 );
+			strcat( ch, buff );
+		}
 	}
 	
 	return ch;
 }
 
 			
-// function to remove table 0
+/*****************************************************************************
+NOLH_CLEAR
+Function to remove table 0
+******************************************************************************/
 void NOLH_clear( void )				
 {
 	if ( NOLH_0 == NULL )			// table is not allocated?
@@ -1266,11 +1007,14 @@ void NOLH_clear( void )
 }
 
 
-// function to load a .csv file named NOLH.csv as table 0 (first to be used)
-// if option 'force' is used, will be used for any number of factors
-bool NOLH_load( char const baseName[ ] = NOLH_DEF_FILE, bool force = false )				
+/*****************************************************************************
+NOLH_LOAD
+Function to load a .csv file named NOLH.csv as table 0 ( first to be used)
+If option 'force' is used, will be used for any number of factors
+******************************************************************************/
+bool NOLH_load( char const baseName[ ] = NOLH_DEF_FILE, bool force = false )			
 {
-	int i, j, k, n = 1, loLevel = INT_MAX, hiLevel = 1, kFile = 0;
+	int i, j, n = 1, loLevel = INT_MAX, hiLevel = 1, kFile = 0;
 	char *fileName, *lBuffer, *str, *num;
 	bool ok = false;
 	FILE *NOLHfile;
@@ -1288,12 +1032,12 @@ bool NOLH_load( char const baseName[ ] = NOLH_DEF_FILE, bool force = false )
 		fileName = new char[ strlen( baseName ) + 1 ];
 		sprintf( fileName, "%s", baseName );
 	}
-	NOLHfile = fopen( fileName, "r");
+	NOLHfile = fopen( fileName, "r" );
 	if ( NOLHfile == NULL )
 	{
 		sprintf( msg, "cannot open NOHL design file '%s'", fileName );
-		error_hard( msg, "design of experiment file error", 
-					"check the requested file exists" );
+		error_hard( msg, "problem accessing the design of experiment file", 
+					"check if the requested file exists" );
 		return false;
 	}
 
@@ -1357,7 +1101,8 @@ bool NOLH_load( char const baseName[ ] = NOLH_DEF_FILE, bool force = false )
 	if ( force )
 		NOLH[ 0 ].kMin = 1;
 	else
-		NOLH[ 0 ].kMin = NOLH[ sizeof NOLH - 1 ].kMax + 1;
+		NOLH[ 0 ].kMin = NOLH[ sizeof NOLH / sizeof NOLH[ 0 ] - 1 ].kMax + 1;
+	
 	NOLH[ 0 ].kMax = kFile;
 	NOLH[ 0 ].n1 = NOLH[ 0 ].n2 = n;
 	NOLH[ 0 ].loLevel = loLevel;
@@ -1373,21 +1118,14 @@ end:
 	return ok;
 }
 
-/*
-	Support functions for morris_oat() and enhancements
-*/
 
-#include <list>
-#include <vector>
-#include <algorithm>
-using namespace std;
-
-// Integer random in [min,max]
-#define RND_RANGE( min, max ) ( min + ( rand( ) % ( int )( max - min + 1 ) ) )
+/*****************************************************************************
+MAT_*
+Matrix operations support functions for morris_oat() and enhancements
+******************************************************************************/
 // Random choice between two numbers
-#define RND_CHOICE( o1, o2 ) ( RND < 0.5 ? o1 : o2 )
+#define RND_CHOICE( o1, o2 ) ( ran1( ) < 0.5 ? o1 : o2 )
 
-// Matrix operations
 // allocate dynamic space for matrix
 double **mat_new( int m, int n )
 {
@@ -1396,6 +1134,7 @@ double **mat_new( int m, int n )
 		c[ i ] = new double[ n ];
 	return c;
 }
+
 // deallocate dynamic space for matrix
 void mat_del( double **a, int m, int n )
 {
@@ -1403,7 +1142,8 @@ void mat_del( double **a, int m, int n )
 		delete [ ] a[ i ];
 	delete [ ] a;
 }
-// multiply two matrices (c<-a*b)
+
+// multiply two matrices ( c<-a*b)
 double **mat_mult_mat( double **a, int m, int n, double **b, int o, int p, double **c )
 {
 	if ( n != o )
@@ -1417,7 +1157,8 @@ double **mat_mult_mat( double **a, int m, int n, double **b, int o, int p, doubl
 		}
 	return c;
 }
-// add two same size matrices (c<-a+b)
+
+// add two same size matrices ( c<-a+b)
 double **mat_add_mat( double **a, int m, int n, double **b, double **c )
 {
 	for ( int i = 0; i < m ; ++i )	 	//rows
@@ -1425,6 +1166,7 @@ double **mat_add_mat( double **a, int m, int n, double **b, double **c )
 			c[ i ][ j ] = a[ i ][ j ] + b[ i ][ j ];
 	return c;
 }
+
 // multiply all positions in matrix by a scalar 
 double **mat_mult_scal( double **a, int m, int n, double b, double **c )
 {
@@ -1433,6 +1175,7 @@ double **mat_mult_scal( double **a, int m, int n, double b, double **c )
 			c[ i ][ j ] = a[ i ][ j ] * b;
 	return c;
 }
+
 // add a scalar to all positions in matrix
 double **mat_add_scal( double **a, int m, int n, double b, double **c )
 {
@@ -1441,6 +1184,7 @@ double **mat_add_scal( double **a, int m, int n, double b, double **c )
 			c[ i ][ j ] = a[ i ][ j ] + b;
 	return c;
 }
+
 // copy a scalar to all positions in matrix
 double **mat_copy_scal( double **a, int m, int n, double b )
 {
@@ -1449,6 +1193,7 @@ double **mat_copy_scal( double **a, int m, int n, double b )
 			a[ i ][ j ] = b;
 	return a;
 }
+
 // copy same size matrices
 double **mat_copy_mat( double **a, int m, int n, double **b )
 {
@@ -1457,6 +1202,7 @@ double **mat_copy_mat( double **a, int m, int n, double **b )
 			a[ i ][ j ] = b[ i ][ j ];
 	return a;
 }
+
 // insert lines (replacing) in matrix (a<-b)
 double **mat_ins_mat( double **a, int m, int n, double **b, int o, int p, int lpos )
 {
@@ -1468,6 +1214,7 @@ double **mat_ins_mat( double **a, int m, int n, double **b, int o, int p, int lp
 				a[ i ][ j ] = b[ i - lpos ][ j ];
 	return a;
 }
+
 // extract lines (replacing) in matrix (a<-b)
 double **mat_ext_mat( double **a, int m, int n, double **b, int o, int p, int lpos )
 {
@@ -1478,10 +1225,10 @@ double **mat_ext_mat( double **a, int m, int n, double **b, int o, int p, int lp
 				a[ i ][ j ] = b[ i + lpos ][ j ];
 	return a;
 }
-/* 	Sum the Euclidean distances of points in two matrices of same size
-	Calculates the distance between all points pairs and adds them
-	The matrices a and b must have the same size
-*/
+
+// Sum the Euclidean distances of points in two matrices of same size
+// Calculates the distance between all points pairs and adds them
+// The matrices a and b must have the same size
 double mat_sum_dists( double **a, int m, int n, double **b )
 {
 	double sum = 0;
@@ -1496,7 +1243,9 @@ double mat_sum_dists( double **a, int m, int n, double **b )
 	return sum;
 }
 
-/*
+
+/*****************************************************************************
+MORRIS_OAT
 	Calculate a DoE for Elementary Effects (Morris 1991) analysis,
 	according to Saltelli et al 2008. Code adapted from SAlib by
 	Jon Herman.
@@ -1508,12 +1257,15 @@ double mat_sum_dists( double **a, int m, int n, double **b )
 	p: number of grid levels
 	jump: delta measured in grid levels
 	X: preallocated memory area to save the trajectories
-*/
+******************************************************************************/
 double **morris_oat( int k, int r, int p, int jump, double **X )
 {
 	int i, j, l;
     double delta = ( double ) jump / ( p - 1 );	// grid step delta
 	
+	// reset random number generator 
+	init_random( seed );
+
 	// allocate all temporary matrices
 	double **B = mat_new( k + 1, k ),
 		**DM = mat_new( k, k ),
@@ -1529,7 +1281,9 @@ double **morris_oat( int k, int r, int p, int jump, double **X )
 			B[ i ][ j ] = ( i > j ) ? 1 : -1;
     
     // Create r trajectories. Each trajectory contains k+1 parameter sets.
-    // (Starts at a base point, and then changes one parameter at a time)
+    // ( starts at a base point, and then changes one parameter at a time )
+	
+	cmd( "progressbox .psa \"Creating DoE\" \"Analyzing EE trajectories\" \"Trajectory\" %d", r );	
 	
 	for ( l = 0; l < r; ++l )
 	{
@@ -1542,7 +1296,8 @@ double **morris_oat( int k, int r, int p, int jump, double **X )
 		int *perm = new int[ k ];
 		for ( i = 0; i < k; ++i )
 			perm [ i ] = i;
-		random_shuffle( & perm[ 0 ], & perm[ k ] );
+		
+		shuffle( & perm[ 0 ], & perm[ k ], mt32 );
 
 		P = mat_copy_scal( P, k, k, 0 );
 		for ( i = 0; i < k; ++i )
@@ -1553,7 +1308,7 @@ double **morris_oat( int k, int r, int p, int jump, double **X )
         // starting point for this trajectory
 		for ( j = 0; j < k; ++j )
 		{
-			double start = ( double ) RND_RANGE( 0, p - delta * ( p - 1 ) - 1 ) / ( p - 1 );
+			double start = uniform_int( 0, p - delta * ( p - 1 ) - 1 ) / ( p - 1 );
 			for ( i = 0; i < k + 1; ++i )
 				X_base[ i ][ j ] = start;
 		}
@@ -1571,7 +1326,11 @@ double **morris_oat( int k, int r, int p, int jump, double **X )
 		temp_1 = mat_mult_scal( temp_2, k + 1, k, 0.5, temp_1 );
 		temp_2 = mat_add_mat( temp_1, k + 1, k, X_base, temp_2 );
 		X = mat_ins_mat( X, r * ( k + 1 ), k, temp_2, k + 1, k, index_list );
+		
+		cmd( "prgboxupdate .psa %d", l + 1 );
 	}
+	
+	cmd( "destroytop .psa" );
 	
 	// deallocate all temporary matrices
 	mat_del( B, k + 1, k );
@@ -1581,11 +1340,13 @@ double **morris_oat( int k, int r, int p, int jump, double **X )
 	mat_del( delta_diag, k, k );
 	mat_del( temp_1, k + 1, k );
 	mat_del( temp_2, k + 1, k );
-
+	
     return X;
 }
 
-/*
+
+/*****************************************************************************
+COMPUTE_DISTANCE_MATRIX
 	Optimize a DoE for Elementary Effects (Morris 1991) analysis,
 	according to Campolongo et al 2007 and Ruano 2012. Code adapted
 	from SAlib by Jon Herman.
@@ -1595,13 +1356,16 @@ double **morris_oat( int k, int r, int p, int jump, double **X )
 	M: number of trajectories in pool
 	r: number of final trajectories (<= M)
 	ptr: preallocated memory area to save the trajectories
-*/
+******************************************************************************/
 double **compute_distance_matrix( double **sample, int M, int k, double **DM )
 {
 	double **input_1 = mat_new( k + 1, k ), 
 		   **input_2 = mat_new( k + 1, k );
 	
 	DM = mat_copy_scal( DM, M, M, 0 );
+	
+	cmd( "progressbox .psa \"Creating DoE\" \"Compute EE distance matrix\" \"Trajectory\" %d", M );
+	
 	for ( int i = 0 ; i < M; ++i )
 	{
 		input_1 = mat_ext_mat( input_1, k + 1, k, 
@@ -1615,15 +1379,23 @@ double **compute_distance_matrix( double **sample, int M, int k, double **DM )
 			DM[ i ][ j ] = DM[ j ][ i ] = 
 				mat_sum_dists( input_1, k + 1, k, input_2 );
 		}
+		
+		cmd( "prgboxupdate .psa %d", i + 1 );
 	}
 		
+	cmd( "destroytop .psa" );
+	
 	mat_del( input_1, k + 1, k );
 	mat_del( input_2, k + 1, k );
 	
     return DM;
 }
 
-// Calculate the combinations of indices, r-to-r
+
+/*****************************************************************************
+COMBINATIONS
+	Calculate the combinations of indices, r-to-r
+******************************************************************************/
 vector < vector < int > > combinations( list < int > indices, int r )
 {
 	vector < int > comb;
@@ -1651,13 +1423,14 @@ vector < vector < int > > combinations( list < int > indices, int r )
 	return combs;
 }
 
-/*
+
+/*****************************************************************************
+SUM_DISTANCES
   Calculate combinatorial distance between a select group of trajectories, 
   indicated by indices
-    
     indices: list of candidate pairs of points = list < int >
     DM: distance matrix = array (M,M)
-*/    
+******************************************************************************/
 double sum_distances( list < int > indices, double **DM )
 {
 	// get all combination pairs of indices
@@ -1665,17 +1438,22 @@ double sum_distances( list < int > indices, double **DM )
 
     // add distance of all points pairs
 	double D = 0;
-	for ( int j = 0; j < combs.size( ); ++j )
+	for ( unsigned int j = 0; j < combs.size( ); ++j )
 		D += DM[ combs[ j ][ 0 ] ][ combs[ j ][ 1 ] ];
 	
 	return D;
 }
 
-// get the top-i size items index from a unidimensional array
+
+/*****************************************************************************
+TOP_IDX
+	Get the top-i size items index from a unidimensional array
+******************************************************************************/
 list < int > top_idx( double *a, int n, int i )
 {
 	list < int > top;
 	vector < bool > used( n, false );
+	
 	for ( int k = 0; k < i; ++k )
 	{
 		int max_idx = -1;
@@ -1689,36 +1467,43 @@ list < int > top_idx( double *a, int n, int i )
 		used[ max_idx ] = true;
 		top.push_back( max_idx );
 	}
+	
 	return top;
 }
 
-/*
+
+/*****************************************************************************
+GET_MAX_SUM_IND
 	Get the indice that belong to the maximum distance in an array of distances
-    
     indices_list = list of points
     distance = array (M)
-*/
+******************************************************************************/
 list < int > get_max_sum_ind( vector < list < int > > indices_list, vector < double > row_maxima_i )
 {
 	int max_idx = -1;
 	double max = -INFINITY;
-	for ( int j = 0; j < indices_list.size( ); ++j )
+	
+	for ( unsigned int j = 0; j < indices_list.size( ); ++j )
 		if ( row_maxima_i[ j ] > max )
 		{
 			max_idx = j;
 			max = row_maxima_i[ j ];
 		}
+		
 	return indices_list[ max_idx ];
 }
 
-/*
+
+/*****************************************************************************
+ADD_INDICES
 	Adds extra indices for the combinatorial problem. 
-	For indices = (1,2) and M=5, the method returns [(1,2,3),(1,2,4),(1,2,5)]
-*/
+	For indices = (1,2 ) and M=5, the method returns [(1,2,3),(1,2,4),(1,2,5)]
+******************************************************************************/
 vector < list < int > > add_indices( list < int > m_max_ind, int M )
 {
 	vector < list < int > > list_new_indices;
 	list < int > copy = m_max_ind;
+	
 	for ( int i = 0; i < M; ++i )
 		if ( find( m_max_ind.begin( ), m_max_ind.end( ), i ) == m_max_ind.end( ) )
 		{
@@ -1726,15 +1511,18 @@ vector < list < int > > add_indices( list < int > m_max_ind, int M )
 			list_new_indices.push_back( copy );
 			copy.pop_back( );
 		}
+		
 	return list_new_indices;
 }
 
-/*
-	An alternative by Ruano et al. (2012) for the brute force approach as 
+
+/*****************************************************************************
+OPT_TRAJECTORIES
+	An alternative by Ruano et al. (2012 ) for the brute force approach as 
 	originally proposed by Campolongo et al. (2007). The method should improve 
 	the speed with which an optimal set of trajectories is found tremendously 
 	for larger sample sizes.
-*/
+******************************************************************************/
 double **opt_trajectories( int k, double **pool, int M, int r, double **X )
 {
 	if ( r >= M )					// nothing to do?
@@ -1769,7 +1557,7 @@ double **opt_trajectories( int k, double **pool, int M, int r, double **X )
 		// Find the indices belonging to the maximum distance
 		i_max_ind = get_max_sum_ind( indices_list, row_maxima_i );
 
-		//#########Loop 'm' (called loop 'k' in Ruano)############
+		// ######### Loop 'm' ( called loop 'k' in Ruano) ############
 		m_max_ind = i_max_ind;
 		// m starts at 1
         for ( int m = 1; m <= r - i - 1; ++m )
@@ -1777,7 +1565,7 @@ double **opt_trajectories( int k, double **pool, int M, int r, double **X )
 			m_ind = add_indices( m_max_ind, M );
             vector < double > m_maxima( m_ind.size( ), 0 );
 			
-            for ( int n = 0; n < m_ind.size( ); ++n )
+            for ( unsigned int n = 0; n < m_ind.size( ); ++n )
                 m_maxima[ n ] = sum_distances( m_ind[ n ], DM );
             
             m_max_ind = get_max_sum_ind( m_ind, m_maxima );
@@ -1809,7 +1597,11 @@ double **opt_trajectories( int k, double **pool, int M, int r, double **X )
     return X;
 }
 	
-// destructor function to the design object
+
+/*****************************************************************************
+~DESIGN
+	Destructor function to the design object
+******************************************************************************/
 design::~design( void )
 {
 	for ( int i = 0; i < n; i++ )		// run through all experiments
@@ -1825,25 +1617,31 @@ design::~design( void )
 	delete [ ] intg;
 }
 
-// Constructor function to the design object
-// type = 1: NOLH
-// type = 2: random sampling
-// type = 3: Elementary Effects sampling (Morris, 1991)
-// samples = -1: use extended predefined sample size (n2)
-// factors = 0: use automatic DoE size
 
+/*****************************************************************************
+DESIGN
+	Constructor function to the design object
+		type = 1: NOLH
+		type = 2: random sampling
+		type = 3: Elementary Effects sampling (Morris, 1991)
+		samples = -1: use extended predefined sample size (n2 )
+		factors = 0: use automatic DoE size
+******************************************************************************/
 design::design( sense *rsens, int typ, char const *fname, int findex, 
 				int samples, int factors, int jump, int trajs )
 {
 	int i , j, kTab, doeRange, poolSz;
 	double **pool;
-	char *doefname, doeName[MAX_ELEM_LENGTH];
+	char *doefname, doeName[ MAX_ELEM_LENGTH + 1 ];
 	FILE *f;
 	sense *cs;
 	
+	// reset random number generator 
+	init_random( seed );
+
 	if ( rsens == NULL )					// valid pointer?
 		typ = 0;							// trigger invalid design
-	
+		
 	switch ( typ )
 	{
 		case 1:								// Near Orthogonal Latin Hypercube sampling
@@ -1865,7 +1663,7 @@ design::design( sense *rsens, int typ, char const *fname, int findex,
 			}
 				
 			tab = NOLH_table( kTab );		// design table to use
-			if ( tab == -1 )				// number of factors too large, try to load external table (file)
+			if ( tab == -1 )				// number of factors too large, try to load external table ( file )
 			{
 				if ( NOLH_load( ) )			// tentative table load from disk ok?
 				{
@@ -1893,7 +1691,7 @@ design::design( sense *rsens, int typ, char const *fname, int findex,
 			plog( "\nNOLH table used: %d (%s), n = %d", "", tab, tab > 0 ? "built-in" : "from file", n );
 			
 			// allocate memory for data
-			par = new int[ k ];				// vector of variable type (parameter / lagged value)
+			par = new int[ k ];				// vector of variable type (parameter / lagged value )
 			lag = new int[ k ];				// vector of lags
 			intg = new bool[ k ];			// vector of format (integer/float)
 			hi = new double[ k ];			// vector of high factor value
@@ -1918,7 +1716,7 @@ design::design( sense *rsens, int typ, char const *fname, int findex,
 				par[ i ] = cs->param;		// set variable type
 				lag[ i ] = cs->lag;			// set number of lags
 				
-				// copy label (name)
+				// copy label (name )
 				lab[ i ] = new char[ strlen( cs->label ) + 1 ];
 				strcpy( lab[ i ], cs->label );
 				
@@ -1945,7 +1743,7 @@ design::design( sense *rsens, int typ, char const *fname, int findex,
 				goto invalid;
 			
 			// allocate memory for data
-			par = new int[ k ];				// vector of variable type (parameter / lagged value)
+			par = new int[ k ];				// vector of variable type (parameter / lagged value )
 			lag = new int[ k ];				// vector of lags
 			intg = new bool[ k ];			// vector of format (integer/float)
 			hi = new double[ k ];			// vector of high factor value
@@ -1970,7 +1768,7 @@ design::design( sense *rsens, int typ, char const *fname, int findex,
 				par[ i ] = cs->param;		// set variable type
 				lag[ i ] = cs->lag;			// set number of lags
 				
-				// copy label (name)
+				// copy label (name )
 				lab[ i ] = new char[ strlen( cs->label ) + 1 ];
 				strcpy( lab[ i ], cs->label );
 				
@@ -1982,7 +1780,7 @@ design::design( sense *rsens, int typ, char const *fname, int findex,
 			{
 				ptr[ i ] = new double[ k ];	// allocate 2nd level data
 				for ( j = 0; j < k; j++ )	// for all factors
-					ptr[ i ][ j ] = lo[ j ] + RND * ( hi[ j ] - lo[ j ] );
+					ptr[ i ][ j ] = lo[ j ] + ran1( ) * ( hi[ j ] - lo[ j ] );
 			}
 			
 			break;	
@@ -1995,7 +1793,7 @@ design::design( sense *rsens, int typ, char const *fname, int findex,
 				goto invalid;
 			
 			// allocate memory for data
-			par = new int[ k ];				// vector of variable type (parameter / lagged value)
+			par = new int[ k ];				// vector of variable type (parameter / lagged value )
 			lag = new int[ k ];				// vector of lags
 			intg = new bool[ k ];			// vector of format (integer/float)
 			hi = new double[ k ];			// vector of high factor value
@@ -2025,7 +1823,7 @@ design::design( sense *rsens, int typ, char const *fname, int findex,
 				par[ i ] = cs->param;		// set variable type
 				lag[ i ] = cs->lag;			// set number of lags
 				
-				// copy label (name)
+				// copy label (name )
 				lab[ i ] = new char[ strlen( cs->label ) + 1 ];
 				strcpy( lab[ i ], cs->label );
 				
@@ -2099,25 +1897,27 @@ design::design( sense *rsens, int typ, char const *fname, int findex,
 }
 
 
-// procedure to generate the configuration files for the Design of Experiment (DOE)
+/*****************************************************************************
+SENSITIVITY_DOE
+	Generate the configuration files for the 
+	Design of Experiment (DOe )
+******************************************************************************/
 void sensitivity_doe( int *findex, design *doe )
 {
 	int i, j;
 	object *cur;
 	variable *cvar;
-	description *cdescr; 
-	char *fname;
-	FILE *f;
 	
-	plog( "\nCreating a configuration file for each sample.\nIt may take a while, please wait..." );
+	stop = false;
+	cmd( "progressbox .psa \"Creating DoE\" \"Creating configuration files\" \"File\" %d { set stop true }", doe->n );
 	
-	for ( i = 0; i < doe->n; i++ )				// run through all experiments
+	for ( i = 0; i < doe->n && ! stop; ++i )	// run through all experiments
 	{
-		// set up the variables (factors) with the experiment values
+		// set up the variables ( factors) with the experiment values
 		for ( j = 0; j < doe->k; j++ )			// run through all factors
 		{
 			cvar = root->search_var( root, doe->lab[ j ] );	// find variable to set
-			for ( cur = cvar->up; cur!=NULL; cur = cur->hyper_next( cur->label ) )
+			for ( cur = cvar->up; cur != NULL; cur = cur->hyper_next( cur->label ) )
 			{									// run through all objects containing var
 				cvar = cur->search_var( cur, doe->lab[ j ] ); 
 				if ( doe->par[ j ] == 1 )		// handle lags > 0
@@ -2128,13 +1928,25 @@ void sensitivity_doe( int *findex, design *doe )
 		}
 		
 		// generate a configuration file for the experiment
-		if ( ! save_configuration( root, *findex ) )
+		if ( ! save_configuration( *findex ) )
 		{
-			cmd( "tk_messageBox -parent . -type ok -icon error -title Error -message \"Configuration files cannot be saved\" -detail \"Check if the drive or the current directory is set READ-ONLY, select a drive/directory with write permission and try again.\"" );
+			plog( "Aborted\n" );
+			cmd( "ttk::messageBox -parent . -type ok -icon error -title Error -message \"Configuration files cannot be saved\" -detail \"Check if the drive or the current directory is set READ-ONLY, select a drive/directory with write permission and try again.\"" );
 			return;
 		}
 		
+		if ( ( i + 2 ) % 10 == 0 )
+			cmd( "prgboxupdate .psa %d", i + 1 );
+			
 		*findex = *findex + 1;
 	}
-	plog( " Done" );
+	
+	cmd( "destroytop .psa" );
+	
+	plog( "\nSensitivity analysis configurations produced: %d\n", "", findexSens - 1 );
+		
+	if ( ! stop )
+		sensitivity_created( );					// explain user how to proceed
+	else
+		*findex = 0;							// don't consider for appending
 }

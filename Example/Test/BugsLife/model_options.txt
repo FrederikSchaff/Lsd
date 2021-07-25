@@ -1,0 +1,4 @@
+TARGET=LSD
+FUN=fun_anitbiotics
+SWITCH_CC=-g
+

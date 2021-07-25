@@ -1,0 +1,3 @@
+TARGET=LSD
+FUN=fun_demand
+SWITCH_CC=-g

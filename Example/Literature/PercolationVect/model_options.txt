@@ -1,0 +1,4 @@
+TARGET=LSD
+FUN=fun_per
+SWITCH_CC=-g
+

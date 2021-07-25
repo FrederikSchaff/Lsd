@@ -1,0 +1,6 @@
+TARGET=LSD
+FUN=fun_richardson
+FUN_EXTRA=
+SWITCH_CC= -Og -ggdb3
+SWITCH_CC_LNK=
+

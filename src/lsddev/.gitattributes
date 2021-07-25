@@ -1,0 +1,5 @@
+
+# Gitattributes for LSD, allowing to work with WSL, checking out LSD with windows.
+*.md            text eol=lf diff=markdown
+*.txt           text eol=lf
+*.sh            text eol=lf

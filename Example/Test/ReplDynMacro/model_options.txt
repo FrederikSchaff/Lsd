@@ -1,0 +1,4 @@
+TARGET=LSD
+FUN=fun_ReplDynMacro
+SWITCH_CC=-g
+

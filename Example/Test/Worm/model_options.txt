@@ -1,0 +1,4 @@
+TARGET=LSD
+FUN=fun_Worm
+SWITCH_CC=-g
+

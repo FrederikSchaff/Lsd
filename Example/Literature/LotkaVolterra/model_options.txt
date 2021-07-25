@@ -1,0 +1,3 @@
+TARGET=LSD
+FUN=fun_Lotka
+SWITCH_CC=-g

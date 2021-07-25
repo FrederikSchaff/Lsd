@@ -1,5 +1,0 @@
-TARGET=lsd_gnu
-FUN=fun_schelling
-SWITCH_CC=-g
-SWITCH_CC_LNK=
-

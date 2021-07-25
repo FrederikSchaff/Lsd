@@ -1,0 +1,4 @@
+TARGET=LSD
+FUN=fun_spatial
+SWITCH_CC=-g
+

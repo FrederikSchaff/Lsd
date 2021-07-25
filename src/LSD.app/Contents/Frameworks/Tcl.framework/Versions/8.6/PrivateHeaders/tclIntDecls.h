@@ -15,7 +15,6 @@
 #ifndef _TCLINTDECLS
 #define _TCLINTDECLS
 
-#include "tclPort.h"
 
 #undef TCL_STORAGE_CLASS
 #ifdef BUILD_tcl
@@ -639,6 +638,15 @@ EXTERN int		TclPtrObjMakeUpvar(Tcl_Interp *interp,
 EXTERN int		TclPtrUnsetVar(Tcl_Interp *interp, Tcl_Var varPtr,
 				Tcl_Var arrayPtr, Tcl_Obj *part1Ptr,
 				Tcl_Obj *part2Ptr, const int flags);
+/* 257 */
+EXTERN void		TclStaticPackage(Tcl_Interp *interp,
+				const char *pkgName,
+				Tcl_PackageInitProc *initProc,
+				Tcl_PackageInitProc *safeInitProc);
+/* Slot 258 is reserved */
+/* Slot 259 is reserved */
+/* 260 */
+EXTERN void		TclUnusedStubEntry(void);
 
 typedef struct TclIntStubs {
     int magic;
@@ -901,6 +909,10 @@ typedef struct TclIntStubs {
     Tcl_Obj * (*tclPtrIncrObjVar) (Tcl_Interp *interp, Tcl_Var varPtr, Tcl_Var arrayPtr, Tcl_Obj *part1Ptr, Tcl_Obj *part2Ptr, Tcl_Obj *incrPtr, const int flags); /* 254 */
     int (*tclPtrObjMakeUpvar) (Tcl_Interp *interp, Tcl_Var otherPtr, Tcl_Obj *myNamePtr, int myFlags); /* 255 */
     int (*tclPtrUnsetVar) (Tcl_Interp *interp, Tcl_Var varPtr, Tcl_Var arrayPtr, Tcl_Obj *part1Ptr, Tcl_Obj *part2Ptr, const int flags); /* 256 */
+    void (*tclStaticPackage) (Tcl_Interp *interp, const char *pkgName, Tcl_PackageInitProc *initProc, Tcl_PackageInitProc *safeInitProc); /* 257 */
+    void (*reserved258)(void);
+    void (*reserved259)(void);
+    void (*tclUnusedStubEntry) (void); /* 260 */
 } TclIntStubs;
 
 extern const TclIntStubs *tclIntStubsPtr;
@@ -1342,6 +1354,12 @@ extern const TclIntStubs *tclIntStubsPtr;
 	(tclIntStubsPtr->tclPtrObjMakeUpvar) /* 255 */
 #define TclPtrUnsetVar \
 	(tclIntStubsPtr->tclPtrUnsetVar) /* 256 */
+#define TclStaticPackage \
+	(tclIntStubsPtr->tclStaticPackage) /* 257 */
+/* Slot 258 is reserved */
+/* Slot 259 is reserved */
+#define TclUnusedStubEntry \
+	(tclIntStubsPtr->tclUnusedStubEntry) /* 260 */
 
 #endif /* defined(USE_TCL_STUBS) */
 
@@ -1403,5 +1421,7 @@ extern const TclIntStubs *tclIntStubsPtr;
 
 #undef TclCopyChannelOld
 #undef TclSockMinimumBuffersOld
+
+#define TclSetChildCancelFlags TclSetSlaveCancelFlags
 
 #endif /* _TCLINTDECLS */

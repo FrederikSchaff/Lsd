@@ -1,84 +1,49 @@
 /*************************************************************
 
-	LSD 7.1 - May 2018
+	LSD 8.0 - May 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
-	Copyright Marco Valente
+	Copyright Marco Valente and Marcelo Pereira
 	LSD is distributed under the GNU General Public License
+	
+	See Readme.txt for copyright information of
+	third parties' code used in LSD
 	
  *************************************************************/
 
-/****************************************************
-RUN_TIME.CPP contains initialization and management of run-time plotting
+/*************************************************************
+RUN_TIME.CPP 
+Contains initialization and management of run-time plotting
 
+The main functions contained here are:
 
-The functions contained here are:
-
-- void prepare_plot(object *r, int id_sim)
+- void prepare_plot( object *r, int id_sim )
 Checks is there are LSD variables to plot. If not, returns immediately. Otherwise
-initiliaze the run time globale variables. Namely, the vector of the labels for
+initialize the run time global variables. Namely, the vector of the labels for
 the variables of plot. The plot window is initialized according to the id_sim name
 
-- void count(object *r, int *i);
+- void count( object *r, int *i );
 Recursive function that increments i of one for any variable to plot.
 
-- void assign(object *r, int *i, char *lab);
+- void assign( object *r, int *i, char *lab );
 Create a list of Variables to plot and create the list of labels (adding
 the indexes if necessary) to be used in the plot.
 
-
-- void init_plot(int i, int id_sim);
+- void init_plot( int i, int id_sim );
 create the canvas for the plot, the lines, button, labels, etc.
 
-- void plot_rt(variable *v)
+- void plot_rt( variable *v )
 the function used run time to plot the value of variable v
-
-Other functions used here:
-- object *skip_next_obj(object *t, int *count);
-Contained in UTIL.CPP. Counts how many types of objects equal to t are in this
-group. count returns such value, and the whole function returns the next object
-after the last of the series.
-
-- object *go_brother(object *c);
-Contained in UTIL.CPP. returns: c->next, if it is of the same type of c (brother).
-Returns NULL otherwise. It is safe to use even when c or c->next are NULL.
-
-
-- void cmd(char *cc);
-Contained in UTIL.CPP. Standard routine to send the message string cc to the interp
-Basically it makes a simple Tcl_Eval, but controls also that the interpreter
-did not issue an error message.
-
-
-- void plog(char *m);
-print  message string m in the Log screen. It is in LSDMAIN.CPP
-
-****************************************************/
+*************************************************************/
 
 #include "decl.h"
 
-int width = 500;				// runtime plot area dimensions
-int height = 300;
-int b_height = 48;
-int s_width = 75;
-int h_margin = 8;
-int t_margin = 3;
-int b_margin = 30;
-int h_ticks = 5;
-int v_ticks = 2;
-int tick = 5;
-int lab_lin = 5;				// labels per line
-int lin_lab = 3;				// lines of label
-int lin_height = 18;
-
 char intval[ 100 ];				// string buffer
-char **tp;						// labels of variables to plot in runtime
-double ymin;
 double ymax;
+double ymed;
+double ymin;
 double *old_val;
-double plot_step;
-int shift = 20;					// new window shift
 variable **list_var;
 
 
@@ -93,14 +58,17 @@ void prepare_plot( object *r, int id_sim )
 	ymax = ymin = 0;
 	strcpy( lab, "" );
 	count( r, &i );
+	
 	if ( i == 0 )
 		return;
 	
-	tp = new char *[ i ];
+	cmd( "unset -nocomplain tp" );
 	list_var = new variable *[ i ];
 	old_val = new double [ i ];
 	i = 0;
 	assign( r, &i, lab );
+	
+	add_rt_plot_tab( ".plt", id_sim );
 	init_plot( i, id_sim );
 }
 
@@ -110,9 +78,9 @@ COUNT
 **************************************/
 void count( object *r, int *i )
 {
-	variable *a;
-	object *c;
 	bridge *cb;
+	object *c;
+	variable *a;
 
 	for ( a = r->v; a != NULL; a = a->next)
 		if ( a->plot == 1 )
@@ -129,19 +97,18 @@ ASSIGN
 **************************************/
 void assign( object *r, int *i, char *lab )
 {
-	variable *a;
-	object *c, *c1;
 	char cur_lab[ MAX_ELEM_LENGTH ];
 	int j;
 	bridge *cb;
-
+	object *c, *c1;
+	variable *a;
+	
 	for ( a = r->v; a != NULL; a = a->next )
 		if ( a->plot == 1 )
 		{
 			list_var[ *i ] = a; 	// assigns the address of a to the list to plot
 			sprintf( msg, "%s%s", a->label, lab );
-			tp[ *i ] = new char[ strlen( msg ) + 1 ];
-			strcpy( tp[ *i ], msg );
+			cmd( "lappend tp %s", msg );
 			*i = *i + 1;
 		}
 
@@ -154,7 +121,7 @@ void assign( object *r, int *i, char *lab )
 		if ( c->next != NULL ) 		// multiple instances
 			for ( j = 1, c1 = c; c1 != NULL; c1 = go_brother( c1 ), ++j )
 			{
-				sprintf( cur_lab, "%s_%d", lab, j );
+				sprintf( cur_lab, "%s#%d", lab, j );
 				assign( c1, i, cur_lab );
 			}
 		else 						// unique instance
@@ -164,106 +131,208 @@ void assign( object *r, int *i, char *lab )
 
 
 /**************************************
+ADD_RT_PLOT_TAB
+**************************************/
+void add_rt_plot_tab( const char *w, int id_sim )
+{
+	int i, j, k, cols, dbut, tabs;
+		
+	switch ( platform )
+	{
+		case _WIN_:
+			tabs = 12;
+			cols = 10;
+			dbut = 2;
+			break;
+		case _LIN_:
+			tabs = 9;
+			cols = 8;
+			dbut = 3;
+			break;
+		default:
+		case _MAC_:
+			tabs = 8;
+			cols = 5;
+			dbut = 2;
+			break;
+	}
+	
+	cmd( "set w %s", w );
+	cmd( "set rtptab $w.pad" );
+	cmd( "if { ! [ winfo exists $rtptab ] } { \
+			newtop $w \"%s%s - LSD Run-time Plots\" { set_c_var done_in 5 } \"\"; \
+			wm transient $w .; \
+			ttk::notebook $rtptab; \
+			pack $rtptab; \
+			ttk::notebook::enableTraversal $rtptab; \
+			bind $w <F1> { LsdHelp runtime.html }; \
+			set rtptab_show 0 \
+		}", unsaved_change( ) ? "*" : " ", simul_name );
+		
+	set_shortcuts_run( "$w" );
+		
+	cmd( "set activeplot $rtptab.tab%d", id_sim );
+	cmd( "if [ winfo exists $activeplot ] { \
+			if { $activeplot in [ $rtptab  tabs ] } { \
+				$rtptab forget $activeplot \
+			}; \
+			destroy $activeplot \
+		}" );
+	cmd( "ttk::frame $activeplot" );
+	cmd( "pack $activeplot" );
+	
+	if ( id_sim < tabs )
+		cmd( "$rtptab add $activeplot -text \"Run %d\" -underline 4", id_sim );
+		
+	if ( id_sim == tabs )
+		cmd( "$rtptab add $activeplot -text \"Run %d\" -underline 5", id_sim );
+		
+	if ( id_sim <= tabs )
+		cmd( "$rtptab select $activeplot" );
+	
+	if ( id_sim == tabs + 1 )
+	{
+		cmd( "ttk::frame $rtptab.more" );
+		cmd( "pack $rtptab.more" );
+		cmd( "$rtptab insert 0 $rtptab.more -text \"More...\" -underline 0" );
+	}
+	
+	if ( id_sim > tabs ) 
+	{
+		cmd( "$rtptab forget 1" );
+		cmd( "$rtptab add $activeplot -text \"Run %d\"", id_sim );
+		cmd( "$rtptab select $activeplot" );
+		
+		cmd( "destroy $rtptab.more.b");
+		cmd( "ttk::frame $rtptab.more.b");
+		
+		for ( i = 0; cols * i + 1 <= id_sim; ++i )
+		{
+			cmd( "ttk::frame $rtptab.more.b.l%d", i );
+			
+			for ( j = 1; j <= cols && cols * i + j <= id_sim; ++j )
+			{
+				k = cols * i + j;
+				cmd( "set b [ expr { $butWid - ( %d ) } ]", k > 99 ? dbut : dbut - 1 );
+				cmd( "ttk::button $rtptab.more.b.l%d.b%d -width $b -text \"Run %d\" -command { \
+						if { \"$rtptab.tab%d\" ni [ $rtptab tabs ] } { \
+							if { [ $rtptab index end ] >= %d } { \
+								$rtptab forget 1 \
+							}; \
+							$rtptab add $rtptab.tab%d -text \"Run %d\" \
+						}; \
+						$rtptab select $rtptab.tab%d \
+					}", i, k, k, k, tabs, k, k, k );
+				cmd( "pack $rtptab.more.b.l%d.b%d -side left -padx 2", i, k );
+			}
+			
+			cmd( "pack $rtptab.more.b.l%d -anchor w -pady 2", i );
+		}
+		
+		cmd( "pack $rtptab.more.b -padx 20 -pady 20" );
+	}
+}
+
+
+/**************************************
 INIT_PLOT
 **************************************/
 void init_plot( int num, int id_sim )
 {
-	int i, j, k, l;
+	cmd( "if { %d > $hsizeR } { set plot_step 1 } { set plot_step [ expr { $hsizeR / %d.0 } ] }", max_step, max_step );
 	
-	plot_step = ( max_step > width ) ? 1 : plot_step = width / ( double ) max_step;
-	cmd( "set scrollB 0" );
-
-	cmd( "set activeplot .plt%d", id_sim );
-
-	cmd( "destroytop $activeplot" );
-
-	cmd( "newtop $activeplot \"\" { set_c_var done_in 5 } \"\"" );
-	cmd( "wm transient $activeplot ." );
-	cmd( "wm title $activeplot \"%s%s(%d) - LSD Run-time Plot\"", unsaved_change() ? "*" : " ", simul_name, id_sim  );
-	
-	cmd( "frame $activeplot.c" );
+	cmd( "ttk::frame $activeplot.c" );
 	
 	// vertical scale values
-	cmd( "canvas $activeplot.c.yscale -width %d -height %d", s_width, height + t_margin + b_margin );
+	cmd( "ttk::canvas $activeplot.c.yscale -width $sclhsizeR -height [ expr { $vsizeR + $sclvmarginR + $botvmarginR } ] -entry 0 -dark $darkTheme" );
 
-	cmd( "$activeplot.c.yscale create text %d %d -anchor e -justify right -text \"\" -tag ymax", s_width, ( int ) max( t_margin, 10 ) );
-	cmd( "$activeplot.c.yscale create text %d %d -anchor e -justify right -text \"\" -tag medy", s_width, t_margin + height / 2 );
-	cmd( "$activeplot.c.yscale create text %d %d -anchor e -justify right -text \"\" -tag ymin", s_width, t_margin + height );
+	cmd( "$activeplot.c.yscale create text $sclhsizeR [ expr { max( $sclvmarginR, 10 ) } ] -anchor e -justify right -text \"\" -fill $colorsTheme(dfg) -tag ymax" );
+	cmd( "$activeplot.c.yscale create text $sclhsizeR [ expr { $sclvmarginR + $vsizeR / 2 } ] -anchor e -justify right -text \"\" -fill $colorsTheme(dfg) -tag medy" );
+	cmd( "$activeplot.c.yscale create text $sclhsizeR [ expr { $sclvmarginR + $vsizeR } ] -anchor e -justify right -text \"\" -fill $colorsTheme(dfg) -tag ymin" );
 	
 	cmd( "pack $activeplot.c.yscale -side left -anchor nw" );
 	
 	// main canvas
-	cmd( "frame $activeplot.c.c  " );
+	cmd( "ttk::frame $activeplot.c.c  " );
 	cmd( "set p $activeplot.c.c.cn" );
-	cmd( "scrollbar $activeplot.c.c.hscroll -orient horiz -command \"$p xview\"" );
-	cmd( "canvas $p -width %d -height %d -bg white -scrollregion {0 0 %d %d} -xscrollcommand \"$activeplot.c.c.hscroll set\" -xscrollincrement 1 -yscrollincrement 1", width + 2 * h_margin, height + t_margin + b_margin, max_step, height + t_margin + b_margin );
+	cmd( "ttk::scrollbar $activeplot.c.c.hscroll -orient horiz -command \"$p xview\"" );
+	cmd( "ttk::canvas $p -width [ expr { $hsizeR + 2 * $cvhmarginR } ] -height [ expr { $vsizeR + $sclvmarginR + $botvmarginR } ] -scrollregion \"0 0 %d [ expr { $vsizeR + $sclvmarginR + $botvmarginR } ]\" -xscrollcommand \"$activeplot.c.c.hscroll set\" -xscrollincrement 1 -yscrollincrement 1 -dark $darkTheme", max_step );
 	cmd( "pack $activeplot.c.c.hscroll -side bottom -expand yes -fill x" );
+	cmd( "mouse_wheel $p" );
 	
 	// horizontal grid lines
-	for ( i = 0; i <= v_ticks; ++i )
-	{
-		cmd( "$p create line %d %d %d %d -fill grey60", h_margin - tick, t_margin + height * i / v_ticks, ( int )( h_margin + max_step * plot_step ), t_margin + height * i / v_ticks );
-	}
+	cmd( "for { set i 0 } { $i <= $vticksR } { incr i } { \
+			if { $i > 0 && $i < $vticksR } { \
+				set color $colorsTheme(bg) \
+			} else { \
+				set color $colorsTheme(dfg) \
+			}; \
+			$p create line [ expr { $cvhmarginR - $ticmarginR } ] [ expr { $sclvmarginR + $vsizeR * $i / $vticksR } ] [ expr { $cvhmarginR } ] [ expr { $sclvmarginR + $vsizeR * $i / $vticksR } ] -fill $colorsTheme(dfg); \
+			$p create line [ expr { $cvhmarginR } ] [ expr { $sclvmarginR + $vsizeR * $i / $vticksR } ] [ expr { $cvhmarginR + %d * $plot_step } ] [ expr { $sclvmarginR + $vsizeR * $i / $vticksR } ] -fill $color \
+		}", max_step );
 
 	// vertical grid lines
-	for ( i = 0, j = h_margin; j <= h_margin + max_step * plot_step; ++i, j += width / h_ticks )
-	{
-		k = height + t_margin + tick;
-		l = ( plot_step > 1 ) ? max_step * i / h_ticks : j - h_margin;
-		cmd( "$p create line %d %d %d %d -fill grey60", j, t_margin, j, k );
-		cmd( "$p create text %d %d -text %d -anchor n", j, k + tick, l );
-	}
+	cmd( "set k [ expr { $vsizeR + $sclvmarginR } ]" );
+	cmd( "for { set i 0; set j $cvhmarginR; set u -1 } { $j <= [ expr { $cvhmarginR + %d * $plot_step } ] } { incr i; set j [ expr { $j + $hsizeR / $hticksR } ] } { \
+			if { $plot_step > 1 } { \
+				set l [ expr { %d * $i / $hticksR } ] \
+			} else { \
+				set l [ expr { $j - $cvhmarginR } ] \
+			}; \
+			if { $j > $cvhmarginR && $j < [ expr { $cvhmarginR + %d * $plot_step } ] } { \
+				set color $colorsTheme(bg) \
+			} else { \
+				set color $colorsTheme(dfg) \
+			}; \
+			$p create line $j $sclvmarginR $j $k -fill $color; \
+			$p create line $j $k $j [ expr { $k + $ticmarginR } ] -fill  $colorsTheme(dfg); \
+			if { $l > $u } { \
+				$p create text $j [ expr { $k + $ticmarginR } ] -text $l -anchor n -fill $colorsTheme(dfg); \
+				set u $l \
+			} \
+	}	", max_step, max_step, max_step );
 	
 	cmd( "pack $p -anchor nw" );
 	cmd( "pack $activeplot.c.c -anchor nw" );
 	cmd( "pack $activeplot.c -anchor nw" );
 	cmd( "$p xview moveto 0" );
-	cmd( "mouse_wheel $p" );
 	
 	// bottom part
-	cmd( "canvas $activeplot.fond -width %d -height %d", s_width + width + 2 * h_margin, b_height );
+	cmd( "ttk::canvas $activeplot.fond -width [ expr { $sclhsizeR + $hsizeR + 2 * $cvhmarginR } ] -height $botvsizeR -entry 0 -dark $darkTheme" );
 
 	// controls
-	cmd( "checkbutton $activeplot.fond.shift -text Scroll -variable scrollB -command { set_c_var done_in 8 }" );	
-	cmd( "if { $tcl_platform(platform) == \"windows\" } { set goWid 7 } { set goWid 5 }" );
-	cmd( "button $activeplot.fond.go -width $goWid -text Center -command { set halfCanvas %d; set_c_var done_in 7 }", width / 2 );
+	cmd( "set scrollB %d", scrollB );
+	cmd( "ttk::checkbutton $activeplot.fond.shift -text Scroll -variable scrollB -state disabled -command { set_c_var done_in 8 }" );	
+	cmd( "if [ string equal $CurPlatform windows ] { \
+			set centerB Center; \
+			set goWid 7 \
+		} elseif [ string equal $CurPlatform linux ] { \
+			set centerB Center; \
+			set goWid 6 \
+		} { \
+			set centerB Cen.; \
+			set goWid 3 \
+		}" );
+	cmd( "ttk::button $activeplot.fond.go -width $goWid -text $centerB -state disabled -command { set_c_var done_in 7 }" );
 
-	cmd( "$activeplot.fond create window %d %d -window $activeplot.fond.shift", s_width / 2, b_height / 4 - 5 );
-	cmd( "$activeplot.fond create window %d %d -window $activeplot.fond.go", s_width / 2, 3 * b_height / 4 );
+	cmd( "$activeplot.fond create window [ expr { $sclhsizeR / 2 } ] [ expr { $botvsizeR / 4 - 5 } ] -window $activeplot.fond.shift" );
+	cmd( "$activeplot.fond create window [ expr { $sclhsizeR / 2 } ] [ expr { 3 * $botvsizeR / 4 - 2 } ] -window $activeplot.fond.go" );
 	
 	// labels
-	for ( i = 0, j = 0, k = 0; i < ( num < lin_lab * lab_lin ? num : lin_lab * lab_lin ); ++i )
-	{
-		cmd( "$activeplot.fond create text %d %d -anchor nw -text %s -fill $c%d", s_width + t_margin + j * width / lab_lin, k * lin_height, tp[ i ], i  );
-		if ( j < lab_lin - 1 )
-			++j;
-		else
-		{
-			++k;
-			j = 0;
-		}
-	}
+	cmd( "for { set i 0; set j 0; set k 0 } { $i < [ expr { min( %d, $linlabR * $lablinR ) } ] } { incr i } { \
+			set l [ regsub # [ lindex $tp $i ] _ ]; \
+			set it [ $activeplot.fond create text [ expr { $sclhsizeR + $sclvmarginR + $j * $hsizeR / $lablinR } ] [ expr { $k * $linvsizeR } ] -anchor nw -text $l -fill [ set c$i ] ]; \
+			set n [ regsub #\\[0-9\\]+ [ lindex $tp $i ] \"\" ]; \
+			set_ttip_descr $activeplot.fond $n $it 0; \
+			if { $j < [ expr { $lablinR - 1 } ] } { \
+				incr j \
+			} else { \
+				incr k; \
+				set j 0 \
+			} \
+		}", num );
+		
 	cmd( "pack $activeplot.fond -expand yes -fill both -pady 7" );
-	
-	// calculate window shift position
-	i = id_sim * shift;
-	sprintf( intval,"%i",i );
-	Tcl_SetVar( inter, "shift", intval, 0 );
-	cmd( "set posXrt [ expr [ winfo x . ] + [ winfo width . ] + 2 * $bordsize + $hmargin + $corrX + $shift ]" );
-	cmd( "set posYrt [ expr [ winfo y . ] + $corrY + $shift ]" );
-
-	cmd( "showtop  $activeplot xy no no no $posXrt $posYrt" );
-	
-	if ( fast_mode > 0 )
-	{
-		cmd( "wm withdraw $activeplot" );
-		cmd( "$activeplot.fond.go conf -state disabled" );
-		cmd( "$activeplot.fond.shift conf -state disabled" );
-	}
-
-	cmd( "wm deiconify .log; raise .log; focus .log" );
-
-	set_shortcuts_log( "$activeplot", "runtime.html" );
 }
 
 
@@ -272,8 +341,21 @@ PLOT_RT
 **************************************/
 void plot_rt( variable *v )
 {
-	int x1, x2, y1, y2;
-	double step, value;
+	bool relabel = false;
+	int height, p_digits;
+	double value, scale, zero_lim;
+	
+	cmd( "if { [ info exists activeplot ] && [ winfo exists $activeplot.c.c.cn ] } { \
+			set e 1 \
+		} { \
+			set e 0 \
+		}" );
+	
+	if ( ! get_bool( "e" ) )
+		return;
+	
+	height = get_int( "vsizeR" );
+	p_digits = get_int( "pdigitsR" );
 	
 	// limit the number of run-time plot variables
 	if ( cur_plt > 100 )
@@ -282,54 +364,55 @@ void plot_rt( variable *v )
 	if ( ymax == ymin ) 		// very initial setting
 	{ 
 		if ( v->val[ 0 ] > 0 )
-		{
-			ymax = v->val[ 0 ] * 1.001;
-			ymin = v->val[ 0 ];
-		}
+			ymax = round_digits( v->val[ 0 ] * ( 1 + MARG ), p_digits );
 		else
-		{
-			ymax = v->val[ 0 ] * 0.009;
-			ymin = v->val[ 0 ];
-		}
+			ymax = round_digits( v->val[ 0 ] * ( 1 - MARG ), p_digits );
+		
+		ymin = round_digits( v->val[ 0 ], p_digits );
 		
 		if ( ymax == ymin )
-			ymax += 0.0001;
-
-		cmd( "$activeplot.c.yscale itemconf ymax -text %.4g", ymax );
-		cmd( "$activeplot.c.yscale itemconf ymin -text %.4g", ymin );
-		cmd( "$activeplot.c.yscale itemconf medy -text %.4g", ( ymax - ymin ) / 2 + ymin );
+			ymax += MARG;
+		
+		relabel = true;
 	}
 	
 	if ( v->val[ 0 ] >= ymax )
 	{
-		if ( v->val[ 0 ] >= 0 )
-			step = 1.1;
-		else
-			step = 0.9;
+		value = v->val[ 0 ] * ( v->val[ 0 ] > 0 ? 1 + MARG_CONST : 1 - MARG_CONST );
+		value = round_digits( value, p_digits );
 	  
-		double scale = ( ymax - ymin ) / ( v->val[ 0 ] * step - ymin );
-		cmd( "$activeplot.c.c.cn scale punto 0 %d 1 %lf", height, scale  < 0.01 ? 0.01 : scale  );
-		ymax = v->val[ 0 ] * step;
-		cmd( "$activeplot.c.yscale itemconf ymax -text %.4g", ymax );
-		cmd( "$activeplot.c.yscale itemconf medy -text %.4g", ( ymax - ymin ) / 2 + ymin );
+		scale = ( ymax - ymin ) / ( value - ymin );
+		ymax = value;	
+		
+		relabel = true;
+		
+		cmd( "$activeplot.c.c.cn scale punto 0 $vsizeR 1 %lf", scale  < 0.01 ? 0.01 : scale  );
 	}
 
 	if ( v->val[ 0 ] <= ymin )
 	{
-		if ( v->val[ 0 ] > 0 )
-			step = 0.9;
-		else
-			step = 1.1;
-		
-		value = min( v->val[ 0 ] * step, ymin - ( ymax - ymin ) / height );
+		value = v->val[ 0 ] * ( v->val[ 0 ] > 0 ? 1 - MARG_CONST : 1 + MARG_CONST );
+		value = min( value, ymin - ( ymax - ymin ) / height );
+		value = round_digits( value, p_digits );
 
-		double scale = ( ymax - ymin ) / ( ymax - value );
-		cmd( "$activeplot.c.c.cn scale punto 0 0 1 %lf", scale < 0.01 ? 0.01 : scale  );
+		scale = ( ymax - ymin ) / ( ymax - value );
 		ymin = value;
-		cmd( "$activeplot.c.yscale itemconf ymin -text %.4g", ymin );
-		cmd( "$activeplot.c.yscale itemconf medy -text %.4g", ( ymax - ymin ) / 2 + ymin );
+		
+		relabel = true;
+		
+		cmd( "$activeplot.c.c.cn scale punto 0 0 1 %lf", scale < 0.01 ? 0.01 : scale  );
 	}
 
+	if ( relabel )
+	{
+		ymed = round_digits( ( ymax - ymin ) / 2 + ymin, p_digits );
+		zero_lim = ( ymax - ymin ) * MARG;
+		
+		cmd( "$activeplot.c.yscale itemconf ymax -text %.*g", p_digits, fabs( ymax ) < zero_lim ? 0 : ymax );
+		cmd( "$activeplot.c.yscale itemconf medy -text %.*g", p_digits, fabs( ymed ) < zero_lim ? 0 : ymed );
+		cmd( "$activeplot.c.yscale itemconf ymin -text %.*g", p_digits, fabs( ymin ) < zero_lim ? 0 : ymin );
+	}
+		
 	if ( t == 1 )
 	{
 		old_val[ cur_plt ] = v->val[ 0 ];
@@ -337,13 +420,14 @@ void plot_rt( variable *v )
 		return;
 	}
 
-	x1 = ( int ) floor( h_margin + t * plot_step );
-	x2 = ( int ) floor( h_margin + ( t - 1 ) * plot_step );
-	y1 = ( int ) floor( t_margin + ( height - ( ( v->val[ 0 ] - ymin ) / ( ymax - ymin ) ) * height ) );
-	y2 = ( int ) floor( t_margin + ( height - ( ( old_val[ cur_plt ] - ymin ) / ( ymax - ymin ) ) * height ) );
-	old_val[ cur_plt ] = v->val[ 0 ];
+	cmd( "set x1 [ expr { floor( $cvhmarginR + %d * $plot_step ) } ]", t );
+	cmd( "set x2 [ expr { floor( $cvhmarginR + ( %d - 1 ) * $plot_step ) } ]", t );
+	cmd( "set y1 [ expr { floor( $sclvmarginR + ( $vsizeR - ( ( %lf - %lf ) / ( %lf - %lf ) ) * $vsizeR ) ) } ]", v->val[ 0 ], ymin, ymax, ymin );
+	cmd( "set y2 [ expr { floor( $sclvmarginR + ( $vsizeR - ( ( %lf - %lf ) / ( %lf - %lf ) ) * $vsizeR ) ) } ]", old_val[ cur_plt ], ymin, ymax, ymin );
 
-	cmd( "$activeplot.c.c.cn create line %d %d %d %d -tag punto -fill $c%d", x2, y2, x1, y1, cur_plt );
+	cmd( "$activeplot.c.c.cn create line $x2 $y2 $x1 $y1 -tag punto -fill $c%d", cur_plt );
+	
+	old_val[ cur_plt ] = v->val[ 0 ];
 	++cur_plt;
 }
 
@@ -351,9 +435,85 @@ void plot_rt( variable *v )
 /**************************************
 RESET_PLOT
 **************************************/
-void reset_plot( int run )
+void reset_plot( void )
 {
-	// allow for run-time plot window destruction
-	cmd( "if [ winfo exists .plt%d ] { wm protocol .plt%d WM_DELETE_WINDOW \"\"; .plt%d.fond.go conf -state disabled; .plt%d.fond.shift conf -state disabled }", 
-		 run, run, run, run );
+	cmd( "if { [ info exists activeplot ] && [ winfo exists $activeplot ] } { \
+			$activeplot.fond.go conf -state disabled; \
+			$activeplot.fond.shift conf -state disabled; \
+			tooltip::tooltip clear $activeplot.fond.go; \
+			tooltip::tooltip clear $activeplot.fond.shift; \
+			if { %d } { \
+				destroytop [ winfo toplevel $activeplot ] \
+			} else { \
+				deiconifytop $activeplot; \
+				$rtptab select $activeplot; \
+				wm protocol [ winfo toplevel $activeplot ] WM_DELETE_WINDOW \"destroytop [ winfo toplevel $activeplot ]\" \
+			}; \
+			update \
+		}", fast ? 1 : 0 );
+}
+
+
+/**************************************
+ENABLE_PLOT
+**************************************/
+void enable_plot( void )
+{
+	cmd( "if { [ info exists activeplot ] && [ winfo exists $activeplot ] } { \
+			$rtptab select $activeplot; \
+			$activeplot.fond.go conf -state normal; \
+			$activeplot.fond.shift conf -state normal; \
+			tooltip::tooltip $activeplot.fond.go \"Center plot in current time step\"; \
+			tooltip::tooltip $activeplot.fond.shift \"Automatic scrolling\"; \
+			$rtptab select $activeplot; \
+			if { [ info exists rtptab_show ] && ! $rtptab_show } { \
+				set rtptab_show 1; \
+				showtop [ winfo toplevel $activeplot ] \
+			} else { \
+				deiconifytop $activeplot \
+			}; \
+			focustop .log; \
+			update \
+		}" );
+}
+
+
+/**************************************
+DISABLE_PLOT
+**************************************/
+void disable_plot( void )
+{
+	cmd( "if { [ info exists activeplot ] && [ winfo exists $activeplot ] } { \
+			$activeplot.fond.go conf -state disabled; \
+			$activeplot.fond.shift conf -state disabled; \
+			tooltip::tooltip clear $activeplot.fond.go; \
+			tooltip::tooltip clear $activeplot.fond.shift; \
+			wm withdraw [ winfo toplevel $activeplot ]; \
+			update \
+		}" );
+}
+
+
+/**************************************
+CENTER_PLOT
+**************************************/
+void center_plot( void )
+{
+	cmd( "if { [ info exists activeplot ] && [ winfo exists $activeplot ] && %d > [ expr { $hsizeR / 2 } ] } { \
+			set newpos [ expr { %lf - $hsizeR / 2 / %lf } ]; \
+			$activeplot.c.c.cn xview moveto $newpos; \
+			update idletasks \
+		}", t, t / ( double ) max_step, ( double ) max_step );
+}
+
+
+/**************************************
+SCROLL_PLOT
+**************************************/
+void scroll_plot( void )
+{
+	if ( scrollB )
+		cmd( "if { [ info exists activeplot ] && [ winfo exists $activeplot ] && %d > [ expr { $hsizeR * 0.8 } ] } { \
+				$activeplot.c.c.cn xview scroll 1 units \
+			}", t );
 }
