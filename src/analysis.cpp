@@ -1,6 +1,6 @@
 /*************************************************************
 
-	LSD 8.0 - March 2021
+	LSD 8.0 - May 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
@@ -254,7 +254,11 @@ cmd( "bind $f.v <KeyRelease> { \
 				set kk _ \
 			}; \
 			set ll %%W; \
-			set ff [ lsearch -start [ expr { [ $ll curselection ] + 1 } ] -nocase [ $ll get 0 end ] \"${kk}*\" ]; \
+			set ss [ $ll curselection ]; \
+			if { [ llength $ss ] > 1 } { \
+				return \
+			}; \
+			set ff [ lsearch -start [ expr { $ss + 1 } ] -nocase [ $ll get 0 end ] \"${kk}*\" ]; \
 			if { $ff == -1 } { \
 				set ff [ lsearch -start 0 -nocase [ $ll get 0 end ] \"${kk}*\" ] \
 			}; \
@@ -335,7 +339,11 @@ cmd( "bind $f.v <KeyRelease> { \
 				set kk _ \
 			}; \
 			set ll %%W; \
-			set ff [ lsearch -start [ expr { [ $ll curselection ] + 1 } ] -nocase [ $ll get 0 end ] \"${kk}*\" ]; \
+			set ss [ $ll curselection ]; \
+			if { [ llength $ss ] > 1 } { \
+				return \
+			}; \
+			set ff [ lsearch -start [ expr { $ss + 1 } ] -nocase [ $ll get 0 end ] \"${kk}*\" ]; \
 			if { $ff == -1 } { \
 				set ff [ lsearch -start 0 -nocase [ $ll get 0 end ] \"${kk}*\" ] \
 			}; \
@@ -2533,9 +2541,12 @@ while ( true )
 					if ( logs )
 						cmd( "ttk::messageBox -parent .da -type ok -icon warning -title Warning -message \"Series in logs not allowed\" -detail \"The option 'Series in logs' is checked but it does not affect the data produced by this command.\"" );
 
-					cmd( "set confi 95" );
 					cmd( "set bidi 1" );
 					cmd( "set keepSeries 0" );
+					cmd( "set confi 95" );
+					cmd( "set clList [ list ]" );
+					for ( i = 0; i < T_CLEVS; ++i )
+						cmd( "lappend clList %g", 100 * t_dist_cl[ i ] );
 
 					cmd( "newtop .da.s \"Monte Carlo Options\" { set choice 2 } .da" );
 
@@ -2546,9 +2557,9 @@ while ( true )
 					cmd( "ttk::radiobutton .da.s.i.r.m -text \"Average only\" -variable bidi -value 1 -command { .da.s.ci.p configure -state disabled }" );
 					cmd( "ttk::radiobutton .da.s.i.r.z -text \"Maximum and minimum\" -variable bidi -value 13 -command { .da.s.ci.p configure -state disabled }" );
 					cmd( "ttk::radiobutton .da.s.i.r.x -text \"Average, maximum and minimum\" -variable bidi -value 15 -command { .da.s.ci.p configure -state disabled }" );
-					cmd( "ttk::radiobutton .da.s.i.r.i -text \"Confidence interval\" -variable bidi -value 11 -command { .da.s.ci.p configure -state normal }" );
-					cmd( "ttk::radiobutton .da.s.i.r.n -text \"Average and confidence interval\" -variable bidi -value 6 -command { .da.s.ci.p configure -state normal }" );
-					cmd( "ttk::radiobutton .da.s.i.r.a -text \"All the above\" -variable bidi -value 16 -command { .da.s.ci.p configure -state normal }" );
+					cmd( "ttk::radiobutton .da.s.i.r.i -text \"Confidence interval\" -variable bidi -value 11 -command { .da.s.ci.p configure -state readonly }" );
+					cmd( "ttk::radiobutton .da.s.i.r.n -text \"Average and confidence interval\" -variable bidi -value 6 -command { .da.s.ci.p configure -state readonly }" );
+					cmd( "ttk::radiobutton .da.s.i.r.a -text \"All the above\" -variable bidi -value 16 -command { .da.s.ci.p configure -state readonly }" );
 
 					cmd( "pack .da.s.i.r.m .da.s.i.r.z .da.s.i.r.x .da.s.i.r.i .da.s.i.r.n .da.s.i.r.a -anchor w" );
 					cmd( "pack .da.s.i.l .da.s.i.r" );
@@ -2560,7 +2571,7 @@ while ( true )
 
 					cmd( "ttk::frame .da.s.ci" );
 					cmd( "ttk::label .da.s.ci.l -text \"Confidence level (%%)\"" );
-					cmd( "ttk::entry .da.s.ci.p -width 3 -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 80 && $n <= 99 } { set confi %%P; return 1 } { %%W delete 0 end; %%W insert 0 $confi; return 0 } } -invalidcommand { bell } -justify center -state disabled" );
+					cmd( "ttk::combobox .da.s.ci.p -values $clList -width 4 -justify center -state disabled" );
 					cmd( "write_disabled .da.s.ci.p $confi" ); 
 					cmd( "pack .da.s.ci.l .da.s.ci.p" );
 					
@@ -2584,10 +2595,8 @@ while ( true )
 					while ( *choice == 0 )
 						Tcl_DoOneEvent( 0 );
 
-					cmd( "if [ string is integer [ .da.s.ci.p get ] ] { set confi [ .da.s.ci.p get ] }" ); 
+					cmd( "if [ string is double -strict [ .da.s.ci.p get ] ] { set confi [ .da.s.ci.p get ] }" ); 
 					cmd( "destroytop .da.s" );
-
-					Tcl_UnlinkVar( inter, "confi" );
 
 					if ( *choice == 2 )
 						goto add_end;
@@ -2780,7 +2789,7 @@ while ( true )
 
 		// open Gnuplot
 		case 4:
-			cmd( "open_gnuplot" );
+			cmd( "open_gnuplot \"\" \"\"" );
 			break;
 
 			  
@@ -2830,8 +2839,8 @@ while ( true )
 
 			if ( *choice == 3 )
 			{
-				cmd( "set sysTermTmp $systemTerm" );
-				cmd( "set gptermTmp $gnuplotTerm" );
+				cmd( "set sysTermTmp $DefaultSysTerm" );
+				cmd( "set gptermTmp \"\"" );
 				cmd( "set gpdgrid3dTmp \"$gnuplotGrid3D\"" );
 				cmd( ".da.a.o.t delete 1.0 end; .da.a.o.t insert end \"$gnuplotOptions\"" );
 				goto gpoptions;
@@ -3059,7 +3068,6 @@ while ( true )
 			cmd( "bind .da.s.s.e1 <<ComboboxSelected>> { if { $sm == \"raw\" } { .da.s.s.e2 configure -state normal } { .da.s.s.e2 configure -state disabled } }" );
 
 			cmd( "showtop .da.s" );
-			cmd( "focus .da.s.x.e1; .da.s.x.e1 selection range 0 end" );
 			cmd( "mousewarpto .da.s.b.ok" );
 
 			set_plot:
@@ -3147,7 +3155,6 @@ while ( true )
 			cmd( "bind .da.s.y.e <KeyPress-Return> { set choice 1 }" );
 
 			cmd( "showtop .da.s" );
-			cmd( "focus .da.s.s.e; .da.s.s.e selection range 0 end" );
 			cmd( "mousewarpto .da.s.b.ok" );
 
 			set_lattice:
@@ -3249,8 +3256,6 @@ while ( true )
 			cmd( "bind $wid.format.e.sty <Return> { $wid.b.ok invoke }" );
 			
 			cmd( "showtop $wid current" );
-			cmd( "focus $wid.l.e" );
-			cmd( "$wid.l.e selection range 0 end" );
 			cmd( "mousewarpto $wid.b.ok" );
 			
 			*choice = 0;
@@ -3377,8 +3382,6 @@ while ( true )
 			cmd( "bind $wid.d.e <Return> { $wid.b.ok invoke }" );
 			
 			cmd( "showtop $wid current" );
-			cmd( "focus $wid.l.e" );
-			cmd( "$wid.l.e selection range 0 end" );
 			cmd( "mousewarpto $wid.b.ok" );
 		 
 			// enable most options for non-dotted lines
@@ -3548,7 +3551,7 @@ while ( true )
 			
 			cmd( "ttk::frame $wid.l" );
 			cmd( "ttk::label $wid.l.t -text \"Outline width\"" );
-			cmd( "ttk::spinbox $wid.l.e -textvariable iwidth -width 5 -from 0.0 -to 10.0 -justify center -validate focusout -validatecommand { set n %%P; if { [ string is double -strict $n ] && $n >= 0 } { set iwidth %%P; return 1 } { %%W delete 0 end; %%W insert 0 $iwidth; return 0 } } -invalidcommand { bell }" );
+			cmd( "ttk::spinbox $wid.l.e -textvariable iwidth -width 5 -from 0.0 -to 10.0 -justify center -validate focusout -validatecommand { set n %%P; if { [ string is double -strict $n ] && $n >= 0 && $n <= 10 } { set iwidth %%P; return 1 } { %%W delete 0 end; %%W insert 0 $iwidth; return 0 } } -invalidcommand { bell }" );
 			cmd( "ttk::label $wid.l.l -text \" color\"" );
 			cmd( "ttk::style configure icolor1.TButton -foreground [ invert_color $icolor1 ] -background $icolor1" );
 			cmd( "ttk::button $wid.l.color -width 5 -text Set -style icolor1.TButton -command { \
@@ -3572,8 +3575,6 @@ while ( true )
 			cmd( "bind $wid.l.e <Return> { $wid.b.ok invoke }" );
 			
 			cmd( "showtop $wid current" );
-			cmd( "focus $wid.l.e" );
-			cmd( "$wid.l.e selection range 0 end" );
 			cmd( "mousewarpto $wid.b.ok" );
 			
 			*choice = 0;
@@ -4209,7 +4210,6 @@ void set_cs_data( int *choice )
 		}" );
 
 	cmd( "showtop $p centerW no no yes 0 0 .da.s.fb.r1.add" );
-	cmd( ".da.s.u.i.e.e selection range 0 end; focus .da.s.u.i.e.e" );
 	cmd( "mousewarpto $p.fb.ok" );
 
 	cmd( "tooltip::tooltip $p.fb.r1.x \"Add case to selected\"" );
@@ -4351,7 +4351,7 @@ void update_descr_dict( void )
 	description *cd;
 	
 	for ( cd = descr; cd != NULL; cd = cd->next )
-		cmd( "dict set serDescrDict %s \"%s\"", cd->label, fmt_ttip_descr( desc, cd, MAX_LINE_SIZE + 1 ) );
+		cmd( "dict set serDescrDict %s \"%s\"", cd->label, fmt_ttip_descr( desc, cd, MAX_LINE_SIZE + 1, false ) );
 }
 
 
@@ -5039,7 +5039,7 @@ void plot_gnu( int *choice )
 {
 	bool done;
 	char *app, **str, **tag, str1[ 50 ], str2[ 100 ], str3[ 10 ], dirname[ MAX_PATH_LENGTH ];
-	double **data;
+	double temp, maxx, minx, **data;
 	int i, j, box, ndim, gridd, *start, *end, *id, nanv = 0;
 	FILE *f, *f2;
 
@@ -5176,6 +5176,7 @@ void plot_gnu( int *choice )
 		autom = true;
 
 	if ( autom )
+	{
 		for ( done = false, i = 1; i < nv; ++i )
 			for ( j = min_c; j <= max_c; ++j )
 			{
@@ -5191,7 +5192,29 @@ void plot_gnu( int *choice )
 				if ( start[ i ] <= j && end[ i ] >= j && is_finite( data[ i ][ j - start[ i ] ] ) && data[ i ][ j - start[ i ] ] > maxy )	// ignore NaNs
 					maxy = data[ i ][ j - start[ i ] ];
 			}
-	   
+			
+		// condition the max and min values 
+		temp = lower_bound( miny, maxy, MARG, MARG_CONST, pdigits );
+		maxy = upper_bound( miny, maxy, MARG, MARG_CONST, pdigits );
+		miny = temp;
+	}
+	
+	// check x series max/mins to allow splines
+	for ( minx = maxx = 0, done = false, j = min_c; j <= max_c; ++j )
+	{
+		if ( ! done && start[ 0 ] <= j && end[ 0 ] >= j && is_finite( data[ 0 ][ j - start[ 0 ] ] ) )	// ignore NaNs
+		{
+			minx = maxx = data[ 0 ][ j - start[ 0 ] ];
+			done = true;
+		}
+		
+		if ( start[ 0 ] <= j && end[ 0 ] >= j && is_finite( data[ 0 ][ j - start[ 0 ] ] ) && data[ 0 ][ j - start[ 0 ] ] < minx )	// ignore NaNs
+			minx = data[ 0 ][ j - start[ 0 ] ];
+			
+		if ( start[ 0 ] <= j && end[ 0 ] >= j && is_finite( data[ 0 ][ j - start[ 0 ] ] ) && data[ 0 ][ j - start[ 0 ] ] > maxx )	// ignore NaNs
+			maxx = data[ 0 ][ j - start[ 0 ] ];
+	}
+	
 	cmd( "set dirxy plotxy_%d", cur_plot );
 	cmd( "file mkdir $dirxy" );
 	getcwd( dirname, MAX_PATH_LENGTH - 1 );
@@ -5344,10 +5367,16 @@ void plot_gnu( int *choice )
 
 	fprintf( f, "set output 'plot.file'\n" );
 
+	cmd( "set bordercolor [ rgb_24_color $colorsTheme(dfg) ]" );
+	app = ( char * ) Tcl_GetVar( inter, "bordercolor", 0 );
+	fprintf( f, "set border linecolor \"%s\"\n", app );
+	fprintf( f2, "set border linecolor \"%s\"\n", app );
+
 	if ( grid )
 	{
-		fprintf( f, "set grid\n" );
-		fprintf( f2, "set grid\n" );
+		cmd( "set gridcolor [ rgb_24_color $colorsTheme(bg) ]" );
+		fprintf( f, "set grid linecolor \"%s\"\n", ( char * ) Tcl_GetVar( inter, "gridcolor", 0 ) );
+		fprintf( f2, "set grid linecolor \"%s\"\n", ( char * ) Tcl_GetVar( inter, "gridcolor", 0 ) );
 	}
 
 	if ( line_point == 2 )
@@ -5365,9 +5394,9 @@ void plot_gnu( int *choice )
 	} 
 
 	if ( box == 0 )
-		sprintf( msg, "set xlabel \"%s_%s\"\n", str[ 0 ], tag[ 0 ] );
+		sprintf( msg, "set xlabel \"%s_%s\" textcolor \"%s\"\n", str[ 0 ], tag[ 0 ], app );
 	else
-		sprintf( msg, "set xlabel \"Time\"\n" );  
+		sprintf( msg, "set xlabel \"Time\" textcolor \"%s\"\n", app );  
 
 	fprintf( f, "%s", msg );
 	fprintf( f2, "%s", msg );
@@ -5375,15 +5404,15 @@ void plot_gnu( int *choice )
 	if ( ndim > 2 )
 	{
 		if ( box == 0 )
-			sprintf( msg, "set ylabel \"%s_%s\"\n", str[ 1 ], tag[ 1 ] );
+			sprintf( msg, "set ylabel \"%s_%s\" textcolor \"%s\"\n", str[ 1 ], tag[ 1 ], app );
 		else
-			sprintf( msg, "set ylabel \"Series\"\n" ); 
+			sprintf( msg, "set ylabel \"Series\" textcolor \"%s\"\n", app ); 
 		
 		fprintf( f, "%s", msg );
 		fprintf( f2, "%s", msg );
 	} 
 
-	if ( line_point == 1 && ndim == 2 )
+	if ( line_point == 1 && ndim == 2 && maxx > minx )
 		sprintf( str1, "smooth csplines" );
 	else
 		if ( line_point == 1 && ndim > 2 )
@@ -5432,7 +5461,7 @@ void plot_gnu( int *choice )
 		sprintf( msg, "plot 'data.gp' using 1:2 %s t \"%s_%s\"", str1, str[ 1 ], tag[ 1 ] );
 		
 		if ( allblack )
-			strcat( msg, str3);
+			strcat( msg, str3 );
 		
 		i = 2;
 	} 
@@ -5531,7 +5560,7 @@ void plot_cs_xy( int *choice )
 {
 	bool done;
 	char *app, **str, **tag, str1[ TCL_BUFF_STR ], str2[ 5 * MAX_ELEM_LENGTH ], str3[ MAX_ELEM_LENGTH ], dirname[ MAX_PATH_LENGTH ];
-	double **data, previous_row;
+	double temp, maxx, minx, **data, previous_row;
 	int i, j, time_sel, block_length, ndim, *start, *end, *id;
 	FILE *f, *f2;
 
@@ -5606,6 +5635,7 @@ void plot_cs_xy( int *choice )
 		autom = true;
 	
 	if ( autom )
+	{
 		for ( done = false, i = 1; i < nv; ++i )
 			for ( j = min_c; j <= max_c; ++j )
 			{
@@ -5621,7 +5651,29 @@ void plot_cs_xy( int *choice )
 				if ( start[ i ] <= j && end[ i ] >= j && is_finite( data[ i ][ j - start[ i ] ] ) && data[ i ][ j - start[ i ] ] > maxy )	// ignore NaNs
 					maxy = data[ i ][ j - start[ i ] ];
 			}
+			
+		// condition the max and min values 
+		temp = lower_bound( miny, maxy, MARG, MARG_CONST, pdigits );
+		maxy = upper_bound( miny, maxy, MARG, MARG_CONST, pdigits );
+		miny = temp;
+	}
 
+	// check x series max/mins to allow splines
+	for ( minx = maxx = 0, done = false, j = min_c; j <= max_c; ++j )
+	{
+		if ( ! done && start[ 0 ] <= j && end[ 0 ] >= j && is_finite( data[ 0 ][ j - start[ 0 ] ] ) )	// ignore NaNs
+		{
+			minx = maxx = data[ 0 ][ j - start[ 0 ] ];
+			done = true;
+		}
+		
+		if ( start[ 0 ] <= j && end[ 0 ] >= j && is_finite( data[ 0 ][ j - start[ 0 ] ] ) && data[ 0 ][ j - start[ 0 ] ] < minx )	// ignore NaNs
+			minx = data[ 0 ][ j - start[ 0 ] ];
+			
+		if ( start[ 0 ] <= j && end[ 0 ] >= j && is_finite( data[ 0 ][ j - start[ 0 ] ] ) && data[ 0 ][ j - start[ 0 ] ] > maxx )	// ignore NaNs
+			maxx = data[ 0 ][ j - start[ 0 ] ];
+	}
+	
 	cmd( "set bidi %d", end[ 0 ] );
 
 	cmd( "newtop .da.s \"XY Plot Options\" { set choice 2 } .da" );
@@ -5692,8 +5744,6 @@ void plot_cs_xy( int *choice )
 	cmd( "bind .da.s.v.e <KeyPress-Return> { focus .da.s.b.ok }" );
 
 	cmd( "showtop .da.s" );
-	cmd( "focus .da.s.i.e" );
-	cmd( ".da.s.i.e selection range 0 end" );
 	cmd( "mousewarpto .da.s.b.ok" );
 
 	*choice = 0;
@@ -5780,10 +5830,16 @@ void plot_cs_xy( int *choice )
 
 	fprintf( f, "set output 'plot.file'\n" );
 
+	cmd( "set bordercolor [ rgb_24_color $colorsTheme(dfg) ]" );
+	app = ( char * ) Tcl_GetVar( inter, "bordercolor", 0 );
+	fprintf( f, "set border linecolor \"%s\"\n", app );
+	fprintf( f2, "set border linecolor \"%s\"\n", app );
+
 	if ( grid )
 	{
-		fprintf( f, "set grid\n" );
-		fprintf( f2, "set grid\n" );
+		cmd( "set gridcolor [ rgb_24_color $colorsTheme(bg) ]" );
+		fprintf( f, "set grid linecolor \"%s\"\n", ( char * ) Tcl_GetVar( inter, "gridcolor", 0 ) );
+		fprintf( f2, "set grid linecolor \"%s\"\n", ( char * ) Tcl_GetVar( inter, "gridcolor", 0 ) );
 	}
 
 	if ( line_point == 2 )
@@ -5798,19 +5854,19 @@ void plot_cs_xy( int *choice )
 	}
 	else
 	{
-		if ( ndim == 2 )
+		if ( ndim == 2 && maxx > minx )
 			sprintf( str2, "smooth csplines " );
 		else
 			sprintf( str2, "with lines " ); 
 	}
 
-	sprintf( msg, "set xlabel \"%s_%s\"\n", str[ 0 ], tag[ 0 ] );
+	sprintf( msg, "set xlabel \"%s_%s\" textcolor \"%s\"\n", str[ 0 ], tag[ 0 ], app );
 	fprintf( f, "%s", msg );
 	fprintf( f2, "%s", msg );
 
 	if ( ndim == 3 )
 	{
-		sprintf( msg, "set ylabel \"%s_%s\"\n", str[ block_length ], tag[ block_length ] );
+		sprintf( msg, "set ylabel \"%s_%s\" textcolor \"%s\"\n", str[ block_length ], tag[ block_length ], app );
 		fprintf( f, "%s", msg );
 		fprintf( f2, "%s", msg );
 	} 
@@ -5926,7 +5982,7 @@ void plot_phase_diagram( int *choice )
 {
 	bool done;
 	char *app, **str, **tag, str1[ 50 ], str2[ 100 ], str3[ 100 ], dirname[ MAX_PATH_LENGTH ];
-	double **data;
+	double temp, maxdelta, **data;
 	int i, j, nlags, *start, *end, *id;
 	FILE *f, *f2;
 
@@ -5999,6 +6055,7 @@ void plot_phase_diagram( int *choice )
 		autom = true;
 
 	if ( autom )
+	{
 		for ( done = false, i = 0; i < nv; ++i )
 			for ( j = min_c; j <= max_c; ++j )
 			{
@@ -6014,6 +6071,12 @@ void plot_phase_diagram( int *choice )
 				if ( start[ i ] <= j && end[ i ] >= j && is_finite( data[ i ][ j - start[ i ] ] ) && data[ i ][ j - start[ i ] ] > maxy )		// ignore NaNs
 					maxy = data[ i ][ j - start[ i ] ];
 			}
+			
+		// condition the max and min values 
+		temp = lower_bound( miny, maxy, MARG, MARG_CONST, pdigits );
+		maxy = upper_bound( miny, maxy, MARG, MARG_CONST, pdigits );
+		miny = temp;
+	}
 		
 	cmd( "newtop .da.s \"Lag Selection\" { set choice 2 } .da" );
 
@@ -6034,7 +6097,6 @@ void plot_phase_diagram( int *choice )
 	cmd( "bind .da.s <KeyPress-Escape> {set choice 2}" );
 
 	cmd( "showtop .da.s" );
-	cmd( "focus .da.s.i.e; .da.s.i.e selection range 0 end" );
 	cmd( "mousewarpto .da.s.b.ok" );
 
 	*choice = 0;
@@ -6067,11 +6129,16 @@ void plot_phase_diagram( int *choice )
 	 
 	fprintf( f, "\n" );
 
-	for ( j = min_c; j <= max_c - nlags; ++j )
+	for ( maxdelta = 0, j = min_c; j <= max_c - nlags; ++j )
 	{
 		for ( i = 0; i <= nlags; ++i )
 			if ( start[ 0 ] <= max_c && end[ 0 ] >= min_c )
+			{
 				fprintf( f, "%lf\t", data[ 0 ][ j + i - start[ 0 ] ] );
+				
+				if ( i > 0 )
+					maxdelta = max( maxdelta, data[ 0 ][ j + i - start[ 0 ] ] - data[ 0 ][ j + i - 1 - start[ 0 ] ] );
+			}
 
 		fprintf( f, "\n" );
 	}
@@ -6087,10 +6154,16 @@ void plot_phase_diagram( int *choice )
 	fprintf( f, "set term tkcanvas\n" );
 	fprintf( f, "set output 'plot.file'\n" );
 
+	cmd( "set bordercolor [ rgb_24_color $colorsTheme(dfg) ]" );
+	app = ( char * ) Tcl_GetVar( inter, "bordercolor", 0 );
+	fprintf( f, "set border linecolor \"%s\"\n", app );
+	fprintf( f2, "set border linecolor \"%s\"\n", app );
+
 	if ( grid )
 	{
-		fprintf( f, "set grid\n" );
-		fprintf( f2, "set grid\n" );
+		cmd( "set gridcolor [ rgb_24_color $colorsTheme(bg) ]" );
+		fprintf( f, "set grid linecolor \"%s\"\n", ( char * ) Tcl_GetVar( inter, "gridcolor", 0 ) );
+		fprintf( f2, "set grid linecolor \"%s\"\n", ( char * ) Tcl_GetVar( inter, "gridcolor", 0 ) );
 	}
 
 	if ( line_point == 2 )
@@ -6103,7 +6176,7 @@ void plot_phase_diagram( int *choice )
 	sprintf( msg, "set yrange [%.*g:%.*g]\n", pdigits, miny, pdigits, maxy );
 	fprintf( f, "%s", msg );
 	fprintf( f2, "%s", msg );
-	sprintf( msg, "set xlabel \"%s_%s\"\n", str[ 0 ], tag[ 0 ] );
+	sprintf( msg, "set xlabel \"%s_%s\" textcolor \"%s\"\n", str[ 0 ], tag[ 0 ], app );
 	fprintf( f, "%s", msg );
 	fprintf( f2, "%s", msg );
 
@@ -6114,7 +6187,7 @@ void plot_phase_diagram( int *choice )
 		fprintf( f2, "set arrow from %.*g,%.*g to %.*g,%.*g lt -1\n", pdigits, miny, pdigits, miny, pdigits, maxy, pdigits, maxy );
 	}
 
-	if ( line_point == 1 )
+	if ( line_point == 1 && maxdelta > 0 )
 		sprintf( str1, "smooth csplines" );
 	else
 		strcpy( str1, "" );
@@ -6278,9 +6351,9 @@ void show_plot_gnu( int n, int *choice, int type, char **str, char **tag )
 	cmd( "pack $w.b.c.case $w.b.c.y -anchor w" );
 
 	cmd( "ttk::frame $w.b.o" );
-	cmd( "ttk::label $w.b.o.l1 -text \"Alt-click: properties\"" );
-	cmd( "ttk::label $w.b.o.l2 -text \"Shift-click: add text\"" );
-	cmd( "ttk::label $w.b.o.l3 -text \"Ctrl-click: add line\"" );
+	cmd( "ttk::label $w.b.o.l1 -text \"%s+click: properties\"", platform == _MAC_ ? "Ctrl" : "Alt" );
+	cmd( "ttk::label $w.b.o.l2 -text \"Shift+click: add text\"" );
+	cmd( "ttk::label $w.b.o.l3 -text \"%s+click: add line\"", platform == _MAC_ ? "Cmd" : "Ctrl" );
 	cmd( "pack $w.b.o.l1 $w.b.o.l2 $w.b.o.l3" );
 
 	cmd( "ttk::frame $w.b.s" );
@@ -6462,7 +6535,7 @@ void plot_lattice( int *choice )
 
 	cmd( "ttk::frame .da.s.i" );
 	cmd( "ttk::label .da.s.i.l -width 22 -anchor e -text \"Data columns\"" );
-	cmd( "ttk::spinbox .da.s.i.e -width 5 -from 1 -to %d -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 1 } { set bidi %%P; return 1 } { %%W delete 0 end; %%W insert 0 $bidi; return 0 } } -invalidcommand { bell } -justify center", num_c );
+	cmd( "ttk::spinbox .da.s.i.e -width 5 -from 1 -to %d -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 1 && $n <= %d } { set bidi %%P; return 1 } { %%W delete 0 end; %%W insert 0 $bidi; return 0 } } -invalidcommand { bell } -justify center", num_c, num_c );
 	cmd( ".da.s.i.e insert 0 $bidi" ); 
 	cmd( "pack .da.s.i.l .da.s.i.e -side left -anchor w -padx 2 -pady 2" );
 
@@ -6604,9 +6677,9 @@ void plot_lattice( int *choice )
 	cmd( "ttk::frame $w.b -width %d", ncol * le + 1 );
 
 	cmd( "ttk::frame $w.b.o" );
-	cmd( "ttk::label $w.b.o.l1 -text \"Alt-click: properties\"" );
-	cmd( "ttk::label $w.b.o.l2 -text \"Shift-click: add text\"" );
-	cmd( "ttk::label $w.b.o.l3 -text \"Ctrl-click: add line\"" );
+	cmd( "ttk::label $w.b.o.l1 -text \"%s+click: properties\"", platform == _MAC_ ? "Ctrl" : "Alt" );
+	cmd( "ttk::label $w.b.o.l2 -text \"Shift+click: add text\"" );
+	cmd( "ttk::label $w.b.o.l3 -text \"%s+click: add line\"", platform == _MAC_ ? "Cmd" : "Ctrl" );
 	cmd( "pack $w.b.o.l1 $w.b.o.l2 $w.b.o.l3" );
 
 	cmd( "ttk::frame $w.b.s" );
@@ -6781,7 +6854,6 @@ void histograms( int *choice )
 	cmd( "bind .da.s.i.e <KeyPress-Return> {set choice 1}" );
 
 	cmd( "showtop .da.s" );
-	cmd( "focus .da.s.i.e; .da.s.i.e selection range 0 end" );
 	cmd( "mousewarpto .da.s.b.ok" );
 
 	*choice = 0;
@@ -7034,7 +7106,6 @@ void histograms_cs( int *choice )
 	cmd( "bind .da.s.i.e <KeyPress-Return> {set choice 1}" );
 
 	cmd( "showtop .da.s" );
-	cmd( "focus .da.s.t.e; .da.s.t.e selection range 0 end" );
 	cmd( "mousewarpto .da.s.b.ok" );
 
 	*choice = 0;
@@ -7200,9 +7271,6 @@ void histograms_cs( int *choice )
 /***************************************************
 CREATE_SERIES
 ****************************************************/
-// Confidence level  0.80      0.81      0.82      0.83      0.84      0.85      0.86      0.87      0.88      0.89      0.90      0.91      0.92      0.93      0.94      0.95       0.96      0.97      0.98      0.99
-double z_star[ ] = { 1.281552, 1.310579, 1.340755, 1.372204, 1.405072, 1.439531, 1.475791, 1.514102, 1.554774, 1.598193, 1.644854, 1.695398, 1.750686, 1.811911, 1.880794, 1.959964,  2.053749, 2.170090, 2.326348, 2.575829 };
-
 // define MC series parent names for AoR
 const char *mc_par[ ] = { "(MC)", "meanMC", "maxMC", "minMC", "varMC", "sumMC", "meanMC", "countMC", "sdMC", "prodMC", "invMC", "ci+MC", "ci-MC", "maxMC", "(MC)", "meanMC", "meanMC" };
 		
@@ -7210,8 +7278,8 @@ bool create_series( int *choice, bool mc, vector < string > var_names )
 {
 	bool first, done = true;
 	char *lapp, **str, **tag;
-	double nmax = 0, nmin = 0, nmean, nvar, nn, sum, prod, thflt, z_crit, **data;
-	int i, j, k, flt, cs_long, type_series, new_series, sel_series, confi, *start, *end, *id;
+	double nmax = 0, nmin = 0, nmean, nvar, nn, sum, prod, thflt, confi, z_crit, **data;
+	int i, j, k, flt, cs_long, type_series, new_series, sel_series, *start, *end, *id;
 	store *app;
 
 	if ( ! mc )
@@ -7231,6 +7299,9 @@ bool create_series( int *choice, bool mc, vector < string > var_names )
 		cmd( "set bidi 1" );
 		cmd( "set ftag 1" );
 		cmd( "set confi 95" );
+		cmd( "set clList [ list ]" );
+		for ( i = 0; i < Z_CLEVS; ++i )
+			cmd( "lappend clList %g", 100 * z_dist_cl[ i ] );
 
 		cmd( "newtop .da.s \"New Series Options\" { set choice 2 } .da" );
 
@@ -7276,10 +7347,10 @@ bool create_series( int *choice, bool mc, vector < string > var_names )
 		cmd( "ttk::radiobutton .da.s.i.r.s -text \"Standard deviation\" -variable bidi -value 8 -command { .da.s.i.r.ci.p configure -state disabled; set tailname \"_sd\"; set vname $basename$tailname; .da.s.n.nv selection range 0 end }" );
 
 		cmd( "ttk::frame .da.s.i.r.ci" );
-		cmd( "ttk::radiobutton .da.s.i.r.ci.c -text \"Confidence interval (3 series)\" -variable bidi -value 6 -command { .da.s.i.r.ci.p configure -state normal; set tailname \"\"; set vname $basename$tailname; .da.s.n.nv selection range 0 end }" );
+		cmd( "ttk::radiobutton .da.s.i.r.ci.c -text \"Confidence interval (3 series)\" -variable bidi -value 6 -command { .da.s.i.r.ci.p configure -state readonly; set tailname \"\"; set vname $basename$tailname; .da.s.n.nv selection range 0 end }" );
 		cmd( "ttk::label .da.s.i.r.ci.x -text @" );
 		cmd( "ttk::label .da.s.i.r.ci.perc -text %%" );
-		cmd( "ttk::spinbox .da.s.i.r.ci.p -width 5 -from 80 -to 99 -validate focusout -validatecommand { set n %%P; if { [ string is integer -strict $n ] && $n >= 80 && $n <= 99 } { set confi %%P; return 1 } { %%W delete 0 end; %%W insert 0 $confi; return 0 } } -invalidcommand { bell } -justify center -state disabled" );
+		cmd( "ttk::combobox .da.s.i.r.ci.p -values $clList -width 4 -justify center -state disabled" );
 		cmd( "write_disabled .da.s.i.r.ci.p $confi" ); 
 		cmd( "pack .da.s.i.r.ci.c .da.s.i.r.ci.x .da.s.i.r.ci.p .da.s.i.r.ci.perc -side left" );
 
@@ -7309,16 +7380,14 @@ bool create_series( int *choice, bool mc, vector < string > var_names )
 		cmd( "bind .da.s <KeyPress-Escape> {set choice 2}" );
 
 		cmd( "showtop .da.s" );
-		cmd( "focus .da.s.n.nv" );
-		cmd( ".da.s.n.nv selection range 0 end" );
 		cmd( "mousewarpto .da.s.b.ok" );
 		 
 		*choice = 0;
 		while ( *choice == 0 )
 			Tcl_DoOneEvent( 0 );
 
-		cmd( "if [ string is double [ .da.s.f.t.th get ] ] { set thflt [ .da.s.f.t.th get ] }" ); 
-		cmd( "if [ string is integer [ .da.s.i.r.ci.p get ] ] { set confi [ .da.s.i.r.ci.p get ] }" ); 
+		cmd( "if [ string is double -strict [ .da.s.f.t.th get ] ] { set thflt [ .da.s.f.t.th get ] }" ); 
+		cmd( "if [ string is double -strict [ .da.s.i.r.ci.p get ] ] { set confi [ .da.s.i.r.ci.p get ] }" ); 
 		cmd( "destroytop .da.s" );
 
 		if ( *choice == 2 )
@@ -7341,10 +7410,10 @@ bool create_series( int *choice, bool mc, vector < string > var_names )
 		sel_series = var_names.size( );
 	}
 	
-	confi = get_int( "confi" );
+	confi = get_double( "confi" );
+	z_crit = z_star( confi );
 	type_series = get_int( "bidi" );
 	new_series = 1;
-	z_crit = 0;
 	
 	// set option specific parameters
 	switch ( type_series )
@@ -7353,17 +7422,12 @@ bool create_series( int *choice, bool mc, vector < string > var_names )
 			new_series = 3;
 			
 			// first series to produce
-			cmd( "set basename $vname; set tailname \"_avg\"; set vname $basename$tailname" );
-			
-			// get the critical value to the chosen confidence level
-			z_crit = z_star[ ( int ) max( min( confi, 99 ), 80 ) - 80 ];
-			
+			cmd( "set basename $vname; set tailname \"_avg\"; set vname $basename$tailname" );			
 			break;
 			
 		case 11:						// ci+ (11), ci- (12)
 			new_series = 2;
 			cmd( "set basename $vname; set tailname \"_ci+\"; set vname $basename$tailname" );
-			z_crit = z_star[ ( int ) max( min( confi, 99 ), 80 ) - 80 ];
 			break;
 			
 		case 13:						// max (13), min (3)
@@ -7379,7 +7443,6 @@ bool create_series( int *choice, bool mc, vector < string > var_names )
 		case 16:						// avg (16), ci+ (11), ci- (12), max (2), min (3)
 			new_series = 5;
 			cmd( "set basename $vname; set tailname \"_avg\"; set vname $basename$tailname" );
-			z_crit = z_star[ ( int ) max( min( confi, 99 ), 80 ) - 80 ];
 			break;
 	}
 	
@@ -7511,8 +7574,19 @@ bool create_series( int *choice, bool mc, vector < string > var_names )
 				else
 				{
 					nmean = sum / nn;
-					nvar /= nn;
-					nvar -= nmean * nmean;
+					
+					// handle sample (MC) x population variance calculation
+					if ( mc && nn >= 2 )
+					{
+						nvar *= nn;
+						nvar -= sum * sum;
+						nvar /= nn * ( nn - 1 );
+					}
+					else
+					{
+						nvar /= nn;
+						nvar -= nmean * nmean;
+					}
 				}
 			   
 				if ( type_series == 1 || type_series == 6 || type_series == 15 || type_series == 16 )
@@ -7538,10 +7612,22 @@ bool create_series( int *choice, bool mc, vector < string > var_names )
 					else
 						vs[ num_var ].data[ i - min_c ] = NAN;
 				}
-				if ( type_series == 11 )
-					vs[ num_var ].data[ i - min_c ] = nmean + z_crit * sqrt( nvar ) / sqrt( nn );
-				if ( type_series == 12 )
-					vs[ num_var ].data[ i - min_c ] = nmean - z_crit * sqrt( nvar ) / sqrt( nn );
+				
+				// handle sample (MC) x population variance calculation
+				if ( mc && nn >= 2 )
+				{
+					if ( type_series == 11 )
+						vs[ num_var ].data[ i - min_c ] = nmean + t_star( nn - 1, confi ) * sqrt( nvar ) / sqrt( nn );
+					if ( type_series == 12 )
+						vs[ num_var ].data[ i - min_c ] = nmean - t_star( nn - 1, confi ) * sqrt( nvar ) / sqrt( nn );
+				}
+				else
+				{
+					if ( type_series == 11 )
+						vs[ num_var ].data[ i - min_c ] = nmean + z_crit * sqrt( nvar ) / sqrt( nn );
+					if ( type_series == 12 )
+						vs[ num_var ].data[ i - min_c ] = nmean - z_crit * sqrt( nvar ) / sqrt( nn );
+				}
 			}
 		} 
 		else												// compute over cases
@@ -7615,7 +7701,6 @@ bool create_series( int *choice, bool mc, vector < string > var_names )
 					vs[ num_var ].data[ j ] = nmean + z_crit * sqrt( nvar ) / sqrt( nn );
 				if ( type_series == 12 )
 					vs[ num_var ].data[ j ] = nmean - z_crit * sqrt( nvar ) / sqrt( nn );
-					
 			}
 		}
 
@@ -7720,8 +7805,6 @@ bool create_maverag( int *choice )
 	cmd( "bind .da.s <KeyPress-Escape> {set choice 2}" );
 
 	cmd( "showtop .da.s" );
-	cmd( "focus .da.s.o.th" );
-	cmd( ".da.s.o.th selection range 0 end" );
 	cmd( "mousewarpto .da.s.b.ok" );
 
 	*choice = 0;
@@ -7990,7 +8073,7 @@ int numcol = 16;
 void save_datazip( int *choice )
 {
 	char *app, **str, **tag, delimiter[ 10 ], misval[ 10 ], labprefix[ MAX_ELEM_LENGTH ];
-	const char *descr, *ext;
+	const char *desc, *ext;
 	double **data;
 	int i, j, fr, typelab, del, type_res, *start, *end, *id, headprefix = 0;
 	FILE *fsave = NULL;
@@ -7999,8 +8082,8 @@ void save_datazip( int *choice )
 
 	const char str0[ ] = "00000000000000000000000000000000000000000000000000000000000000000000000000000000";
 	const char strsp[ ] = "                                                                                ";
-	const char descrRes[ ] = "LSD Result File";
-	const char descrTxt[ ] = "Text File";
+	const char descRes[ ] = "LSD Result File";
+	const char descTxt[ ] = "Text File";
 	const char extResZip[ ] = ".res.gz";
 	const char extTxtZip[ ] = ".txt.gz";
 	const char extRes[ ] = ".res";
@@ -8175,7 +8258,7 @@ void save_datazip( int *choice )
 
 	if ( type_res == 4 )
 	{
-		descr = descrTxt;
+		desc = descTxt;
 		if ( ! dozip )
 			ext = extTxt;
 		else
@@ -8183,7 +8266,7 @@ void save_datazip( int *choice )
 	}
 	else
 	{
-		descr = descrRes;
+		desc = descRes;
 		if ( ! dozip )
 			ext = extRes;
 		else
@@ -8195,7 +8278,7 @@ void save_datazip( int *choice )
 	if ( strlen( path ) > 0 )
 		cmd( "cd \"$path\"" );
 
-	cmd( "set bah [ tk_getSaveFile -parent .da -title \"Save Data File\" -initialdir \"$path\" -defaultextension \"%s\" -filetypes { { {%s} {%s} } { {All files}  {*} }  } ]", ext, descr, ext );
+	cmd( "set bah [ tk_getSaveFile -parent .da -title \"Save Data File\" -initialdir \"$path\" -defaultextension \"%s\" -filetypes { { {%s} {%s} } { {All files}  {*} }  } ]", ext, desc, ext );
 	app = ( char * ) Tcl_GetVar( inter, "bah", 0 );
 	strcpy( msg, app );
 
@@ -9172,9 +9255,9 @@ void plot_canvas( int type, int nv, int *start, int *end, char **str, char **tag
 	cmd( "pack $w.b.c.case $w.b.c.y $w.b.c.var -anchor w" );
 
 	cmd( "ttk::frame $w.b.o" );
-	cmd( "ttk::label $w.b.o.l1 -text \"Alt-click: properties\"" );
-	cmd( "ttk::label $w.b.o.l2 -text \"Shift-click: add text\"" );
-	cmd( "ttk::label $w.b.o.l3 -text \"Ctrl-click: add line\"" );
+	cmd( "ttk::label $w.b.o.l1 -text \"%s+click: properties\"", platform == _MAC_ ? "Ctrl" : "Alt" );
+	cmd( "ttk::label $w.b.o.l2 -text \"Shift+click: add text\"" );
+	cmd( "ttk::label $w.b.o.l3 -text \"%s+click: add line\"", platform == _MAC_ ? "Cmd" : "Ctrl" );
 	cmd( "pack $w.b.o.l1 $w.b.o.l2 $w.b.o.l3" );
 
 	cmd( "ttk::frame $w.b.s" );
@@ -9289,6 +9372,7 @@ void plot_canvas( int type, int nv, int *start, int *end, char **str, char **tag
 					tOk = true;
 				else
 					tOk = false;
+				
 				sprintf( txtLab, "%s_%s", str[ i ], tag[ i ] );
 				break;
 				
@@ -9314,13 +9398,19 @@ void plot_canvas( int type, int nv, int *start, int *end, char **str, char **tag
 			h = get_int( "ylabel" );
 			if ( h > tbordsize + vsize + bbordsize - 2 * lheight )
 				break;
-			cmd( "$p create text $xlabel $ylabel -font $fontP -anchor nw -text \"%s\" -tag { txt%d text legend } -fill $c%d", txtLab, i, ( color < 1100 ) ? color : 0 );
+			cmd( "set it [ $p create text $xlabel $ylabel -font $fontP -anchor nw -text \"%s\" -tag { txt%d text legend } -fill $c%d ]", txtLab, i, ( color < 1100 ) ? color : 0 );
 			cmd( "set xlabel [ expr { $xlabel + $app + $htmarginP } ]" );
+			
+			if ( type == TSERIES )
+				cmd( "set_ttip_descr $p \"%s\" $it 0", str[ i ] );
 		}
 	}
 
 	if ( i < nLine )
-		cmd( "$p create text $xlabel $ylabel -fill $colorsTheme(fg) -font $fontP -anchor nw -text \"(%d more...)\"", nLine - i );
+	{
+		cmd( "set it [ $p create text $xlabel $ylabel -fill $colorsTheme(fg) -font $fontP -anchor nw -text \"(%d more...)\" ]", nLine - i );
+		cmd( "tooltip::tooltip $p -item  $it \"%d series labels not presented\"", nLine - i );
+	}
 
 	// create context menu and common bindings
 	canvas_binds( cur_plot );
@@ -9380,7 +9470,7 @@ void canvas_binds( int n )
 	
 	cmd( "bind $p <Double-Button-1> { focustop .da }" );
 	
-	cmd( "bind $p <Alt-1> { \
+	cmd( "bind $p <Alt-Button-1> { \
 			set ccanvas $daptab.tab%d.c.f.plots; \
 			set LX %%X; set LY %%Y; \
 			set type [ $ccanvas gettags current ]; \
@@ -9401,7 +9491,7 @@ void canvas_binds( int n )
 			} \
 		}", n );
 
-	cmd( "bind $p <Shift-1> { \
+	cmd( "bind $p <Shift-Button-1> { \
 			set ccanvas $daptab.tab%d.c.f.plots; \
 			set LX %%X; \
 			set LY %%Y; \
@@ -9410,14 +9500,14 @@ void canvas_binds( int n )
 			set choice 27 \
 		}", n );
 		
-	cmd( "bind $p <Control-1> { \
+	cmd( "bind $p <%s-Button-1> { \
 			set ccanvas $daptab.tab%d.c.f.plots; \
 			set ncanvas %d; \
 			set hereX [ $ccanvas canvasx %%x ]; \
 			set hereY [ $ccanvas canvasy %%y ]; \
 			unset -nocomplain cl; \
 			set choice 28 \
-		}", n, n );
+		}", platform == _MAC_ ? "Command" : "Control", n, n );
 
 	cmd( "bind $p <Button-1> { \
 			set ccanvas $daptab.tab%d.c.f.plots; \
@@ -9464,7 +9554,7 @@ void add_da_plot_tab( const char *w, int id_plot )
 			ttk::notebook::enableTraversal $daptab; \
 			showtop $w; \
 			bind $w <F1> { LsdHelp menudata_res.html#graph }; \
-			bind $w <Escape> \"wm withdraw $w\"; \
+			bind $w <Escape> \"wm withdraw $w\" \
 		} else { \
 			settop $w \
 		}", unsaved_change( ) ? "*" : " ", simul_name );
@@ -9529,7 +9619,7 @@ void update_more_tab( const char *w, bool adding )
 	char *tt;
 	int i, j, k, m, n, cols;
 	
-	if ( platform == MAC )
+	if ( platform == _MAC_ )
 		cols = 3;
 	else
 		cols = 4;

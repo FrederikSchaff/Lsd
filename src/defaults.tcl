@@ -1,6 +1,6 @@
 #*************************************************************
 #
-#	LSD 8.0 - March 2021
+#	LSD 8.0 - May 2021
 #	written by Marco Valente, Universita' dell'Aquila
 #	and by Marcelo Pereira, University of Campinas
 #
@@ -259,9 +259,9 @@ set exeMac 				"LSD"
 set exeWindows 			"LSD"
 
 # OS specific default system terminal
-set sysTermMac			"Terminal"	; # "Terminal", "xterm"
-set sysTermLinux		"xterm"		; # "gnome-terminal", "xterm", "uxterm"
-set sysTermWindows		"cmd"		;
+set sysTermMac			"Terminal"		; # "Terminal", "xterm"
+set sysTermLinux		"xterm -e"		; # "gnome-terminal --", "xterm -e", "uxterm -e"
+set sysTermWindows		"cmd /c"		;
 
 # OS specific default debugger command
 set dbgMac				"lldb"		; # "gdb"
@@ -285,9 +285,9 @@ set makeWinCygwin		"make.exe"
 set makeWinMingw		"mingw32-make.exe"
 
 # OS specific default gnuplot terminal (empty string=gnuplot default)
-set gnuplotTermMac		""	; # "qt", "x11"
-set gnuplotTermLinux	""	; # "qt", "wxt", "x11"
-set gnuplotTermWindows	""	; # "wxt", "qt" , "windows"
+set gnuplotMac			"gnuplot"
+set gnuplotLinux		"gnuplot"
+set gnuplotindows		"wgnuplot.exe"
 
 # default diff application settings
 set diffApp				"tkdiff.tcl"; # command line diff application to use
@@ -297,6 +297,22 @@ set diffFile2			""			; # option to inform second file name
 set diffFile1name		"-L"		; # option for naming first file
 set diffFile2name		"-L"		; # option for naming second file
 set diffOptions			"-lsd"		; # other options
+
+# other software dependencies and required packages
+set winGCC	[ list \\msys64\\mingw64\\bin\\g++.exe \\cygwin64\\bin\\g++.exe \\cygwin64\\usr\\x86_64-w64-mingw32\\bin\\g++.exe ]
+set winDLL 	[ list libwinpthread-1.dll libgcc_s_seh-1.dll libstdc++-6.dll tcl86.dll tk86.dll zlib1.dll ]
+set winTcl	[ list \\msys64\\mingw64\\bin\\tcl86.dll ]
+set winTk	[ list \\msys64\\mingw64\\bin\\tk86.dll ]
+
+set linuxPkg 		[ list	g++ 				make	gdb		gnuplot		xterm	multitail	zlib			tcl				tk				]
+set linuxTyp 		[ list	exe 				exe 	exe		exe			exe		exe			lib				lib				lib				]
+set linuxInclude	[ list "/usr/include" "/usr/local/include" "/usr/include/tcl8.6" "/usr/local/include/tcl8.6" ]
+set linuxLib 		[ list "/usr/lib" "/usr/local/lib" "/usr/lib/x86_64-linux-gnu" "/usr/local/lib/x86_64-linux-gnu" ]
+
+set inclPkg		[ list	zlib	tcl			tk			]
+set inclFile	[ list	zlib.h	tcl.h		tk.h		]
+set libPkg		[ list	zlib	tcl			tk			]
+set libFile		[ list	libz.a	libtcl8.6.a	libtk8.6.a	]
 
 # known themes table and associated parameters
 # theme list elements:		0:plat		1:pkg name				2:full name			3:dark	4:tbph	5:tbpv

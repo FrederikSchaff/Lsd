@@ -1,6 +1,6 @@
 /*************************************************************
 
-	LSD 8.0 - March 2021
+	LSD 8.0 - May 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
@@ -61,7 +61,7 @@ int fishErrCnt, studErrCnt, weibErrCnt, betaErrCnt, paretErrCnt, alaplErrCnt;
 double dimW = 0;						// lattice screen size
 double dimH = 0;
 
-#ifndef NP
+#ifndef _NP_
 mutex error;
 #endif	
 
@@ -84,7 +84,13 @@ void plog( char const *cm, char const *tag, ... )
 		if ( ! strcmp( tag, tags[ i ] ) )
 			tag_ok = true;
 	
-#ifndef NP
+	// handle the "bar" pseudo tag
+	if ( ! strcmp( tag, "bar" ) )
+		tag_ok = true;
+	else
+		on_bar = false;
+	
+#ifndef _NP_
 	// abort if not running in main LSD thread
 	if ( this_thread::get_id( ) != main_thread )
 		return;
@@ -108,7 +114,7 @@ void plog( char const *cm, char const *tag, ... )
 			message[ j++ ] = buffer[ i ];
 	message[ j ] = '\0';
 
-#ifdef NW 
+#ifdef _NW_ 
 	printf( "%s", message );
 	fflush( stdout );
 #else
@@ -117,7 +123,10 @@ void plog( char const *cm, char const *tag, ... )
 	
 	if ( tag_ok )
 	{
-		cmd( "set log_ok [ winfo exists .log ]" );
+		cmd( "set log_ok 0" );
+		cmd( "if { ! [ catch { package present Tk 8.6 } ] && ! [ catch { set tk_ok [ winfo exists . ] } ] && $tk_ok } { \
+				catch { set log_ok [ winfo exists .log ] } \
+			}" );
 		cmd( "if $log_ok { .log.text.text.internal see [ .log.text.text.internal index insert ] }" );
 		cmd( "if $log_ok { catch { .log.text.text.internal insert end \"%s\" %s } }", message, tag );
 		cmd( "if $log_ok { .log.text.text.internal see end }" );
@@ -143,7 +152,7 @@ void error_hard( const char *logText, const char *boxTitle, const char *boxText,
 	if ( quit == 2 )		// simulation already being stopped
 		return;
 		
-#ifndef NP
+#ifndef _NP_
 	// prevent concurrent use by more than one thread
 	lock_guard < mutex > lock( error );
 	
@@ -163,7 +172,7 @@ void error_hard( const char *logText, const char *boxTitle, const char *boxText,
 	}
 #endif	
 		
-#ifndef NW
+#ifndef _NW_
 	if ( running )			// handle running events differently
 	{
 		cmd( "if [ winfo exists .deb ] { destroytop .deb }" );
@@ -193,7 +202,7 @@ void error_hard( const char *logText, const char *boxTitle, const char *boxText,
 
 	quit = 2;				// do not continue simulation
 
-#ifndef NW
+#ifndef _NW_
 	uncover_browser( );
 	cmd( "focustop .log" );
 
@@ -265,7 +274,7 @@ void error_hard( const char *logText, const char *boxTitle, const char *boxText,
 		root->emptyturbo( );
 		uncover_browser( );
 
-#ifndef NP
+#ifndef _NP_
 		// stop multi-thread workers
 		delete [ ] workers;
 		workers = NULL;
@@ -602,11 +611,12 @@ description *search_description( const char *lab, bool add_missing )
 /***************************************************
 ADD_DESCRIPTION
 ***************************************************/
-#define LEGACY_NO_DESCR "(no description available)" // legacy description (do not change)
+const char *kwords[ ] = { BEG_INIT, END_DESCR };
 
 description *add_description( char const *lab, int type, char const *text, char const *init, char initial, char observe )
 {
-	char ltype [ MAX_ELEM_LENGTH + 1 ];
+	char *str, ltype [ MAX_ELEM_LENGTH + 1 ];
+	int i, j;
 	description *cd;
 
 	if ( search_description( lab, false ) != NULL )	// already exists?
@@ -623,7 +633,7 @@ description *add_description( char const *lab, int type, char const *text, char 
 
 	cd->next = NULL;
 	cd->label = new char [ strlen( lab ) + 1 ];
-	strtrim( cd->label, lab, strlen( lab ) + 1 );
+	strcln( cd->label, lab, strlen( lab ) + 1 );
 	
 	switch ( type )
 	{
@@ -646,19 +656,32 @@ description *add_description( char const *lab, int type, char const *text, char 
 	
 	if ( ! strwsp( text ) && strstr( text, LEGACY_NO_DESCR ) == NULL && ( strlen( NO_DESCR ) == 0 || strstr( text, NO_DESCR ) == NULL ) )
 	{
+		for ( i = 0; i < 2; ++i )
+		{
+			str = ( char * ) strstr( text, kwords[ i ] );
+			if ( str != NULL )
+				for( j = 0; j < ( int ) strlen( kwords[ i ] ); ++j, ++str )
+					*str = tolower( *str );
+		}
+		
 		cd->text = new char [ strlen( text ) + 1 ]; 
-		strtrim( cd->text, text, strlen( text ) + 1 );
+		strcln( cd->text, text, strlen( text ) + 1 );
 	}
 	else
 	{
 		cd->text = new char[ strlen( NO_DESCR ) + 1 ]; 
-		strtrim( cd->text, NO_DESCR, strlen( NO_DESCR ) + 1 );
+		strcln( cd->text, NO_DESCR, strlen( NO_DESCR ) + 1 );
 	}
 	
 	if ( ! strwsp( init ) )
 	{
+		str = ( char * ) strstr( init, kwords[ 1 ] );
+		if ( str != NULL )
+			for( j = 0; j < ( int ) strlen( kwords[ 1 ] ); ++j, ++str )
+				*str = tolower( *str );
+		
 		cd->init = new char [ strlen( init ) + 1 ]; 
-		strtrim( cd->init, init, strlen( init ) + 1 );
+		strcln( cd->init, init, strlen( init ) + 1 );
 	}
 	else
 		cd->init = NULL;
@@ -675,7 +698,8 @@ CHANGE_DESCRIPTION
 ***************************************************/
 description *change_description( char const *lab_old, char const *lab, int type, char const *text, char const *init, char initial, char observe )
 {
-	char ltype [ MAX_ELEM_LENGTH + 1 ];
+	char *str, ltype [ MAX_ELEM_LENGTH + 1 ];
+	int i, j;
 	description *cd, *cd1;
 
 	for ( cd = descr; cd != NULL; cd = cd->next )
@@ -707,7 +731,7 @@ description *change_description( char const *lab_old, char const *lab, int type,
 			{
 				delete [ ] cd->label;
 				cd->label = new char [ strlen( lab ) + 1 ];
-				strtrim( cd->label, lab, strlen( lab ) + 1 );
+				strcln( cd->label, lab, strlen( lab ) + 1 );
 			}
 			
 			if ( type >= 0 )
@@ -740,13 +764,21 @@ description *change_description( char const *lab_old, char const *lab, int type,
 
 				if ( ! strwsp( text ) && strstr( text, LEGACY_NO_DESCR ) == NULL && ( strlen( NO_DESCR ) == 0 || strstr( text, NO_DESCR ) == NULL ) )
 				{
+					for ( i = 0; i < 2; ++i )
+					{
+						str = ( char * ) strstr( text, kwords[ i ] );
+						if ( str != NULL )
+							for( j = 0; j < ( int ) strlen( kwords[ i ] ); ++j, ++str )
+								*str = tolower( *str );
+					}
+		
 					cd->text = new char [ strlen( text ) + 1 ]; 
-					strtrim( cd->text, text, strlen( text ) + 1 );
+					strcln( cd->text, text, strlen( text ) + 1 );
 				}
 				else
 				{
 					cd->text = new char[ strlen( NO_DESCR ) + 1 ]; 
-					strtrim( cd->text, NO_DESCR, strlen( NO_DESCR ) + 1 );
+					strcln( cd->text, NO_DESCR, strlen( NO_DESCR ) + 1 );
 				}
 			} 
 			
@@ -756,8 +788,13 @@ description *change_description( char const *lab_old, char const *lab, int type,
 
 				if ( ! strwsp( init ) )
 				{
+					str = ( char * ) strstr( init, kwords[ 1 ] );
+					if ( str != NULL )
+						for( j = 0; j < ( int ) strlen( kwords[ 1 ] ); ++j, ++str )
+							*str = tolower( *str );
+		
 					cd->init = new char [ strlen( init ) + 1 ]; 
-					strtrim( cd->init, init, strlen( init ) + 1 );
+					strcln( cd->init, init, strlen( init ) + 1 );
 				}
 				else
 					cd->init = NULL;
@@ -830,12 +867,12 @@ bool has_descr_text( description *d )
 }
 
 
-#ifndef NW
+#ifndef _NW_
 
 /***************************************************
 FMT_TTIP_DESCR
 ***************************************************/
-char *fmt_ttip_descr( char *out, description *d, int outSz )
+char *fmt_ttip_descr( char *out, description *d, int outSz, bool init )
 {
 	char out1[ outSz ];		
 	
@@ -843,16 +880,16 @@ char *fmt_ttip_descr( char *out, description *d, int outSz )
 		return NULL;
 	
 	if ( has_descr_text ( d ) ) 
-		strtrim( out, d->text, outSz );
+		strcln( out, d->text, outSz );
 	else
 		out[ 0 ] = '\0';
 	
-	if ( d != NULL && d->init != NULL && strlen( d->init ) > 0 ) 
+	if ( init && d != NULL && d->init != NULL && strlen( d->init ) > 0 ) 
 	{
 		if ( strlen( out ) > 0 )
-			strncat( out, "\n\n", outSz - strlen( out ) - 1 );
+			strncat( out, "\n\u2500\u2500\u2500\n", outSz - strlen( out ) - 1 );
 		
-		strtrim( out1, d->init, outSz );
+		strcln( out1, d->init, outSz );
 		strncat( out, out1, outSz - strlen( out ) - 1 );
 	}
 		
@@ -869,20 +906,46 @@ char *fmt_ttip_descr( char *out, description *d, int outSz )
 /***************************************************
 SET_TTIP_DESCR
 ***************************************************/
-void set_ttip_descr( const char *w, const char *lab, int it )
+void set_ttip_descr( const char *w, const char *lab, int it, bool init )
 {
 	char desc[ MAX_LINE_SIZE + 1 ];				
 	description *cd;
 
 	// add tooltip only if element has description
 	cd = search_description( lab, false );
-	if ( cd != NULL && strlen( fmt_ttip_descr( desc, cd, MAX_LINE_SIZE + 1 ) ) > 0 )
+	if ( cd != NULL && strlen( fmt_ttip_descr( desc, cd, MAX_LINE_SIZE + 1, init ) ) > 0 )
 	{
-		if ( it >= 0 )			// listbox?
+		if ( it >= 0 )			// listbox/canvas?
 			cmd( "tooltip::tooltip %s -item %d \"%s\"", w, it, desc );
 		else
 			cmd( "tooltip::tooltip %s \"%s\"", w, desc );
 	}
+}
+
+
+/***************************************************
+TCL_SET_TTIP_DESCR
+***************************************************/
+int Tcl_set_ttip_descr( ClientData cdata, Tcl_Interp *inter, int argc, const char *argv[ ] )
+{
+	int it, init;
+	
+	if ( argc < 3 || argc > 5 )		// require 4 parameters: widget name, variable name text, item number (opt) and init text flag (opt)
+		return TCL_ERROR;
+		
+	if ( argv[ 1 ] == NULL || argv[ 2 ] == NULL || 
+		 ! strcmp( argv[ 1 ], "" ) || ! strcmp( argv[ 2 ], "" ) )
+		return TCL_ERROR;
+	
+	if ( argc < 4 || argv[ 3 ] == NULL || sscanf( argv[ 3 ], "%d", & it ) == 0 )
+		it = -1;
+	
+	if ( argc < 5 || argv[ 4 ] == NULL || sscanf( argv[ 4 ], "%d", & init ) == 0 || init < 0 || init > 1 )
+		init = 1;
+	
+	set_ttip_descr( argv[ 1 ], argv[ 2 ], it, init ? true : false );
+	
+	return TCL_OK;
 }
 
 
@@ -948,9 +1011,9 @@ void return_where_used( char *lab, char s[ ] )
 /***************************************************
 GET_VAR_DESCR
 ***************************************************/
-void get_var_descr( char const *lab, char *descr, int descr_len )
+void get_var_descr( char const *lab, char *desc, int descr_len )
 {
-	char str[ 2 * MAX_ELEM_LENGTH ], str1[ MAX_LINE_SIZE ];
+	char str[ 2 * MAX_ELEM_LENGTH ], str1[ MAX_LINE_SIZE + 1 ], str2[ descr_len ];
 	int i, j = 0, done = -1;
 	FILE *f;
 	
@@ -1015,7 +1078,7 @@ void get_var_descr( char const *lab, char *descr, int descr_len )
 
 				if ( done == 0 || done == 2 )
 					if ( str1[ i ] != '\r' )
-						descr[ j++ ] = str1[ i ];
+						str2[ j++ ] = str1[ i ];
 
 				if ( done == 2 && str1[ i ] == '\n' )
 					done = -1; 
@@ -1028,7 +1091,8 @@ void get_var_descr( char const *lab, char *descr, int descr_len )
 		fclose( f );
 	}
 	
-	descr[ j ] = '\0';
+	str2[ j ] = '\0';
+	strcln( desc, str2, descr_len );
 }
 
 
@@ -1097,477 +1161,6 @@ void count_save( object *n, int *count )
 }
 
 
-/****************************************************
-GET_SAVED
-****************************************************/
-void get_saved( object *n, FILE *out, const char *sep, bool all_var )
-{
-	int i, sl;
-	char *lab;
-	bridge *cb;
-	description *cd;
-	object *co;
-	variable *cv;
-
-	for ( cv = n->v; cv != NULL; cv = cv->next )
-		if ( cv->save || all_var )
-		{
-			// get element description
-			cd = search_description( cv->label, false );
-			if ( cd != NULL && cd->text != NULL && ( sl = strlen( cd->text ) ) > 0 )
-			{
-				// select just the first description line
-				lab = new char[ sl + 1 ];
-				strcpy( lab, cd->text );
-				for ( i = 0; i < sl; ++i )
-					if ( lab[ i ] == '\n' || lab[ i ] == '\r' )
-					{
-						lab[ i ] = '\0';
-						break;
-					}
-			}
-			else
-				lab = NULL;
-		
-			fprintf( out, "%s%s%s%s%s%s%s\n", cv->label, sep, cv->param ? "parameter" : "variable", sep, n->label, sep, lab != NULL ? lab : "" );
-		}
-
-	for ( cb = n->b; cb != NULL; cb = cb->next )
-	{
-		if ( cb->head == NULL )
-			co = blueprint->search( cb->blabel );
-		else
-			co = cb->head; 
-		get_saved( co, out, sep, all_var );
-	}
-}
-
-
-/****************************************************
-GET_SA_LIMITS
-****************************************************/
-void get_sa_limits( object *r, FILE *out, const char *sep )
-{
-	int i, sl;
-	char *lab;
-	variable *cv;
-	description *cd;
-	sense *cs;
-	
-	for ( cs = rsense; cs != NULL; cs = cs->next )
-	{
-		// get current value (first object)
-		cv = r->search_var( NULL, cs->label );
-		
-		// get element description
-		cd = search_description( cs->label, false );
-		if ( cd != NULL && cd->text != NULL && ( sl = strlen( cd->text ) ) > 0 )
-		{
-			// select just the first description line
-			lab = new char[ sl + 1 ];
-			strcpy( lab, cd->text );
-			for ( i = 0; i < sl; ++i )
-				if ( lab[ i ] == '\n' || lab[ i ] == '\r' )
-				{
-					lab[ i ] = '\0';
-					break;
-				}
-		}
-		else
-			lab = NULL;
-		
-		// find max and min values
-		double min = HUGE_VAL, max = - HUGE_VAL;
-		for ( i = 0; cs->v != NULL &&  i < cs->nvalues; ++i )
-			if ( cs->v[ i ] < min )
-				min = cs->v[ i ];
-			else
-				if ( cs->v[ i ] > max )
-					max = cs->v[ i ];
-
-		fprintf( out, "%s%s%s%s%d%s%s%s%g%s%g%s%g%s\"%s\"\n", cs->label, sep, cs->param == 1 ? "parameter" : "variable", sep, cs->param == 1 ? 0 : cs->lag + 1, sep, cs->integer ? "integer" : "real", sep, cv != NULL ? cv->val[ cs->lag ] : NAN, sep, min, sep, max, sep, lab != NULL ? lab : "" );	
-		
-		delete [ ] lab;
-	}
-}
-
-
-/***************************************************
-SAVE_EQFILE
-***************************************************/
-void save_eqfile( FILE *f )
-{
-	if ( strlen( lsd_eq_file ) == 0 )
-		strcpy( lsd_eq_file, eq_file );
-	 
-	fprintf( f, "\nEQ_FILE\n" );
-	fprintf( f, "%s", lsd_eq_file );
-	fprintf( f, "\nEND_EQ_FILE\n" );
-}
-
-
-#ifndef NW
-
-/***************************************************
-READ_EQ_FILENAME
-***************************************************/
-void read_eq_filename( char *s )
-{
-	char lab[ MAX_PATH_LENGTH ];
-	FILE *f;
-
-	sprintf( lab, "%s/%s", exec_path, MODEL_OPTIONS );
-	f = fopen( lab, "r" );
-	
-	if ( f == NULL )
-	{
-		cmd( "ttk::messageBox -parent . -title Error -icon error -type ok -message \"File not found\" -detail \"File '$MODEL_OPTIONS' missing, cannot upload the equation file.\nYou may have to recreate your model configuration.\"" );
-		return;
-	}
-	
-	fscanf( f, "%499s", lab );
-	for ( int i = 0; strncmp( lab, "FUN=", 4 ) && fscanf( f, "%499s", lab ) != EOF && i < MAX_FILE_TRY; ++i );    
-	fclose( f );
-	if ( strncmp( lab, "FUN=", 4 ) != 0 )
-	{
-		cmd( "ttk::messageBox -parent . -type ok -title -title Error -icon error -message \"File corrupted\" -detail \"File '$MODEL_OPTIONS' has invalid contents, cannot upload the equation file.\nYou may have to recreate your model configuration.\"" );
-		return;
-	}
-
-	strcpy( s, lab + 4 );
-	strcat( s, ".cpp" );
-
-	return;
-}
-
-
-/***************************************************
-COMPARE_EQFILE
-***************************************************/
-int compare_eqfile( void )
-{
-	char *s, lab[ MAX_PATH_LENGTH + 1 ];
-	int i = MAX_FILE_SIZE;
-	FILE *f;
-
-	read_eq_filename( lab );
-	f = fopen( lab, "r" );
-	s = new char[ i + 1 ];
-	while ( fgets( msg, MAX_LINE_SIZE, f ) != NULL )
-	{
-		i -= strlen( msg );
-		if ( i < 0 )
-			break;
-		strcat( s, msg );
-	}
-	fclose( f );  
-	
-	if ( strcmp( s, lsd_eq_file ) == 0 )
-		i = 0;
-	else
-		i = 1;
-	delete [ ] s;
-
-	return i;
-}
-
-
-/***************************************************
-UPLOAD_EQFILE
-***************************************************/
-char *upload_eqfile( void )
-{
-	//load into the string eq_file the equation file
-	char s[ MAX_PATH_LENGTH + 1 ], *eq;
-	int i;
-	FILE *f;
-
-	Tcl_LinkVar( inter, "eqfiledim", ( char * ) &i, TCL_LINK_INT );
-
-	read_eq_filename( s );
-	cmd( "set eqfiledim [ file size %s ]", s );
-
-	Tcl_UnlinkVar( inter, "eqfiledim" );
-
-	eq = new char[ i + 1 ];
-	eq[ 0 ] = '\0';
-	f = fopen( s, "r");
-	while ( fgets( msg, MAX_LINE_SIZE, f ) != NULL )
-	{
-		i -= strlen( msg );
-		if ( i < 0 )
-			break;
-		strcat( eq, msg );
-	}
-	
-	fclose( f );
-	return eq;
-}
-
-#endif
-
-
-/***************************************************
-RESULT
-Methods for results file saving (class result)
-***************************************************/
-
-// saves data to file in the specified period
-void result::data( object *root, int initstep, int endtstep )
-{
-	// don't include initialization (t=0) in .csv format
-	initstep = ( docsv && initstep < 1 ) ? 1 : initstep;
-	// adjust for 1 time step if needed
-	endtstep = ( endtstep == 0 ) ? initstep : endtstep;
-	
-	for ( int i = initstep; i <= endtstep; i++ )
-	{
-		firstCol = true;
-		
-		data_recursive( root, i );		// output one data line
-		
-		if ( dozip )					// and change line
-			gzprintf( fz, "\n" );
-		else
-			fprintf( f, "\n" );
-	}
-}
-
-void result::data_recursive( object *r, int i )
-{
-	bridge *cb;
-	object *cur;
-	variable *cv;
-
-	for ( cv = r->v; cv != NULL; cv = cv->next )
-	{
-		if ( cv->save == 1 )
-		{
-			if ( cv->start <= i && cv->end >= i && ! is_nan( cv->data[ i - cv->start ] ) )
-			{
-				if ( dozip )
-				{
-					if ( docsv )
-						gzprintf( fz, "%s%.*G", firstCol ? "" : CSV_SEP, SIG_DIG, cv->data[ i - cv->start ] );
-					else
-						gzprintf( fz, "%.*G\t", SIG_DIG, cv->data[ i - cv->start ] );
-				}
-				else
-				{
-					if ( docsv )
-						fprintf( f, "%s%.*G", firstCol ? "" : CSV_SEP, SIG_DIG, cv->data[ i - cv->start ] );
-					else
-						fprintf( f, "%.*G\t", SIG_DIG, cv->data[ i - cv->start ] );
-				}
-			}
-			else
-			{
-				if ( dozip )		// save NaN as n/a
-				{
-					if ( docsv )
-						gzprintf( fz, "%s%s", firstCol ? "" : CSV_SEP, nonavail );
-					else
-						gzprintf( fz, "%s\t", nonavail );
-				}
-				else
-				{
-					if ( docsv )
-						fprintf( f, "%s%s", firstCol ? "" : CSV_SEP, nonavail );
-					else
-						fprintf( f, "%s\t", nonavail );
-				}
-			}
-			
-			firstCol = false;
-		}
-	}
-	 
-	for ( cb = r->b; cb != NULL; cb = cb->next )
-	{
-		if ( cb->head == NULL )
-			continue;
-		
-		cur = cb->head;
-		if ( cur->to_compute )
-			for ( ; cur != NULL; cur = cur->next )
-				data_recursive( cur, i );
-	}
-
-	if ( r->up == NULL )
-	{
-		for ( cv = cemetery; cv != NULL; cv = cv->next )
-		{
-			if ( cv->start <= i && cv->end >= i && ! is_nan( cv->data[ i - cv->start ] ) )
-			{
-				if ( dozip )
-				{
-					if ( docsv )
-						gzprintf( fz, "%s%.*G", firstCol ? "" : CSV_SEP, SIG_DIG, cv->data[ i - cv->start ] );
-					else
-						gzprintf( fz, "%.*G\t", SIG_DIG, cv->data[ i - cv->start ] );
-				}
-				else
-				{
-					if ( docsv )
-						fprintf( f, "%s%.*G", firstCol ? "" : CSV_SEP, SIG_DIG, cv->data[ i - cv->start ] );
-					else
-						fprintf( f, "%.*G\t", SIG_DIG, cv->data[ i - cv->start ] );
-				}
-			}
-			else					// save NaN as n/a
-			{
-				if ( dozip )
-				{
-					if ( docsv )
-						gzprintf( fz, "%s%s", firstCol ? "" : CSV_SEP, nonavail );
-					else
-						gzprintf( fz, "%s\t", nonavail );
-				}
-				else
-				{
-					if ( docsv )
-						fprintf( f, "%s%s", firstCol ? "" : CSV_SEP, nonavail );
-					else
-						fprintf(f, "%s\t", nonavail );
-				}
-			}
-						
-			firstCol = false;
-		}
-	}
-}
-
-// saves header to file
-void result::title( object *root, int flag )
-{
-	firstCol = true;
-	
-	title_recursive( root, flag );		// output header
-		
-	if ( dozip )						// and change line
-		gzprintf( fz, "\n" );
-	else
-		fprintf( f, "\n" );
-}
-
-void result::title_recursive( object *r, int header )
-{
-	bool single = false;
-	bridge *cb;
-	object *cur;
-	variable *cv;
-
-	for ( cv = r->v; cv != NULL; cv = cv->next )
-	{
-		if ( cv->save == 1 )
-		{
-			set_lab_tit( cv );
-			if ( ( ! strcmp( cv->lab_tit, "1" ) || ! strcmp( cv->lab_tit, "1_1" ) || ! strcmp( cv->lab_tit, "1_1_1" ) || ! strcmp( cv->lab_tit, "1_1_1_1" ) ) && cv->up->hyper_next( ) == NULL )
-				single = true;					// prevent adding suffix to single objects
-			
-			if ( header )
-			{
-				if ( dozip )
-				{
-					if ( docsv )
-						gzprintf( fz, "%s%s%s%s", firstCol ? "" : CSV_SEP, cv->label, single ? "" : "_", single ? "" : cv->lab_tit );
-					else
-						gzprintf( fz, "%s %s (%d %d)\t", cv->label, cv->lab_tit, cv->start, cv->end );
-				}
-				else
-				{
-					if ( docsv )
-						fprintf( f, "%s%s%s%s", firstCol ? "" : CSV_SEP, cv->label, single ? "" : "_", single ? "" : cv->lab_tit );
-					else
-						fprintf( f, "%s %s (%d %d)\t", cv->label, cv->lab_tit, cv->start, cv->end );
-				}
-			}
-			else
-			{
-				if ( dozip )
-				{
-					if ( docsv )
-						gzprintf( fz, "%s%s%s%s", firstCol ? "" : CSV_SEP, cv->label, single ? "" : "_", single ? "" : cv->lab_tit );
-					else
-						gzprintf( fz, "%s %s (-1 -1)\t", cv->label, cv->lab_tit );
-				}
-				else
-				{
-					if ( docsv )
-						fprintf( f, "%s%s%s%s", firstCol ? "" : CSV_SEP, cv->label, single ? "" : "_", single ? "" : cv->lab_tit );
-					else
-						fprintf( f, "%s %s (-1 -1)\t", cv->label, cv->lab_tit );
-				}
-			}
-			
-			firstCol = false;
-		}
-	}
-	 
-	for ( cb = r->b; cb != NULL; cb = cb->next )
-	{
-		if ( cb->head == NULL )
-			continue;
-		
-		cur = cb->head;
-		if ( cur->to_compute )
-		{
-			for ( ; cur != NULL; cur = cur->next )
-			title_recursive( cur, header );
-		} 
-	} 
-
-	if ( r->up == NULL )
-	{
-		for ( cv = cemetery; cv != NULL; cv = cv->next )
-		{
-			if ( dozip )
-			{
-				if ( docsv )
-					gzprintf( fz, "%s%s%s%s", firstCol ? "" : CSV_SEP, cv->label, single ? "" : "_", single ? "" : cv->lab_tit );
-				else
-					gzprintf( fz, "%s %s (%d %d)\t", cv->label, cv->lab_tit, cv->start, cv->end );
-			}
-			else
-			{
-				if ( docsv )
-					fprintf( f, "%s%s%s%s", firstCol ? "" : CSV_SEP, cv->label, single ? "" : "_", single ? "" : cv->lab_tit );
-				else
-					fprintf( f, "%s %s (%d %d)\t", cv->label, cv->lab_tit, cv->start, cv->end );
-			}
-			
-			firstCol = false;
-		}
-	}
-}
-
-// open the appropriate file for saving the results (constructor)
-result::result( char const *fname, char const *fmode, bool dozip, bool docsv )
-{
-	this->docsv = docsv;
-	this->dozip = dozip;		// save local class flag
-	if ( dozip )
-	{
-		char *fnamez = new char[ strlen( fname ) + 4 ];	// append .gz to the file name
-		strcpy( fnamez, fname );
-		strcat( fnamez, ".gz");
-		fz = gzopen( fnamez, fmode );
-		delete [ ] fnamez;
-	}
-	else
-		f = fopen( fname, fmode );
-}
-
-// close the appropriate results file (destructor)
-result::~result( void )
-{
-	if ( dozip )
-		gzclose( fz );
-	else
-		fclose( f );
-}
-
-
 /***************************************************
 INIT_LATTICE
 Create a new run time lattice having:
@@ -1610,7 +1203,7 @@ double init_lattice( double pixW, double pixH, double nrow, double ncol, char co
 		for ( j = 0; j < columns; ++j )
 			lattice[ i ][ j ] = init_color;
 		
-#ifndef NW
+#ifndef _NW_
 
 	hsize = get_int( "hsizeLat" );			// 400
 	vsize = get_int( "vsizeLat" );			// 400
@@ -1650,7 +1243,12 @@ double init_lattice( double pixW, double pixH, double nrow, double ncol, char co
 			if { ! [ info exists pltSavFmt ] } { \
 				set pltSavFmt svg \
 			}; \
-			set a [ tk_getSaveFile -parent .lat -title \"Save Lattice to File\" -defaultextension .$pltSavFmt -initialfile %s.$pltSavFmt -initialdir \"%s\" -filetypes { { {Scalable Vector Graphics} {.svg} } { {Encapsulated Postscript} {.eps} } { {All files} {*} } } -typevariable t ]; \
+			if { [ string equal $pltSavFmt eps ] } { \
+				set c \"Encapsulated Postscript\" \
+			} else { \
+				set c \"Scalable Vector Graphics\" \
+			}; \
+			set a [ tk_getSaveFile -parent .lat -title \"Save Lattice to File\" -defaultextension .$pltSavFmt -initialfile %s.$pltSavFmt -initialdir \"%s\" -filetypes { { {Scalable Vector Graphics} {.svg} } { {Encapsulated Postscript} {.eps} } { {All files} {*} } } -typevariable c ]; \
 			if { [ string length $a ] != 0 } { \
 				set a [ file nativename $a ]; \
 				set b [ string trimleft [ file extension $a ] . ]; \
@@ -1727,7 +1325,7 @@ void close_lattice( void )
 {
 	empty_lattice( );
 	
-#ifndef NW
+#ifndef _NW_
 	cmd( "destroytop .lat" );
 #endif
 }
@@ -1771,7 +1369,7 @@ double update_lattice( double line, double col, double val )
 		else
 			lattice[ line_int ][ col_int ] = val_int;
 	}
-#ifndef NW
+#ifndef _NW_
 
 	// avoid operation if canvas was closed
 	cmd( "if [ winfo exists .lat.c ] { set latcanv 1 } { set latcanv 0 }" );
@@ -1832,7 +1430,7 @@ double save_lattice( const char *fname )
 {
 	char *latcanv;
 
-#ifndef NW
+#ifndef _NW_
 
 	// avoid operation if no canvas or no file name
 	cmd( "if [ winfo exists .lat.c ] { set latcanv \"1\" } { set latcanv \"0\" }" );
@@ -2228,6 +1826,62 @@ double betacdf( double alpha, double beta, double x )
 }
 
 
+#ifndef _NW_
+
+/****************************************************
+T_STAR
+Student t distribution  statistic for given 
+degrees of freedom and confidence level (in %)
+****************************************************/
+double t_star( int df, double cl )
+{
+	int i;
+	
+	for ( i = 0; i < T_CLEVS - 1; ++i )
+		if ( cl <= 100 * t_dist_cl[ i ] )
+			break;
+	
+	if ( df <= 30 )
+		return t_dist_st[ i ][ df - 1 ];
+
+	if ( df <= 40 )
+		return t_dist_st[ i ][ 30 ];
+
+	if ( df <= 60 )
+		return t_dist_st[ i ][ 31 ];
+
+	if ( df <= 80 )
+		return t_dist_st[ i ][ 32 ];
+
+	if ( df <= 100 )
+		return t_dist_st[ i ][ 33 ];
+
+	if ( df <= 1000 )
+		return t_dist_st[ i ][ 34 ];
+
+	return t_dist_st[ i ][ 35 ];
+}
+
+
+/****************************************************
+Z_STAR
+Standard normal distribution statistic for given 
+confidence level (in %)
+****************************************************/
+double z_star( double cl )
+{
+	int i;
+	
+	for ( i = 0; i < Z_CLEVS - 1; ++i )
+		if ( cl <= 100 * z_dist_cl[ i ] )
+			break;
+	
+	return z_dist_st[ i ];
+}
+
+#endif
+
+
 /****************************************************
 IS_FINITE
 function redefinition to handle GCC standard library bugs
@@ -2286,7 +1940,7 @@ ran_gen_id = 7 : Lagged fibonacci with 48 bits resolution in [0,1)
 int ran_gen_id = 2;					// ID of initial generator (DO NOT CHANGE)
 long idum = 0;						// Park-Miller default seed (legacy code only)
 
-#ifndef NP
+#ifndef _NP_
 mutex parallel_rd;					// mutex locks for random generator operations
 mutex parallel_lc1;
 mutex parallel_lc2;
@@ -2317,7 +1971,7 @@ void init_random( unsigned seed )
 
 template < class distr > double draw_rd( distr &d )
 {
-#ifndef NP
+#ifndef _NP_
 	// prevent concurrent draw by more than one thread
 	lock_guard < mutex > lock( parallel_rd );
 #endif	
@@ -2326,7 +1980,7 @@ template < class distr > double draw_rd( distr &d )
 
 template < class distr > double draw_lc1( distr &d )
 {
-#ifndef NP
+#ifndef _NP_
 	// prevent concurrent draw by more than one thread
 	lock_guard < mutex > lock( parallel_lc1 );
 #endif	
@@ -2335,7 +1989,7 @@ template < class distr > double draw_lc1( distr &d )
 
 template < class distr > double draw_lc2( distr &d )
 {
-#ifndef NP
+#ifndef _NP_
 	// prevent concurrent draw by more than one thread
 	lock_guard < mutex > lock( parallel_lc2 );
 #endif	
@@ -2344,7 +1998,7 @@ template < class distr > double draw_lc2( distr &d )
 
 template < class distr > double draw_mt32( distr &d )
 {
-#ifndef NP
+#ifndef _NP_
 	// prevent concurrent draw by more than one thread
 	lock_guard < mutex > lock( parallel_mt32 );
 #endif	
@@ -2353,7 +2007,7 @@ template < class distr > double draw_mt32( distr &d )
 
 template < class distr > double draw_mt64( distr &d )
 {
-#ifndef NP
+#ifndef _NP_
 	// prevent concurrent draw by more than one thread
 	lock_guard < mutex > lock( parallel_mt64 );
 #endif	
@@ -2362,7 +2016,7 @@ template < class distr > double draw_mt64( distr &d )
 
 template < class distr > double draw_lf24( distr &d )
 {
-#ifndef NP
+#ifndef _NP_
 	// prevent concurrent draw by more than one thread
 	lock_guard < mutex > lock( parallel_lf24 );
 #endif	
@@ -2371,7 +2025,7 @@ template < class distr > double draw_lf24( distr &d )
 
 template < class distr > double draw_lf48( distr &d )
 {
-#ifndef NP
+#ifndef _NP_
 	// prevent concurrent draw by more than one thread
 	lock_guard < mutex > lock( parallel_lf48 );
 #endif	

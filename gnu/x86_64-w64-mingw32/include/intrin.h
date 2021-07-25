@@ -47,10 +47,10 @@
  * C++ linkage (when GCC headers are explicitly included before intrin.h), but at least their
  * guards will prevent duplicated declarations and avoid conflicts.
  *
- * On GCC 4.9 we may always include those headers. On older GCCs, we may do it only if CPU
+ * On GCC 4.9 and Clang we may always include those headers. On older GCCs, we may do it only if CPU
  * features used by them are enabled, so we need to check macros like __SSE__ or __MMX__ first.
  */
-#if __MINGW_GNUC_PREREQ(4, 9)
+#if __MINGW_GNUC_PREREQ(4, 9) || defined(__clang__)
 #define __MINGW_FORCE_SYS_INTRINS
 #endif
 
@@ -67,6 +67,10 @@ extern "C" {
 #endif
 
 #include <x86intrin.h>
+#include <cpuid.h>
+
+/* Undefine the GCC one taking 5 parameters to prefer the mingw-w64 one. */
+#undef __cpuid
 
 /* Before 4.9.2, x86intrin.h had broken versions of these. */
 #undef _lrotl
@@ -225,7 +229,7 @@ extern "C" {
 #define __MACHINEX86X_NOWIN64 __MACHINEZ
 #endif
 
-#if !(_M_ARM)
+#if !(defined(__arm__))
 #undef __MACHINESA
 #undef __MACHINEARMX
 #undef __MACHINECC

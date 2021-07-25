@@ -1,6 +1,6 @@
 /*************************************************************
 
-	LSD 8.0 - March 2021
+	LSD 8.0 - May 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
@@ -18,17 +18,17 @@
  
  Relevant flags (when defined):
  
- - LMM: Model Manager executable
- - FUN: user model equation file
- - NW: No Window executable
- - NP: no parallel (multi-task) processing
- - NT: no signal trapping (better when debugging in GDB)
+ - _LMM_: Model Manager executable
+ - _FUN_: user model equation file
+ - _NW_: No Window executable
+ - _NP_: no parallel (multi-task) processing
+ - _NT_: no signal trapping (better when debugging in GDB)
  *************************************************************/
 
 #include "common.h"
 
 // Tcl/Tk-dependent modules
-#ifndef NW
+#ifndef _NW_
 
 /*********************************
  LOAD_LMM_OPTIONS
@@ -126,7 +126,7 @@ void update_model_info( void )
 {
 	int i;
 	
-#ifdef LMM
+#ifdef _LMM_
 	// set undefined parameters to defaults
 	for ( i = 0; i < MODEL_INFO_NUM; ++i )
 	{
@@ -202,7 +202,11 @@ void init_tcl_tk( const char *exec, const char *tcl_app_name )
 	// initialize & test the tk application
 	num = Tk_Init( inter );
 	if ( num == TCL_OK )
-		cmd( "if { ! [ catch { package present Tk 8.6 } ] && [ winfo exists . ] } { set res 0 } { set res 1 }" );
+		cmd( "if { ! [ catch { package present Tk 8.6 } ] && ! [ catch { set tk_ok [ winfo exists . ] } ] && $tk_ok } { \
+				set res 0 \
+			} else { \
+				set res 1 \
+			}" );
 	
 	if ( num != TCL_OK || res )
 	{
@@ -308,7 +312,7 @@ bool set_env( bool set )
 				res = ! ( bool ) putenv( tcl_lib_env );
 			}
 			else
-				if ( system( TCL_FIND_EXE ) != 0 )
+				if ( windows_system( TCL_FIND_EXE ) != 0 )
 					res = false;	// just stop if Tcl/Tk is not on path
 		}
 		
@@ -431,7 +435,7 @@ bool firstCall = true;
 
 void cmd( const char *cm, ... )
 {
-#ifndef NP
+#ifndef _NP_
 	// abort if not running in main LSD thread
 	if ( this_thread::get_id( ) != main_thread )
 		return;
@@ -466,7 +470,7 @@ void cmd( const char *cm, ... )
 		if ( code != TCL_OK )
 		{
 			log_tcl_error( cm, Tcl_GetStringResult( inter ) );
-#ifdef LMM
+#ifdef _LMM_
 			if ( tk_ok )
 				cmd( "ttk::messageBox -type ok -title Error -icon error -message \"Tcl error\" -detail \"More information in file '%s/%s'.\"", rootLsd, err_file );
 #endif
@@ -485,7 +489,7 @@ void log_tcl_error( const char *cm, const char *message )
 	struct tm *timeinfo;
 	char *err_path, ftime[ 80 ];
 	
-#ifdef LMM
+#ifdef _LMM_
 	err_path = rootLsd;
 #else
 	err_path = exec_path;
@@ -501,7 +505,7 @@ void log_tcl_error( const char *cm, const char *message )
 	f = fopen( fname, "a" );
 	if ( f == NULL )
 	{
-#ifdef LMM
+#ifdef _LMM_
 		if ( tk_ok )
 			cmd( "ttk::messageBox -type ok -title Error -icon error -message \"Log file write error\" -detail \"Cannot write to log file: '%s/%s'\nCheck write permissions.\"", err_path, err_file );
 		else
@@ -524,7 +528,7 @@ void log_tcl_error( const char *cm, const char *message )
 	fprintf( f, "\n(%s)\nCommand:\n%s\nMessage:\n%s\n-----\n", ftime, cm, message );
 	fclose( f );
 	
-#ifndef LMM
+#ifndef _LMM_
 	plog( "\nInternal LSD error. See file '%s'\n", "", fname );
 #endif
 }
@@ -710,7 +714,7 @@ int main( int argn, char **argv )
 {
 	int res = 0;
 
-#ifndef NT
+#ifndef _NT_
 	// register all signal handlers
 	handle_signals( signal_handler );
 
@@ -719,7 +723,7 @@ int main( int argn, char **argv )
 #endif
 		res = lsdmain( argn, argv );
 		
-#ifndef NT
+#ifndef _NT_
 	}
 	catch ( bad_alloc& )	// out of memory conditions
 	{
@@ -742,22 +746,61 @@ int main( int argn, char **argv )
 }
 
 
+#ifdef _WIN32
+
+/****************************************************
+ WINDOWS_SYSTEM
+ executes system command in Windows without opening
+ command-prompt window
+ spaces in path/file names are not supported
+ ****************************************************/
+int windows_system( const char *cmd )
+{
+	PROCESS_INFORMATION p_info;
+	STARTUPINFO s_info;
+	DWORD res;
+	LPSTR c_line;
+	
+	memset( &s_info, 0, sizeof s_info );
+	memset( &p_info, 0, sizeof p_info );
+	s_info.cb = sizeof s_info;
+	
+	c_line = ( LPSTR ) malloc( strlen( cmd ) + 1 );
+	strcpy( c_line, cmd );
+	
+	if ( ! CreateProcess( NULL, c_line, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, & s_info, & p_info ) )
+	{
+		free( c_line );
+		return -1;
+	}
+
+	WaitForSingleObject( p_info.hProcess, INFINITE );
+	GetExitCodeProcess( p_info.hProcess, & res );
+	CloseHandle( p_info.hProcess );
+	CloseHandle( p_info.hThread );
+	
+	free( c_line );
+	return res;
+}
+
+#endif
+
 /****************************************************
  CLEAN_FILE
  remove any path prefixes to filename, if present
  ****************************************************/
-char *clean_file( char *filename )
+char *clean_file( const char *filename )
 {
 	if ( filename != NULL )
 	{
 		if ( strchr( filename, '/' ) != NULL )
-			return strrchr( filename, '/' ) + 1;
+			return ( char * ) strrchr( filename, '/' ) + 1;
 		
 		if ( strchr( filename, '\\' ) != NULL )
-			return strrchr( filename, '\\' ) + 1;
+			return ( char * ) strrchr( filename, '\\' ) + 1;
 	}
 	
-	return filename;
+	return ( char * ) filename;
 }
 
 
@@ -892,6 +935,41 @@ bool strwsp( const char *str )
 
 
 /***************************************************
+ STRCLN
+ trim whitespace from the beginning/end of string
+ and convert line ends to LF only (unix-like)
+ ***************************************************/
+int strcln( char *out, const char *str, int outSz )
+{
+	char buf[ strlen( str ) + 1 ];
+	strlf( buf, str, strlen( str ) + 1 );
+	return strtrim( out, buf, outSz );
+}
+
+
+/***************************************************
+ STRLF
+ replace CR-LF pairs with LF only on C string
+ ***************************************************/
+int strlf( char *out, const char *str, int outSz )
+{
+	int i, j;
+	
+	for ( i = j = 0; str[ j ] != '\0' && i < outSz - 1; ++j )
+		if ( str[ j ] == '\r' )
+		{
+			if ( str[ j + 1 ] != '\n' )
+				out[ i++ ] = '\n';
+		}
+		else
+			out[ i++ ] = str[ j ];
+	
+	out[ i ] = '\0';
+	
+	return i;
+}
+
+/***************************************************
  STRTRIM
  trim whitespace from the beginning/end of string
  ***************************************************/
@@ -917,7 +995,7 @@ int strtrim( char *out, const char *str, int outSz )
 		--end;
 	++end;
 
-	size = ( end - str ) < outSz - 1 ? ( end - str ) : outSz - 1;
+	size = ( end - str ) < outSz ? ( end - str ) : outSz - 1;
 
 	memcpy( out, str, size );
 	out[ size ] = '\0';
@@ -940,7 +1018,7 @@ int strwrap( char *out, const char *str, int outSz, int wid )
 
 	tlen = strlen( str );
 
-	if ( tlen == 0 || wid <= 0 )
+	if ( tlen == 0 || wid <= 0 || outSz <= 0 )
 		return 0;
 
 	lines = pos = 0;
@@ -1028,6 +1106,10 @@ char *strtcl( char *out, char const *text, int outSz )
 	else
 	{
 		for ( i = j = 0; text[ i ] != '\0' && j < outSz - 1; ++i )
+		{
+			if ( text[ i ] == '\r' && text[ i + 1 ] == '\n' )
+				continue;				// convert CR-LF to LF
+			
 			if ( text[ i ] != '[' && text[ i ] != ']' && text[ i ] != '{' && text[ i ] != '}' && text[ i ] != '\"' && text[ i ] != '\\' && text[ i ] != '$' )
 				out[ j++ ] = text[ i ];
 			else
@@ -1035,7 +1117,8 @@ char *strtcl( char *out, char const *text, int outSz )
 				out[ j++ ] = '\\';
 				out[ j++ ] = text[ i ];
 			}
-
+		}
+		
 		for ( i = 1; i <= j && isspace( ( unsigned char ) out[ j - i ] ); ++i )
 			out[ j - i ] = '\0';
 	}
@@ -1068,15 +1151,17 @@ void msleep( unsigned msec )
 void myexit( int v )
 {
 	fflush( stderr );
-#ifndef NP
+#ifndef _NP_
 	// stop multi-thread workers, if needed
 	delete [ ] workers;
 #endif
 
-#ifndef NW
+#ifndef _NW_
 	if ( inter != NULL )
 	{
-		cmd( "if { ! [ catch { package present Tk } ] } { destroy . }" );
+		if ( tk_ok )
+			cmd( "if { ! [ catch { package present Tk 8.6 } ] && ! [ catch { set tk_ok [ winfo exists . ] } ] && $tk_ok } { catch { destroy . } }" );
+		
 		cmd( "catch { LsdExit }" );
 		Tcl_Finalize( );
 	}
@@ -1110,8 +1195,8 @@ void handle_signals( void ( * handler )( int signum ) )
 
 /****************************************************
  SIGNAL_HANDLER
+ handle critical system signals
  ****************************************************/
-// handle critical system signals
 void signal_handler( int signum )
 {
 	char msg2[ MAX_LINE_SIZE ], msg3[ MAX_LINE_SIZE ];
@@ -1121,7 +1206,7 @@ void signal_handler( int signum )
 	{
 		case SIGINT:
 		case SIGTERM:
-#ifdef NW
+#ifdef _NW_
 			sprintf( msg, "SIGINT/SIGTERM (%s)", signal_name( signum ) );
 			break;
 #else
@@ -1130,9 +1215,9 @@ void signal_handler( int signum )
 #endif
 #ifdef SIGWINCH
 		case SIGWINCH:
-#ifndef NW
+#ifndef _NW_
 			cmd( "sizetop all" );	// readjust windows size/positions
-			cmd( "update idletasks" );
+			cmd( "update" );
 #endif
 			return;
 #endif
@@ -1168,16 +1253,16 @@ void signal_handler( int signum )
 			strcpy( msg2, "" );			
 	}
 
-#ifndef NW
+#ifndef _NW_
 
-#ifndef LMM
+#ifndef _LMM_
 	if ( ! user_exception )
 #endif
 	{
 		strcpy( msg2, "There is an internal LSD error\n  If error persists, please contact developers" );
 		strcpy( msg3, "LSD will close now..." );
 	}
-#ifndef LMM
+#ifndef _LMM_
 	else
 	{
 		strcpy( msg3, "Additional information may be obtained running the simulation using the 'Model'/'GDB Debugger' menu option" );
@@ -1202,9 +1287,12 @@ void signal_handler( int signum )
 	}
 #endif
 	
-	cmd( "ttk::messageBox -parent . -title Error -icon error -type ok -message \"FATAL ERROR\" -detail \"System Signal received:\n\n %s:\n  %s\n\n%s\"", msg, msg2, msg3 );
+	if ( tk_ok )
+		cmd( "if { ! [ catch { package present Tk 8.6 } ] && ! [ catch { set tk_ok [ winfo exists . ] } ] && $tk_ok } { \
+			catch { ttk::messageBox -parent . -title Error -icon error -type ok -message \"FATAL ERROR\" -detail \"System Signal received:\n\n %s:\n  %s\n\n%s\" } \
+			}", msg, msg2, msg3 );
 	
-#ifndef LMM
+#ifndef _LMM_
 	if ( user_exception )
 	{
 		if ( ! parallel_mode && fast_mode == 0 && stacklog != NULL && 

@@ -356,7 +356,8 @@ proc ::tooltip::menuMotion {w} {
 	variable tooltip
 
         # Menu events come from a funny path, map to the real path.
-        set m [string map {"#" "."} [winfo name $w]]
+        #set m [string map {"#" "."} [winfo name $w]]
+        set m [string map {"#" "."} "[winfo parent $w].[winfo name $w]"]
 	set cur [$w index active]
 
 	# The next two lines (all uses of LAST) are necessary until the
@@ -479,7 +480,7 @@ proc ::tooltip::itemTip {w args} {
 
 proc ::tooltip::enableCanvas {w args} {
     if {[string match *itemTip* [$w bind all <Enter>]]} { return }
-#    $w bind all <Enter> +[namespace code [list itemTip $w]]
+    $w bind all <Enter> +[namespace code [list itemTip $w]]
     $w bind all <Leave>	+[namespace code [list hide 1]] ; # fade ok
     $w bind tooltip <Enter> +[namespace code [list itemTip $w]]
     $w bind tooltip <Leave>	+[namespace code [list hide 1]] ; # fade ok

@@ -1,6 +1,6 @@
 /*************************************************************
 
-	LSD 8.0 - March 2021
+	LSD 8.0 - May 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
@@ -68,7 +68,6 @@ void edit_data( object *r, int *choice, char *lab )
 
 	first = r->search( lab );
 	cmd( "set cwidth 11" );
-	cmd( "set position 1.0" );
 	
 	cmd( "newtop .inid \"%s%s - LSD Initial Values Editor\" { set choice 1 }", unsaved_change( ) ? "*" : " ", simul_name );
 
@@ -163,7 +162,6 @@ void edit_data( object *r, int *choice, char *lab )
 		cmd( ".inid.err conf -text \"OBJECTS NOT SHOWN! (> %d)\" -style hl.TLabel", MAX_COLS );
 		if ( ! iniShowOnce )
 		{
-			cmd( "update idletasks" );
 			cmd( "ttk::messageBox -parent . -type ok -title Warning -icon warning -message \"Too many objects to edit\" -detail \"LSD Initial Values editor can show only the first %d objects' values. Please use the 'Set All' button to define values for objects beyond those.\" ", MAX_COLS );
 			iniShowOnce = true;
 		}
@@ -193,6 +191,7 @@ void edit_data( object *r, int *choice, char *lab )
 		if ( Tcl_GetVar( inter, "var_name", 0 ) != NULL )
 		{
 			strcpy( ch, ( char * ) Tcl_GetVar( inter, "var_name", 0 ) );
+			*choice = 4;	// point .inid window as parent for the set_all window
 			set_all( choice, first, ch, lag );
 			show_cells( r, lab );
 		}
@@ -313,11 +312,13 @@ void link_cells( object *r, char *lab )
 			cmd( "ttk::label $w.typ_t%s -text (P) -style hl.TLabel", cv1->label );
 			cmd( "grid $w.typ_t%s -row %d -column 1 -padx 1", cv1->label, k );
 			cmd( "mouse_wheel $w.typ_t%s", cv1->label );
-			cmd( "ttk::button $w.t%s -text \"Set All\" -width -1 -takefocus 0 -style small.TButton -command { set choice 2; set var_name %s; set lag %d; set position $w.tit_t%s; set lastFocus [ focus -displayof $w ] }", cv1->label, cv1->label, j, cv1->label );
+			cmd( "ttk::button $w.t%s -text \"Set All\" -width -1 -takefocus 0 -style small.TButton -command { set var_name %s; set lag %d; set lastFocus $w.c1_v%sp; set choice 2 }", cv1->label, cv1->label, j, cv1->label );
 			cmd( "grid $w.t%s -row %d -column 2", cv1->label, k );
 			cmd( "mouse_wheel $w.t%s", cv1->label );
 			
-			cmd( "tooltip::tooltip $w.tit_t%s \"Parameter '%s'\nin object '%s'\"", cv1->label, cv1->label, cur1->label );
+			cmd( "set tit $w.tit_t%s", cv1->label );
+			set_ttip_descr( ( char * ) Tcl_GetVar( inter, "tit", 0 ), cv1->label, -1, false );
+			cmd( "tooltip::tooltip $w.typ_t%s \"Parameter '%s'\nin object '%s'\"", cv1->label, cv1->label, cur1->label );
 			cmd( "tooltip::tooltip $w.t%s \"Set all or a subset of\n'%s' instances\"", cv1->label, cv1->label );
 		}
 		else
@@ -333,11 +334,13 @@ void link_cells( object *r, char *lab )
 				cmd( "ttk::label $w.typ_t%s_%d -text (V_%d) -style hl.TLabel", cv1->label, j, j + 1 );
 				cmd( "grid $w.typ_t%s_%d -row %d -column 1 -padx 1", cv1->label, j, k );
 				cmd( "mouse_wheel $w.typ_t%s_%d", cv1->label, j );
-				cmd( "ttk::button $w.t%s_%d -text \"Set All\" -width -1 -takefocus 0 -style small.TButton -command { set choice 2; set var_name %s; set lag %d; set position $w.tit_t%s_%d; set lastFocus [ focus -displayof $w ] }", cv1->label, j, cv1->label, j, cv1->label, j );
+				cmd( "ttk::button $w.t%s_%d -text \"Set All\" -width -1 -takefocus 0 -style small.TButton -command { set var_name %s; set lag %d; set lastFocus $w.c1_v%s_%d; set choice 2 }", cv1->label, j, cv1->label, j, cv1->label, j );
 				cmd( "grid $w.t%s_%d -row %d -column 2", cv1->label, j, k );
 				cmd( "mouse_wheel $w.t%s_%d", cv1->label, j );
 			
-				cmd( "tooltip::tooltip $w.tit_t%s_%d \"Variable '%s' (lag %d)\nin object '%s'\"", cv1->label, j, cv1->label, j + 1, cur1->label );
+				cmd( "set tit $w.tit_t%s_%d", cv1->label, j );
+				set_ttip_descr( ( char * ) Tcl_GetVar( inter, "tit", 0 ), cv1->label, -1, false );
+				cmd( "tooltip::tooltip $w.typ_t%s_%d \"Variable '%s' (lag %d)\nin object '%s'\"", cv1->label, j, cv1->label, j + 1, cur1->label );
 				cmd( "tooltip::tooltip $w.t%s_%d \"Set all or a subset of\n'%s' instances\"", cv1->label, j, cv1->label );
 			}
 		}
@@ -357,13 +360,11 @@ void link_cells( object *r, char *lab )
 				cmd( "grid $w.c%d_v%sp -row %d -column [ expr { 2 + %d } ] -padx 1", i, cv->label, k, i );
 				cmd( "mouse_wheel $w.c%d_v%sp", i, cv->label );
 				
-				cmd( "if { $tag_%d ne \"\" } { \
+				cmd( "if { [ info exists tag_%d ] && $tag_%d ne \"\" } { \
 						tooltip::tooltip $w.c%d_v%sp \"Parameter '%s'\ninstance $tag_%d\" \
 					} else { \
 						tooltip::tooltip $w.c%d_v%sp \"Parameter '%s'\" \
-					}", i, i, cv->label, cv->label, i, i, cv->label, cv->label );
-				
-				cmd( "bind $w.c%d_v%sp <Button-1> { selectcell $g.can $w.c%d_v%sp; break }", i, cv->label, i, cv->label );
+					}", i, i, i, cv->label, cv->label, i, i, cv->label, cv->label );
 				
 				if ( strlen( previous ) != 0 )
 				{
@@ -401,14 +402,12 @@ void link_cells( object *r, char *lab )
 					cmd( "grid $w.c%d_v%s_%d -row %d -column [ expr { 2 + %d } ] -padx 1", i, cv->label, j, k, i );
 					cmd( "mouse_wheel $w.c%d_v%s_%d", i, cv->label, j );
 					
-					cmd( "if { $tag_%d ne \"\" } { \
+					cmd( "if { [ info exists tag_%d ] && $tag_%d ne \"\" } { \
 							tooltip::tooltip $w.c%d_v%s_%d \"Variable '%s' (lag %d)\ninstance $tag_%d\" \
 						} else { \
-							tooltip::tooltip $w.c%d_v%s_%d \"Variable '%s' (lag %d)\ninstance $tag_%d\" \
-						}", i, i, cv->label, j, cv->label, j + 1, i, i, cv->label, j, cv->label, j + 1 );
+							tooltip::tooltip $w.c%d_v%s_%d \"Variable '%s' (lag %d)\" \
+						}", i, i, i, cv->label, j, cv->label, j + 1, i, i, cv->label, j, cv->label, j + 1 );
 
-					cmd( "bind  $w.c%d_v%s_%d <Button-1> { selectcell $g.can $w.c%d_v%s_%d; break }", i, cv->label, j, i, cv->label, j );
-					
 					if ( strlen( previous ) != 0 )
 					{
 						cmd( "bind %s <Return> { selectcell $g.can $w.c%d_v%s_%d }", previous, i, cv->label, j );

@@ -1,4 +1,0 @@
-#This is the default AStyle formating we use
---break-elseifs
---indent=force-tab=2
---formatted #Formatted files display mode. Display only the files that have been formatted. Do not display files that are unchanged.

@@ -1,6 +1,6 @@
 /*************************************************************
 
-	LSD 8.0 - March 2021
+	LSD 8.0 - May 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
@@ -121,7 +121,7 @@ void assign( object *r, int *i, char *lab )
 		if ( c->next != NULL ) 		// multiple instances
 			for ( j = 1, c1 = c; c1 != NULL; c1 = go_brother( c1 ), ++j )
 			{
-				sprintf( cur_lab, "%s_%d", lab, j );
+				sprintf( cur_lab, "%s#%d", lab, j );
 				assign( c1, i, cur_lab );
 			}
 		else 						// unique instance
@@ -139,18 +139,18 @@ void add_rt_plot_tab( const char *w, int id_sim )
 		
 	switch ( platform )
 	{
-		case WINDOWS:
+		case _WIN_:
 			tabs = 12;
 			cols = 10;
 			dbut = 2;
 			break;
-		case LINUX:
+		case _LIN_:
 			tabs = 9;
 			cols = 8;
 			dbut = 3;
 			break;
 		default:
-		case MAC:
+		case _MAC_:
 			tabs = 8;
 			cols = 5;
 			dbut = 2;
@@ -160,13 +160,13 @@ void add_rt_plot_tab( const char *w, int id_sim )
 	cmd( "set w %s", w );
 	cmd( "set rtptab $w.pad" );
 	cmd( "if { ! [ winfo exists $rtptab ] } { \
-			newtop $w \"%s%s - LSD Run-time Plots\" \"set_c_var done_in 5; destroytop $w\" \"\"; \
+			newtop $w \"%s%s - LSD Run-time Plots\" { set_c_var done_in 5 } \"\"; \
 			wm transient $w .; \
 			ttk::notebook $rtptab; \
 			pack $rtptab; \
 			ttk::notebook::enableTraversal $rtptab; \
-			showtop $w; \
-			bind $w <F1> { LsdHelp runtime.html } \
+			bind $w <F1> { LsdHelp runtime.html }; \
+			set rtptab_show 0 \
 		}", unsaved_change( ) ? "*" : " ", simul_name );
 		
 	set_shortcuts_run( "$w" );
@@ -302,7 +302,7 @@ void init_plot( int num, int id_sim )
 
 	// controls
 	cmd( "set scrollB %d", scrollB );
-	cmd( "ttk::checkbutton $activeplot.fond.shift -text Scroll -variable scrollB -command { set_c_var done_in 8 }" );	
+	cmd( "ttk::checkbutton $activeplot.fond.shift -text Scroll -variable scrollB -state disabled -command { set_c_var done_in 8 }" );	
 	cmd( "if [ string equal $CurPlatform windows ] { \
 			set centerB Center; \
 			set goWid 7 \
@@ -313,14 +313,17 @@ void init_plot( int num, int id_sim )
 			set centerB Cen.; \
 			set goWid 3 \
 		}" );
-	cmd( "ttk::button $activeplot.fond.go -width $goWid -text $centerB -command { set_c_var done_in 7 }" );
+	cmd( "ttk::button $activeplot.fond.go -width $goWid -text $centerB -state disabled -command { set_c_var done_in 7 }" );
 
 	cmd( "$activeplot.fond create window [ expr { $sclhsizeR / 2 } ] [ expr { $botvsizeR / 4 - 5 } ] -window $activeplot.fond.shift" );
 	cmd( "$activeplot.fond create window [ expr { $sclhsizeR / 2 } ] [ expr { 3 * $botvsizeR / 4 - 2 } ] -window $activeplot.fond.go" );
 	
 	// labels
 	cmd( "for { set i 0; set j 0; set k 0 } { $i < [ expr { min( %d, $linlabR * $lablinR ) } ] } { incr i } { \
-			$activeplot.fond create text [ expr { $sclhsizeR + $sclvmarginR + $j * $hsizeR / $lablinR } ] [ expr { $k * $linvsizeR } ] -anchor nw -text [ lindex $tp $i ] -fill [ set c$i ]; \
+			set l [ regsub # [ lindex $tp $i ] _ ]; \
+			set it [ $activeplot.fond create text [ expr { $sclhsizeR + $sclvmarginR + $j * $hsizeR / $lablinR } ] [ expr { $k * $linvsizeR } ] -anchor nw -text $l -fill [ set c$i ] ]; \
+			set n [ regsub #\\[0-9\\]+ [ lindex $tp $i ] \"\" ]; \
+			set_ttip_descr $activeplot.fond $n $it 0; \
 			if { $j < [ expr { $lablinR - 1 } ] } { \
 				incr j \
 			} else { \
@@ -330,15 +333,6 @@ void init_plot( int num, int id_sim )
 		}", num );
 		
 	cmd( "pack $activeplot.fond -expand yes -fill both -pady 7" );
-	
-	if ( fast_mode > 0 )
-	{
-		cmd( "$activeplot.fond.go conf -state disabled" );
-		cmd( "$activeplot.fond.shift conf -state disabled" );
-		cmd( "$rtptab hide $activeplot" );
-	}
-
-	cmd( "focustop .log" );
 }
 
 
@@ -444,14 +438,19 @@ RESET_PLOT
 void reset_plot( void )
 {
 	cmd( "if { [ info exists activeplot ] && [ winfo exists $activeplot ] } { \
-			if [ string equal [ $rtptab tab $activeplot -state ] hidden ] { \
-				$rtptab add $activeplot \
-			}; \
 			$activeplot.fond.go conf -state disabled; \
 			$activeplot.fond.shift conf -state disabled; \
-			$rtptab select $activeplot; \
-			update idletasks \
-		}" );
+			tooltip::tooltip clear $activeplot.fond.go; \
+			tooltip::tooltip clear $activeplot.fond.shift; \
+			if { %d } { \
+				destroytop [ winfo toplevel $activeplot ] \
+			} else { \
+				deiconifytop $activeplot; \
+				$rtptab select $activeplot; \
+				wm protocol [ winfo toplevel $activeplot ] WM_DELETE_WINDOW \"destroytop [ winfo toplevel $activeplot ]\" \
+			}; \
+			update \
+		}", fast ? 1 : 0 );
 }
 
 
@@ -464,7 +463,17 @@ void enable_plot( void )
 			$rtptab select $activeplot; \
 			$activeplot.fond.go conf -state normal; \
 			$activeplot.fond.shift conf -state normal; \
-			update idletasks \
+			tooltip::tooltip $activeplot.fond.go \"Center plot in current time step\"; \
+			tooltip::tooltip $activeplot.fond.shift \"Automatic scrolling\"; \
+			$rtptab select $activeplot; \
+			if { [ info exists rtptab_show ] && ! $rtptab_show } { \
+				set rtptab_show 1; \
+				showtop [ winfo toplevel $activeplot ] \
+			} else { \
+				deiconifytop $activeplot \
+			}; \
+			focustop .log; \
+			update \
 		}" );
 }
 
@@ -477,8 +486,10 @@ void disable_plot( void )
 	cmd( "if { [ info exists activeplot ] && [ winfo exists $activeplot ] } { \
 			$activeplot.fond.go conf -state disabled; \
 			$activeplot.fond.shift conf -state disabled; \
-			$rtptab hide $activeplot; \
-			update idletasks \
+			tooltip::tooltip clear $activeplot.fond.go; \
+			tooltip::tooltip clear $activeplot.fond.shift; \
+			wm withdraw [ winfo toplevel $activeplot ]; \
+			update \
 		}" );
 }
 
@@ -502,5 +513,7 @@ SCROLL_PLOT
 void scroll_plot( void )
 {
 	if ( scrollB )
-		cmd( "if { [ info exists activeplot ] && [ winfo exists $activeplot ] && %d > [ expr { $hsizeR * 0.8 } ] } { $activeplot.c.c.cn xview scroll 1 units }", t );
+		cmd( "if { [ info exists activeplot ] && [ winfo exists $activeplot ] && %d > [ expr { $hsizeR * 0.8 } ] } { \
+				$activeplot.c.c.cn xview scroll 1 units \
+			}", t );
 }

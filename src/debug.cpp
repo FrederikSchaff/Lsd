@@ -1,6 +1,6 @@
 /*************************************************************
 
-	LSD 8.0 - March 2021
+	LSD 8.0 - May 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
@@ -663,8 +663,6 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 				cmd( "bind $e.v.l0.e <Return> { set choice 1 }" );
 
 				cmd( "showtop $e" );
-				cmd( "focus $e.v.l0.e" );
-				cmd( "$e.v.l0.e selection range 0 end" );
 				cmd( "mousewarpto $e.b.ok" );
 
 				choice = 0;
@@ -779,8 +777,8 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 
 					cmd( "set choice $sa" );
 					i = choice;
-					choice = 0;
-
+					
+					choice = 3;	// point .deb window as parent for the set_all window
 					set_all( &choice, r, ch, i );
 				} 
 
@@ -1082,8 +1080,6 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 				cmd( "bind $t.t.val <Return> { set choice 1 }" );
 
 				cmd( "showtop $t" );
-				cmd( "$t.t.val selection range 0 end" );
-				cmd( "focus $t.t.val" );
 				cmd( "mousewarpto $t.b.ok" );
 
 				choice = 0;
@@ -1279,8 +1275,7 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 
 					cmd( "okhelpcancel $hk b { set choice 1 } { LsdHelp debug.html#hooks } { set choice 2 }" );
 
-					cmd( "showtop $hk" );
-					
+					cmd( "showtop $hk" );			
 					cmd( "mousewarpto $hk.b.ok" );
 
 					choice = 0;
@@ -1391,6 +1386,7 @@ int deb( object *r, object *c, char const *lab, double *res, bool interact, cons
 			case 25:
 				ch1 = ( char * )Tcl_GetVar( inter, "res", 0 );
 				strcpy( ch, ch1 );
+				choice = 3;	// point .deb window as parent for the set_all window
 				set_all( &choice, r, ch, 0 );
 				
 				choice = 0;
@@ -1564,13 +1560,13 @@ void deb_show( object *r, const char *hl_var, int mode )
 	cmd( "if { ! [ winfo exists .deb.tit ] } { \
 			set fntSz [ expr { [ font metrics [ ttk::style lookup boldSmall.TLabel -font ] -linespace ] + 2 } ]; \
 			ttk::frame .deb.tit -height [ expr { $fntSz + $vspcszD } ]; \
-			ttk::label .deb.tit.name1 -style boldSmall.TLabel -text Variable -anchor w; \
+			ttk::label .deb.tit.name1 -style boldSmall.TLabel -text Name -anchor w; \
 			ttk::label .deb.tit.val1 -style hlBoldSmall.TLabel -text Value; \
-			ttk::label .deb.tit.last1 -style boldSmall.TLabel -text \"Updated\"; \
+			ttk::label .deb.tit.last1 -style boldSmall.TLabel -text Updated; \
 			ttk::label .deb.tit.pad -style boldSmall.TLabel; \
-			ttk::label .deb.tit.name2 -style boldSmall.TLabel -text Variable -anchor w; \
+			ttk::label .deb.tit.name2 -style boldSmall.TLabel -text Name -anchor w; \
 			ttk::label .deb.tit.val2 -style hlBoldSmall.TLabel -text Value; \
-			ttk::label .deb.tit.last2 -style boldSmall.TLabel -text \"Updated\"; \
+			ttk::label .deb.tit.last2 -style boldSmall.TLabel -text Updated; \
 			placeline { .deb.tit.name1 .deb.tit.val1 .deb.tit.last1 .deb.tit.pad .deb.tit.name2 .deb.tit.val2 .deb.tit.last2 } [ list $hnamshD $hvalshD $hupdshD $hpadshD $hnamshD $hvalshD $hupdshD ] 0 $fntSz; \
 			pack .deb.tit -anchor w -fill x -after .deb.v \
 		}" );
@@ -1652,6 +1648,7 @@ void deb_show( object *r, const char *hl_var, int mode )
 		// single frame ($w=.deb.cc.grid.can.f) in canvas to hold all cells
 		cmd( "set w $g.can.f" );
 		cmd( "destroy $w" );
+		cmd( "tooltip::tooltip clear ${w}*" );
 		cmd( "ttk::frame $w" );
 		cmd( "$g.can create window 0 0 -window $w -anchor nw" );
 		
@@ -1700,7 +1697,7 @@ void deb_show( object *r, const char *hl_var, int mode )
 			cmd( "mouse_wheel $w.e$i.val" );
 			cmd( "mouse_wheel $w.e$i.last" );
 			
-			set_ttip_descr( "$w.e$i.name", ap_v->label );
+			set_ttip_descr( "$w.e$i.name", ap_v->label, -1, false );
 			
 			if ( mode != 2 && ap_v->num_lag > 0 )
 			{

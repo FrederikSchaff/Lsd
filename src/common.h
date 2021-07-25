@@ -1,6 +1,6 @@
 /*************************************************************
 
-	LSD 8.0 - March 2021
+	LSD 8.0 - May 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
@@ -18,18 +18,18 @@
  
  Relevant flags (when defined):
  
- - LMM: Model Manager executable
- - FUN: user model equation file
- - NW: No Window executable
- - NP: no parallel (multi-task) processing
- - NT: no signal trapping (better when debugging in GDB)
+ - _LMM_: Model Manager executable
+ - _FUN_: user model equation file
+ - _NW_: No Window executable
+ - _NP_: no parallel (multi-task) processing
+ - _NT_: no signal trapping (better when debugging in GDB)
  *************************************************************/
 
 // LSD version strings, for About... boxes and code testing
 #define _LSD_MAJOR_ 8
 #define _LSD_MINOR_ 0
-#define _LSD_VERSION_ "8.0-beta-2"
-#define _LSD_DATE_ "March 22 2020"   // __DATE__
+#define _LSD_VERSION_ "8.0-beta-3"
+#define _LSD_DATE_ "May 17 2021"   // __DATE__
 
 // standard libraries used
 #include <cstdlib>
@@ -69,9 +69,9 @@
 #define MAX_FILE_TRY 100000				// max number of lines to read from files
 
 // platform codes
-#define LINUX	1
-#define MAC		2
-#define WINDOWS	3
+#define _LIN_	1
+#define _MAC_		2
+#define _WIN_	3
 
 // Choose directory/file separator
 #define foldersep( dir ) ( dir[ 0 ] == '\0' ? "" : "/" )
@@ -182,7 +182,7 @@ struct object
 	b_mapT b_map;						// fast lookup map to object bridges
 	v_mapT v_map;						// fast lookup map to variables
 
-#ifndef NP
+#ifndef _NP_
 	mutex parallel_comp;				// mutex lock for parallel computations
 #endif
 
@@ -316,7 +316,7 @@ struct variable
 	object *up;
 	variable *next;
 	
-#ifndef NP
+#ifndef _NP_
 	mutex parallel_comp;				// mutex lock for parallel computation
 #endif
 
@@ -474,10 +474,21 @@ struct profile							// profiled variable object
 	unsigned int comp;
 	unsigned long long ticks;
 	
-	profile( ) { ticks = 0; comp = 0; };	// constructor
+	profile( ) { ticks = 0; comp = 0; };// constructor
 };
 
-#ifndef NP
+struct nolh								// near-orthogonal Latin hypercube description
+{ 	
+	int kMin; 
+	int kMax; 
+	int n1; 
+	int n2; 
+	int loLevel; 
+	int hiLevel; 
+	int *table;
+};
+
+#ifndef _NP_
 struct worker							// multi-thread parallel worker data structure
 {
 	bool free;
@@ -519,7 +530,7 @@ extern int quit;						// simulation termination control flag
 
 
 // prevent exposing internals in users' fun_xxx.cpp
-#ifndef FUN
+#ifndef _FUN_
 
 // common standalone internal C functions/procedures (not visible to the users)
 bool get_bool( const char *tcl_var, bool *var = NULL );
@@ -528,7 +539,7 @@ bool load_model_info( const char *path );
 bool set_env( bool set );
 bool valid_label( const char *lab );
 bool strwsp( const char *str );
-char *clean_file( char *file );
+char *clean_file( const char *file );
 char *clean_path( char *path );
 char *get_str( const char *tcl_var, char *var = NULL, int var_size = 0 );
 char *search_lsd_root( char *start_path );
@@ -539,8 +550,11 @@ double get_double( const char *tcl_var, double *var = NULL );
 int deb( object *r, object *c, char const *lab, double *res, bool interact = false, const char *hl_var = "" );
 int get_int( const char *tcl_var, int *var = NULL );
 int lsdmain( int argn, char **argv );
+int strcln( char *out, const char *str, int outSz );
+int strlf( char *out, const char *str, int outSz );
 int strtrim( char *out, const char *str, int outSz );
 int strwrap( char *out, const char *str, int outSz, int wid );
+int windows_system( const char *cmd );
 long get_long( const char *tcl_var, long *var = NULL );
 string win_path( string filepath );
 void check_option_files( bool sys );
@@ -555,7 +569,7 @@ void signal_handler( int signum );
 void update_lmm_options( bool justLmmGeom = false );
 void update_model_info( void );
 
-#ifdef LMM
+#ifdef _LMM_
 bool discard_change( void );
 #else
 bool discard_change( bool checkSense = true, bool senseOnly = false, const char title[ ] = "" );
@@ -584,13 +598,13 @@ extern const char *wnd_names[ ];		// LSD main windows' names
 extern const int signals[ ];			// handled system signal numbers
 
 // multi-threading control 
-#ifndef NP
+#ifndef _NP_
 extern thread::id main_thread;			// LSD main thread ID
 extern worker *workers;					// multi-thread parallel worker data
 #endif
 
 // Tcl/Tk specific definitions (for the windowed version only)
-#ifndef NW
+#ifndef _NW_
 
 #include <tk.h>
 
