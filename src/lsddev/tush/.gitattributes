@@ -1,0 +1,6 @@
+# All script files are text
+bin/overwrite text eol=lf
+bin/tush-bless text eol=lf
+bin/tush-check text eol=lf
+bin/tush-run text eol=lf
+bin/tush-run-raw text eol=lf
