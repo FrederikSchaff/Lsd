@@ -1,6 +1,6 @@
 #*************************************************************
 #
-#	LSD 8.0 - March 2021
+#	LSD 8.0 - May 2021
 #	written by Marco Valente, Universita' dell'Aquila
 #	and by Marcelo Pereira, University of Campinas
 #
@@ -102,7 +102,8 @@ proc settop { w { name no } { destroy no } { par no } { force no } } {
 	deiconifytop $w $force
 	raise $w
 	focustop $w "" $force
-	update idletasks
+	
+	update
 
 	if { $logWndFn && [ info procs plog ] != "" } { 
 		plog "\nsettop (w:$w, master:[ wm transient $w ], pos:([ winfo x $w ],[ winfo y $w ]), size:[ winfo width $w ]x[ winfo height $w ], parWndLst:$parWndLst, grab:$grabLst)" 
@@ -267,7 +268,7 @@ proc showtop { w { pos none } { resizeX no } { resizeY no } { grab yes } { sizeX
 		focus $w
 	}
 
-	update idletasks
+	update
 	
 	if { $logWndFn && [ info procs plog ] != "" } { 
 		plog "\nshowtop (w:$w, master:[ wm transient $w ], pos:([ winfo x $w ],[ winfo y $w ]), size:[ winfo width $w ]x[ winfo height $w ], minsize:[ wm minsize $w ], primdisp:[ primdisp [ winfo parent $w ] ], parWndLst:$parWndLst, grab:$grabLst)" 
@@ -287,7 +288,7 @@ proc destroytop w {
 	}
 
 	# save main windows sizes/positions
-	if { [ info exists restoreWin ] && $restoreWin && [ lsearch $wndLst $w ] >= 0 } {
+	if { [ winfo viewable $w ] && [ info exists restoreWin ] && $restoreWin && [ lsearch $wndLst $w ] >= 0 } {
 		set curGeom [ geomtosave $w ]
 
 		if { $curGeom != "" } {
@@ -321,8 +322,10 @@ proc destroytop w {
 		focus [ winfo parent $w ]
 	}
 	
+	tooltip::tooltip clear $w.*
+	
 	destroy $w
-	update idletasks
+	update
 
 	if { $logWndFn && [ info procs plog ] != "" } { 
 		plog "\ndestroytop (w:$w, parWndLst:$parWndLst, grab:$grabLst)" 
@@ -605,7 +608,7 @@ proc sizetop { { w all } } {
 		}
 	}
 
-	update idletasks
+	update
 
 	if { $logWndFn && [ info procs plog ] != "" } { 
 		plog "\nsizetop (w:$w, master:[ wm transient $w ], pos:([ winfo x $w ],[ winfo y $w ]), size:[ winfo width $w ]x[ winfo height $w ], parWndLst:$parWndLst, grab:$grabLst)"
@@ -641,7 +644,7 @@ proc resizetop { w sizeX { sizeY 0 } } {
 		}
 	}
 	
-	update idletasks
+	update
 
 	if { $logWndFn && [ info procs plog ] != "" } { 
 		plog "\nresizetop (w:$w, master:[ wm transient $w ], pos:([ winfo x $w ],[ winfo y $w ]), size:[ winfo width $w ]x[ winfo height $w ], parWndLst:$parWndLst, grab:$grabLst)"
@@ -675,7 +678,7 @@ proc focustop { w1 { w2 "" } { force no } } {
 		}
 	}
 	
-	update idletasks
+	update
 }
 
 
@@ -686,10 +689,10 @@ proc focustop { w1 { w2 "" } { force no } } {
 proc deiconifytop { w { force no } } {
 
 	if { $force || ! [ winfo viewable $w ] } {
-		wm deiconify $w
+		wm deiconify [ winfo toplevel $w ]
 	}
 	
-	update idletasks
+	update
 }
 
 
@@ -781,7 +784,7 @@ proc align { w1 w2 { side R } } {
 	}
 	
 	wm geometry $w1 +$g+$d
-	update idletasks
+	update
 
 	if { $logWndFn && [ info procs plog ] != "" } { 
 		plog "\nalign w1:$w1 w2:$w2 (w1 width:$a, w1 height:$b, w2 x:$c, w2 y:$d, w2 width:$e)"
@@ -943,7 +946,7 @@ proc disable_window { w m { args "" } } {
 		}
 	}
 	
-	update idletasks
+	update
 }
 
 
@@ -966,7 +969,7 @@ proc enable_window { w m { args "" } } {
 		}
 	}
 	
-	update idletasks
+	update
 }
 
 
@@ -980,7 +983,7 @@ proc setglobkeys { w { chkChg 1 } } {
 	# soft/hard exit (check for unsaved changes or not)
 	if { $chkChg } {
 		bind $w <Control-Alt-x> { 
-			if [ string equal [ discard_change ] ok ] { 
+			if { [ discard_change ] eq \"ok\" && [ abort_run_threads ] eq \"ok\" } { 
 				exit 
 			}
 			break

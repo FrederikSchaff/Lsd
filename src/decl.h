@@ -1,6 +1,6 @@
 /*************************************************************
 
-	LSD 8.0 - March 2021
+	LSD 8.0 - May 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
@@ -18,10 +18,10 @@ Global definitions among all LSD C++ modules
 
 Relevant flags (when defined):
 
-- FUN: user model equation file
-- NW: No Window executable
-- NP: no parallel (multi-task) processing
-- NT: no signal trapping (better when debugging in GDB)
+- _FUN_: user model equation file
+- _NW_: No Window executable
+- _NP_: no parallel (multi-task) processing
+- _NT_: no signal trapping (better when debugging in GDB)
 *************************************************************/
 
 // common definitions for LMM and LSD
@@ -61,6 +61,9 @@ Relevant flags (when defined):
 #define MARG 0.01						// y-axis % plot clearance margin
 #define MARG_CONST 0.1					// y-axis % plot clearance margin for constant series
 #define BAR_DONE_SIZE 80				// characters in the percentage done bar
+#define NOLH_TABS 7						// number of defined NOLH tables
+#define T_CLEVS 10						// number of defined t distribution confidence levels
+#define Z_CLEVS 7						// number of defined normal distr. confidence levels
 #define SIG_DIG 10						// number of significant digits in data files
 #define SIG_MIN 1e-100					// Minimum significant value (different than zero)
 #define CSV_SEP ","						// single char string with the .csv format separator
@@ -71,6 +74,10 @@ Relevant flags (when defined):
 #define LEGACY_NO_DESCR "(no description available)" // legacy description (do not change)
 #define BEG_INIT "_INIT_"				// initial values description section begin keyword
 #define END_DESCR "END_DESCRIPTION"		// description section end keyword
+
+// define meta-parameter names for LWI getlimits
+#define META_PAR_NUM 3
+#define META_PAR_NAME { "_timeSteps_", "_numRuns_", "_rndSeed_" }
 
 // define PI for C++11
 #ifndef M_PI
@@ -170,22 +177,24 @@ extern int t;
 extern unsigned seed;
 extern object *root;
 
-#ifndef NW
+#ifndef _NW_
 extern int i_values[ ];					// user temporary variables copy
 extern double d_values[ ];
 extern object *o_values[ ];
 extern netLink *n_values[ ];
+extern FILE *f_values[ ];
 #endif
 
 
 // prevent exposing internals in users' fun_xxx.cpp
-#ifndef FUN
+#ifndef _FUN_
 
 // standalone internal C functions/procedures (not visible to the users)
 FILE *create_frames( const char *path, const char *fname );
 FILE *search_data_ent( char *name, variable *v );
 FILE *search_data_str( char const *name, char const *init, char const *str );
 FILE *search_str( char const *name, char const *str );
+bool abort_run_threads( void );
 bool add_unsaved( int *choice );
 bool alloc_save_mem( object *r );
 bool alloc_save_var( variable *v );
@@ -213,6 +222,8 @@ description *change_description( char const *lab_old, char const *lab = NULL, in
 description *search_description( const char *lab, bool add_missing = true );
 double lower_bound( double a, double b, double marg, double marg_eq, int dig = 16 );
 double upper_bound( double a, double b, double marg, double marg_eq, int dig = 16 );
+double t_star( int df, double cl );
+double z_star( double cl );
 double *log_data( double *data, int start, int end, int ser, const char *err_msg );
 int browse( object *r, int *choice );
 int check_label( char *l, object *r );
@@ -224,8 +235,10 @@ int load_configuration( bool reload, bool quick = false );
 int load_sensitivity( FILE *f );
 int logic_op_code( char const *lop, char const *errmsg );
 int min_hborder( int *choice, int pdigits, double miny, double maxy );
+int monitor_logs( vector < string > & logs );
 int num_sensitivity_variables( sense *rsens );
 int rnd_int( int min, int max );
+int run_parallel( bool nw, const char *exec, const char *simname, int fseed, int runs, int thrrun, int parruns, vector < string > & logs );
 int shrink_gnufile( void );
 int uniform_int_0( int max );
 long num_sensitivity_points( sense *rsens );
@@ -254,6 +267,7 @@ void clean_plot( object *n );
 void clean_save( object *n );
 void close_sim( void );
 void collect_inst( object *r, o_setT &list );
+void consolidate_logs( bool nw, vector < string > logs );
 void control_tocompute(object *r, char *ch);
 void copy_descendant( object *from, object *to );
 void count( object *r, int *i );
@@ -289,7 +303,7 @@ void find_lags( object *r );
 void find_using( object *r, variable *v, FILE *frep, bool *found );
 void get_sa_limits( object *r, FILE *out, const char *sep );
 void get_saved( object *n, FILE *out, const char *sep, bool all_var = false );
-void get_var_descr( char const *lab, char *descr, int descr_len );
+void get_var_descr( char const *lab, char *desc, int descr_len );
 void histograms( int *choice );
 void histograms_cs( int *choice );
 void init_map( void );
@@ -302,6 +316,7 @@ void insert_obj_num( object *r, const char *tag, const char *ind, int *idx, int 
 void insert_object( const char *w, object *r, bool netOnly = false, object *above = NULL );
 void insert_store_mem( object *r, int *num_v, char *lab = NULL );
 void link_cells( object *root, char *lab );
+void monitor_parallel( bool nw, vector < string > logs );
 void move_obj( char const *lab, char const *dest );
 void plog_series( int *choice );
 void plot( int type, int *start, int *end, char **str, char **tag, int *choice, bool norm );
@@ -325,6 +340,7 @@ void reset_description( object *r );
 void reset_end( object *r );
 void reset_plot( void );
 void run( void );
+void run_parallel_exec( bool nw, int id, string cmd );
 void save_cells( object *r, char *lab );
 void save_data1( int *choice );
 void save_datazip( int *choice );
@@ -357,6 +373,7 @@ void show_descr( char *lab, int *choice );
 void show_eq( char *lab, int *choice );
 void show_graph( object *t = NULL );
 void show_initial( object *n );
+void show_logs( const char *path, vector < string > & logs );
 void show_neighbors( object *r, bool update );
 void show_observe( object *n );
 void show_parallel( object *n );
@@ -383,6 +400,7 @@ void uncover_browser( void );
 void unload_configuration ( bool full );
 void unlink_cells( object *r, char *lab );
 void unset_shortcuts_run( const char *window );
+void update_bar( char *bar, int done, int & last_done );
 void update_bounds( void );
 void update_descr_dict( void );
 void update_more_tab( const char *w, bool adding = false );
@@ -393,7 +411,7 @@ void write_obj( object *r, FILE *frep, int *elemDone );
 void write_str( object *r, FILE *frep, int dep, char const *prefix );
 void write_var( variable *v, FILE *frep );
 
-#ifndef NP
+#ifndef _NP_
 void parallel_update( variable *v, object* p, object *caller = NULL );
 #endif
 
@@ -402,14 +420,18 @@ extern FILE *log_file;			// log file, if any
 extern bool brCovered;			// browser cover currently covered
 extern bool eq_dum;				// current equation is dummy
 extern bool error_hard_thread;	// flag to error_hard() called in worker thread
+extern bool idle_loop;			// indicates in main idle loop (no running operation)
 extern bool ignore_eq_file;		// control of configuration files equation updating
 extern bool iniShowOnce;		// prevent repeating warning on # of columns
 extern bool log_ok;				// control for log window available
 extern bool message_logged;		// new message posted in log window
+extern bool meta_par_in[ ];		// flag meta variables for simulation settings found
 extern bool non_var;			// flag to indicate INTERACT macro condition
+extern bool on_bar;				// flag to indicate bar is being draw in log window
 extern bool redrawRoot;			// control for redrawing root window (.)
 extern bool redrawStruc;		// control for redrawing model structure window
 extern bool running;			// simulation is running
+extern bool save_ok;			// control if saving model configuration is possible
 extern bool scrollB;			// scroll check box state in current runtime plot
 extern bool struct_loaded;		// a valid configuration file is loaded
 extern bool unsavedData;		// control for unsaved simulation results
@@ -427,9 +449,20 @@ extern char lastObj[ ];			// last shown object for quick reload
 extern char lsd_eq_file[ ];		// equations saved in configuration file
 extern char name_rep[ ];		// documentation report file name
 extern char nonavail[ ];		// string for unavailable values
+extern char path_rep[ ];		// documentation report file path
 extern description *descr;		// model description structure
+extern double t_dist_cl[ T_CLEVS ];// t-distribution table confidence levels 
+extern double t_dist_st[ T_CLEVS ][ 36 ];// t-distribution table statistics 
+extern double z_dist_cl[ Z_CLEVS ];// normal distribution table confidence levels 
+extern double z_dist_st[ Z_CLEVS ];// normal distribution table statistics 
 extern double ymax;				// runtime plot max limit
 extern double ymin;				// runtime plot min limit
+extern int NOLH_1[ ][ 7 ];		// near-orthogonal Latin hypercube tables
+extern int NOLH_2[ ][ 11 ];
+extern int NOLH_3[ ][ 16 ];
+extern int NOLH_4[ ][ 22 ];
+extern int NOLH_5[ ][ 29 ];
+extern int NOLH_6[ ][ 100 ];
 extern int actual_steps;		// number of executed time steps
 extern int add_to_tot;			// type of totals file generated (bool)
 extern int choice_g;			// Tcl menu control variable ( structure window)
@@ -440,8 +473,10 @@ extern int findexSens;			// index to sequential sensitivity configuration filena
 extern int log_start;			// first period to start logging to file, if any
 extern int log_stop;			// last period to log to file, if any
 extern int macro;				// equations style (macros or C++) (bool)
-extern int max_threads;			// suggested maximum number of parallel threads 
+extern int max_runs;			// maximum number of parallel runs 
+extern int max_threads;			// maximum number of parallel threads per run
 extern int no_res;				// do not produce .res results files (bool)
+extern int no_tot;				// do not produce .tot totals files (bool)
 extern int overwConf;			// overwrite current configuration file on run (bool)
 extern int parallel_disable;	// flag to control parallel mode
 extern int prof_aggr_time;		// show aggregate profiling times
@@ -458,34 +493,39 @@ extern int wr_warn_cnt;			// invalid write operations warning counter
 extern long nodesSerial;		// network node serial number global counter
 extern map< string, profile > prof;// set of saved profiling times
 extern mt19937 mt32;			// Mersenne-Twister 32 bits generator
+extern nolh NOLH[ NOLH_TABS ];	// characteristics of NOLH tables
 extern object *blueprint;   	// LSD blueprint (effective model in use )
 extern object *currObj;			// pointer to current object in browser
 extern object *wait_delete;		// LSD object waiting for deletion
 extern o_setT obj_list;			// list with all existing LSD objects
 extern s_vecT res_list;			// list of results files last saved
 extern sense *rsense;       	// LSD sensitivity analysis structure
+extern string run_log;			// consolidated runs log
 extern variable *cemetery;  	// LSD saved data from deleted objects
 extern variable *last_cemetery;	// LSD last saved data from deleted objects
 extern void *random_engine;		// current random number generator engine
 
 // multi-threading control 
-#ifndef NP
-extern atomic< bool > parallel_ready;	// flag to indicate multitasking is available
-extern map< thread::id, worker * > thr_ptr;	// worker thread pointers
+#ifndef _NP_
+extern atomic < bool > parallel_ready;// flag to indicate multitasking is available
+extern map< thread::id, worker * > thr_ptr;// worker thread pointers
+extern thread run_monitor;			// thread monitoring parallel instances
 #endif
 
 // Tcl/Tk specific definitions (for the windowed version only)
-#ifndef NW
+#ifndef _NW_
 
 extern p_mapT par_map;			// element to parent name map for AoR
 
 // C to TCL interface functions
+int Tcl_abort_run_threads( ClientData cdata, Tcl_Interp *inter, int argc, const char *argv[ ] );
 int Tcl_get_obj_conf( ClientData cdata, Tcl_Interp *inter, int argc, const char *argv[ ] );
 int Tcl_set_obj_conf( ClientData cdata, Tcl_Interp *inter, int argc, const char *argv[ ] );
 int Tcl_get_var_conf( ClientData cdata, Tcl_Interp *inter, int argc, const char *argv[ ] );
 int Tcl_set_var_conf( ClientData cdata, Tcl_Interp *inter, int argc, const char *argv[ ] );
 int Tcl_set_c_var( ClientData cdata, Tcl_Interp *inter, int argc, const char *argv[ ] );
 int Tcl_get_var_descr( ClientData cdata, Tcl_Interp *inter, int argc, const char *argv[ ] );
+int Tcl_set_ttip_descr( ClientData cdata, Tcl_Interp *inter, int argc, const char *argv[ ] );
 int Tcl_upload_series( ClientData cd, Tcl_Interp *inter, int oc, Tcl_Obj *CONST ov[ ] );
 
 #endif

@@ -1,6 +1,6 @@
 #*************************************************************
 #
-#	LSD 8.0 - March 2021
+#	LSD 8.0 - May 2021
 #	written by Marco Valente, Universita' dell'Aquila
 #	and by Marcelo Pereira, University of Campinas
 #
@@ -63,8 +63,6 @@ if [ string equal $tcl_platform(platform) unix ] {
 # register static special, OS-dependent configurations
 if [ string equal $CurPlatform mac ] {
 	set DefaultSysTerm $sysTermMac
-	set systemTerm $sysTermMac
-	set gnuplotTerm $gnuplotTermMac
 	set DefaultExe $exeMac
 	set DefaultMakeExe $makeMac
 	set DefaultWish $wishMac
@@ -72,6 +70,7 @@ if [ string equal $CurPlatform mac ] {
 	set DefaultHtmlBrowser $browserMac
 	set DefaultFont $fontMac
 	set DefaultFontSize $fontSizeMac
+	set gnuplotExe $gnuplotMac
 	set deltaSize $deltaSizeMac
 	set hsizeBmin $hsizeBminMac
 	set vsizeBmin $vsizeBminMac
@@ -92,10 +91,17 @@ if [ string equal $CurPlatform mac ] {
 	set bvstepM $bvstepMac
 	set borderMadj $bborderMac
 	
+	# enable Ctrl+click as replacement for right-shift
+	bind all <Control-ButtonPress-1> { 
+		event generate %W <ButtonPress-2> -x %x -y %y -rootx %X -rooty %Y -button 2
+	}
+		
+	# ensure homebrew local executables are on PATH
+	if { [ string first "/usr/local/bin" "$env(PATH)" ] < 0 } {
+		set env(PATH) "/usr/local/bin:$env(PATH)"
+	}
 } elseif [ string equal $CurPlatform linux ] {
 	set DefaultSysTerm $sysTermLinux
-	set systemTerm $sysTermLinux
-	set gnuplotTerm $gnuplotTermLinux
 	set DefaultExe $exeLinux
 	set DefaultMakeExe $makeLinux
 	set DefaultWish $wishLinux
@@ -103,6 +109,7 @@ if [ string equal $CurPlatform mac ] {
 	set DefaultHtmlBrowser $browserLinux
 	set DefaultFont $fontLinux
 	set DefaultFontSize $fontSizeLinux
+	set gnuplotExe $gnuplotLinux
 	set deltaSize $deltaSizeLinux
 	set hsizeBmin $hsizeBminLinux
 	set vsizeBmin $vsizeBminLinux
@@ -127,14 +134,14 @@ if [ string equal $CurPlatform mac ] {
 	package require registry
 
 	set DefaultSysTerm $sysTermWindows
-	set systemTerm $sysTermWindows
-	set gnuplotTerm $gnuplotTermWindows
 	set DefaultExe $exeWindows
+	set DefaultMakeExe $makeWinCygwin
 	set DefaultWish $wishWindows
 	set DefaultDbgExe $dbgWindows
 	set DefaultHtmlBrowser $browserWindows
 	set DefaultFont $fontWindows
 	set DefaultFontSize $fontSizeWindows
+	set gnuplotExe $gnuplotWindows
 	set deltaSize $deltaSizeWindows
 	set hsizeBmin $hsizeBminWindows
 	set vsizeBmin $vsizeBminWindows
@@ -159,7 +166,6 @@ if [ string equal $CurPlatform mac ] {
 	set mouseWarp [ ismousesnapon $CurPlatform ]
 	
 	# Cygwin or MSYS2?
-	set DefaultMakeExe make.exe
 	if { [ catch { exec where cygwin1.dll } ] || [ catch { exec where cygintl-8.dll } ] } {
 		if { ! [ catch { exec where $makeWinMingw } ] } {
 			set DefaultMakeExe $makeWinMingw
@@ -171,7 +177,6 @@ if [ string equal $CurPlatform mac ] {
 	}
 	
 	# Gnuplot on path? if not, try default install folder
-	set gnuplotExe "wgnuplot.exe"
 	if [ catch { exec where $gnuplotExe } ] {
 		if [ file exists "C:/Program Files/gnuplot/bin/$gnuplotExe" ] {
 			set gnuplotExe "C:/Program Files/gnuplot/bin/$gnuplotExe"
@@ -179,6 +184,11 @@ if [ string equal $CurPlatform mac ] {
 	}
 }
 
+# check incomplete terminal command
+if { $CurPlatform in [ list linux windows ] && [ llength $sysTerm ] < 2 } { \
+	set sysTerm "$DefaultSysTerm"
+}
+	
 # detect and update OS-dependent current/default theme configurations
 updateTheme
 
@@ -304,6 +314,11 @@ if { $darkTheme } {
 }
 
 # set tool tips (balloons)
+if { [ catch { set ttfam [ font actual [ ttk::style lookup TLabel -font ] -family ] } ] || [ catch { set ttsize [ expr { [ font actual [ ttk::style lookup TLabel -font ] -size ] - 1 } ] } ] } {
+	set ttfam [ font actual TkDefaultFont -family ]
+	set ttsize [ expr { [ font actual TkDefaultFont -size ] - 1 } ]
+}
+set ttfont [ font create -family "$ttfam" -size $ttsize ]
 set tooltip::labelOpts [ list -background $colorsTheme(ttip) -foreground $colorsTheme(fg) \
 	 -borderwidth 0 -highlightthickness 1 -highlightbackground $colorsTheme(fg) ]
 tooltip::tooltip delay $ttipdelay

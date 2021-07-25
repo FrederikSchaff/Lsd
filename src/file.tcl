@@ -1,6 +1,6 @@
 #*************************************************************
 #
-#	LSD 8.0 - March 2021
+#	LSD 8.0 - May 2021
 #	written by Marco Valente, Universita' dell'Aquila
 #	and by Marcelo Pereira, University of Campinas
 #
@@ -23,48 +23,256 @@
 #************************************************
 proc LsdExit { } {
 	global RootLsd
-	if { [ file exists $RootLsd/Manual/temp.html ] } {
-		file delete -force $RootLsd/Manual/temp.html
-	}
 
-	if { [ file exists temp.html ] } {
-		file delete -force temp.html
-	}
 }
 
 
 #************************************************
 # LSDHELP
 #************************************************
-proc LsdHelp a {
-	global HtmlBrowser CurPlatform RootLsd
-	set here [ pwd ]
-	set f [ open $RootLsd/Manual/temp.html w ]
-	puts $f "<meta http-equiv=\"Refresh\" content=\"0;url=$a\">"
-	close $f
-	set b "[ file nativename $RootLsd/Manual/temp.html ]"
-	if { ! [ string equal $CurPlatform windows ] } {
-		exec $HtmlBrowser $b &
-	} {
-		exec cmd.exe /c start $b &
-	}
+proc LsdHelp { fn } {
+	global RootLsd
+	
+	LsdHtml "$RootLsd/Manual" "$fn"
 }
 
 
 #************************************************
 # LSDHTML
 #************************************************
-proc LsdHtml a {
-	global HtmlBrowser CurPlatform
-	set f [ open temp.html w ]
-	puts $f "<meta http-equiv=\"Refresh\" content=\"0;url=$a\">"
-	close $f
-	set b "temp.html"
-	if { ! [ string equal $CurPlatform windows ] } {
-		exec $HtmlBrowser $b &
-	} {
-		exec cmd.exe /c start $b &
+proc LsdHtml { dir fn } {
+	global HtmlBrowser CurPlatform termResult
+	
+	if { $dir eq "" } {
+		set fqn "$fn"
+	} else {
+		set fqn "$dir/$fn"
 	}
+	
+	if { [ file exists "$fqn" ] } {
+
+		set fqn [ file nativename "$fqn" ]
+		
+		if { $CurPlatform ne "windows" } {
+			set error [ open_terminal $fqn $HtmlBrowser ]
+		} else {
+			set error [ open_terminal "start $fqn" ]
+		}
+		
+		if { $error } {
+			ttk::messageBox -parent . -type ok -icon error -title Error -message "Browser failed to launch" -detail "Please check if the web browser is set up properly.\n\nDetail:\n$termResult"
+		}
+		
+		return 1
+		
+	} else {
+		return 0
+	}
+}
+
+
+#************************************************
+# CHECK_COMPONENTS
+# Checks if required external software components
+# are available and on the proper versions
+#************************************************
+proc check_components { } {
+	global CurPlatform RootLsd winGCC winDLL winTcl winTk linuxPkg linuxTyp inclPkg inclFile libPkg libFile linuxMissing xcode gnuplot multitail linuxPkgMiss linuxInclude linuxLib pathInclude pathLib existGCC existDLL msgGCC msgDLL winConflict gccInclude gccLib
+	
+	if { $CurPlatform eq "mac" } {
+	
+		if [ catch { exec which g++ } ] {
+			set xcode 1
+		}
+		if [ catch { exec which gnuplot } ] {
+			set gnuplot 1
+		}	
+		if [ catch { exec which multitail } ] {
+			set multitail 1
+		}
+		
+	} elseif { $CurPlatform eq "linux" } {
+	
+		set linuxPkgMiss [ list ]
+		set i 0
+		foreach pkg $linuxPkg {
+			if [ string equal [ lindex $linuxTyp $i ] exe ] {
+				if [ catch { exec which $pkg } ] {
+					lappend linuxPkgMiss $pkg
+				}
+			}
+			incr i
+		}
+		
+		if { [ lsearch $linuxPkgMiss g++ ] >= 0 || [ lsearch $linuxPkgMiss make ] >= 0 || [ lsearch $linuxPkgMiss zlib ] >= 0 } { 
+			set linuxMissing 1
+		}
+
+		# detect default paths
+		gccPaths
+
+		# try to detect missing headers
+		set pathInclude [ list ]
+		foreach file $inclFile pkg $inclPkg {
+			set found 0
+			foreach include $gccInclude {
+				if [ file exists $include/$file ] {
+					set found 1
+					break
+				}
+			}
+			
+			if { ! $found } {
+				foreach include $linuxInclude {
+					if [ file exists $include/$file ] {
+						set found 1
+
+						# try to get just the base 'include' directory
+						set base [ string first include $include ]
+						if { $base >= 0 } {
+							set include [ string range $include 0 [ expr { $base + [ string length include ] - 1 } ] ]
+						}
+
+						lappend pathInclude $include
+						break
+					}
+				}
+			}
+
+			if { ! $found && [ lsearch -exact $linuxPkgMiss $pkg ] < 0 } {
+				lappend linuxPkgMiss $pkg
+			}
+		}
+
+		set pathInclude [ lsort -unique $pathInclude ] 
+
+		# try to detect missing libraries
+		set pathLib [ list ]
+		foreach file $libFile pkg $libPkg {
+			set found 0
+			foreach lib $gccLib {
+				if [ file exists $lib/$file ] {
+					set found 1
+					break
+				}
+			}
+			
+			if { ! $found } {
+				foreach lib $linuxLib {
+					if [ file exists $lib/$file ] {
+						set found 1
+
+						# try to get just the base 'lib' directory
+						set base [ string first lib $lib ]
+						if { $base >= 0 } {
+							set lib [ string range $lib 0 [ expr { $base + [ string length lib ] - 1 } ] ]
+						}
+
+						lappend pathLib $lib
+						break
+					}
+				}
+			}
+
+			if { ! $found && [ lsearch -exact $linuxPkgMiss $pkg ] < 0 } {
+				lappend linuxPkgMiss $pkg
+			}
+		}
+
+		set pathLib [ lsort -unique $pathLib ] 
+
+	} elseif { $CurPlatform eq "windows" } {
+	
+		# check if another compiler exists and is ahead on path
+		set existGCC [ list ]
+		set msgGCC ""
+		if { ! [ catch { set res [ exec where g++ ] } ] } {
+			foreach f [ split $res ] {
+				if { [ file dirname $f ] eq "$RootLsd/gnu/bin" } {
+					break
+				} else {
+					set existGCC [ lappend existGCC $f ]
+					set msgGCC "$msgGCC\n$f"
+				}	
+			}
+		}
+		
+		# check for a proper compiler
+		if { [ llength $existGCC ] > 0 } {
+			set ok 0
+			set gcc [ lindex $existGCC 0 ]
+			foreach path $winGCC {
+				if { [ string first [ string tolower $path ] [ string tolower $gcc ] ] >= 0 } {
+					set ok 1
+				}
+			}
+			
+			if { ! $ok } {
+				set winConflict 1
+			}
+		}
+		
+		# check if required libraries exist ahead on path
+		set existDLL [ list ]
+		set msgDLL ""
+		foreach dll $winDLL {
+			if { ! [ catch { set res [ exec where $dll ] } ] } {
+				foreach f [ split $res ] {
+					if { [ file dirname $f ] eq "$RootLsd/gnu/bin" } {
+						break
+					} else {
+						set existDLL [ lappend existDLL $f ]
+						set msgDLL "$msgDLL\n$f"
+					}
+				}
+			}
+		}
+		
+		# check for a proper Tcl/Tk
+		if { [ llength $existDLL ] > 0 } {
+			set ok 1
+			foreach dll $existDLL {
+				if { [ string first tcl [ string tolower $dll ] ] >= 0 } {
+					set ok 0
+					foreach path $winTcl {
+						if { [ string first [ string tolower $path ] [ string tolower $dll ] ] >= 0 } {
+							set ok 1
+						}
+					}
+					
+					break
+				}
+			}
+			
+			if { $ok } {
+				foreach dll $existDLL {
+					if { [ string first tk [ string tolower $dll ] ] >= 0 } {
+						set ok 0
+						foreach path $winTk {
+						if { [ string first [ string tolower $path ] [ string tolower $dll ] ] >= 0 } {
+								set ok 1
+							}
+						}
+						
+						break
+					}
+				}
+			}
+			
+			if { ! $ok } {
+				set winConflict 1
+			}
+		}
+	
+		if { [ catch { exec where wgnuplot.exe } ] && ! [ file exists "C:/Program Files/gnuplot/bin/wgnuplot.exe" ] } {
+			set gnuplot 1
+		}
+	
+	} else {
+		return 0
+	}
+	
+	return 1
 }
 
 
@@ -542,30 +750,18 @@ proc browse_model { panel } {
 # OPEN_DIFF
 #************************************************
 proc open_diff { file1 file2 { file1name "" } { file2name "" } } {
-	global CurPlatform wish sysTerm RootLsd LsdSrc diffApp diffAppType diffFile1name diffFile2name diffFile1 diffFile2 diffOptions
+	global wish RootLsd LsdSrc diffApp diffAppType diffFile1name diffFile2name diffFile1 diffFile2 diffOptions termResult
 
 	set cmdline "$RootLsd/$LsdSrc/$diffApp $diffFile1 $file1 $diffFile2 $file2 $diffOptions $diffFile1name $file1name $diffFile2name $file2name"
 
 	if { $diffAppType == 0 } {
-		set cmdline [ concat $wish $cmdline ]
+		set error [ open_terminal $cmdline $wish ]
 	} elseif { $diffAppType == 1 } {
-		switch $CurPlatform {
-			linux {
-				set cmdline [ concat $sysTerm "-e" $cmdline ]
-			}
-			mac {
-				set cmdline [ concat "osascript -e tell application \"$sysTerm\" to do script \"cd [ pwd ]; $cmdline; exit\"" $cmdline ]
-			}
-			windows {
-				set cmdline [ concat $sysTerm "/c" $cmdline ]
-			}
-		}
+		set error [ open_terminal $cmdline ]
 	}
-
-	set error [ catch { exec -- {*}$cmdline & } result ]
-
+	
 	if { $error } {
-		ttk::messageBox -parent $par -type ok -icon error -title Error -message "Diff failed to launch" -detail "Diff returned error '$error'.\nDetail:\n$result\n\nPlease check if the diff appplication is set up properly and reinstall LSD if the problem persists."
+		ttk::messageBox -parent . -type ok -icon error -title Error -message "Diff failed to launch" -detail "Diff returned error '$error'.\nDetail:\n$termResult\n\nPlease check if the diff appplication is set up properly and reinstall LSD if the problem persists."
 	}
 
 	return $error
@@ -573,52 +769,64 @@ proc open_diff { file1 file2 { file1name "" } { file2name "" } } {
 
 
 #************************************************
+# OPEN_TERMINAL
+#************************************************
+proc open_terminal { cmd { term "" } } {
+	global sysTerm wish CurPlatform termResult
+	
+	if { $term eq "" } {
+		set term $sysTerm
+	}
+	
+	# separate command from options
+	if { [ llength $term ] > 1 } {
+		set opt [ lrange $term 1 end ]
+		set term [ lindex $term 0 ]
+	} else {
+		set opt [ list ]
+	}
+	
+	# whish is not system dependent
+	if { $term eq $wish } {
+		set cmdline [ concat $term $opt $cmd ]
+	} else {
+		switch $CurPlatform {
+			windows -
+			linux {
+				set cmdline [ concat $term $opt $cmd ]
+			}
+			mac {
+				set cmdline "osascript -e tell application \"$term\" to do script \"cd [ pwd ]; clear; $cmd; exit\""
+			}
+		}
+	}
+	
+	set termResult ""
+	return [ catch { exec -- {*}$cmdline & } termResult ]
+}
+
+
+#************************************************
 # OPEN_GNUPLOT
 # Open external gnuplot application
 #************************************************
-proc open_gnuplot { { script "" } { errmsg "" } { wait false } { par ".da" } } {
-	global CurPlatform sysTerm gnuplotExe
+proc open_gnuplot { { script "" } { errmsg "" } { persist false } { par ".da" } } {
+	global CurPlatform sysTerm gnuplotExe termResult
 
-	if [ string equal $script "" ] {
-		set args ""
-	} else {
-		set args "-p $script"
-	}
+		if { $script eq "" && $CurPlatform in [ list linux mac ] } {
+			set error [ open_terminal $gnuplotExe ]
+		} elseif { $persist } {
+			set error [ open_terminal $script $gnuplotExe ]
+		} else {
+			set error [ open_terminal "-p $script" $gnuplotExe ]
+		}
 
-	switch $CurPlatform {
-		mac {
-			if { $wait } {
-				set error [ catch { exec osascript -e "tell application \"$sysTerm\" to do script \"cd [ pwd ]; gnuplot $script; exit\"" } result ]
-			} else {
-				set error [ catch { exec osascript -e "tell application \"$sysTerm\" to do script \"cd [ pwd ]; gnuplot $args; exit\"" & } result ]
-			}
-		}
-		linux {
-			if { $wait } {
-				set error [ catch { exec $sysTerm -e "gnuplot $script; exit" } result ]
-			} else {
-				set error [ catch { exec $sysTerm -e "gnuplot $args; exit" & } result ]
-			}
-		}
-		windows {
-			if [ string equal $script "" ] {
-				set error [ catch { exec $gnuplotExe & } result ]
-			} else {
-				if { $wait } {
-					set error [ catch { exec $gnuplotExe $script } result ]
-				} else {
-					set error [ catch { exec $gnuplotExe -p $script & } result ]
-				}
-			}
-		}
-	}
-
-	if { $error != 0 } {
+	if { $error } {
 		if [ string equal $errmsg "" ] {
 			set errmsg "Please check if Gnuplot is installed and set up properly."
 		}
 
-		ttk::messageBox -parent $par -type ok -icon error -title Error -message "Gnuplot failed to launch" -detail "Gnuplot returned error '$error'.\nDetail:\n$result\n\n$errmsg"
+		ttk::messageBox -parent $par -type ok -icon error -title Error -message "Gnuplot failed to launch" -detail "Gnuplot returned error '$error'.\n\nDetail:\n$termResult\n\n$errmsg"
 	}
 
 	return $error

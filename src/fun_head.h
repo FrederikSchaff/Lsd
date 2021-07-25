@@ -1,6 +1,6 @@
 /*************************************************************
 
-	LSD 8.0 - March 2021
+	LSD 8.0 - May 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
@@ -18,7 +18,7 @@ This file contains all the macros required by the
 model's equation file.
 *************************************************************/
 
-#define FUN												// comment this line to access internal LSD functions
+#define _FUN_											// comment this line to access internal LSD functions
 
 #if defined( EIGENLIB ) && __cplusplus >= 201103L		// required C++11
 #include <Eigen/Eigen>									// Eigen linear algebra library
@@ -107,7 +107,7 @@ bool no_ptr_chk = true;
 		error_hard( msg, "invalid equation result", "check your equation code to prevent invalid math operations\nPossible problems:\n- Illegal math operation (division by zero, log of negative number etc.)\n- Use of too-large/small value in calculation\n- Use of non-initialized temporary variable in calculation", true ); \
 	}
 
-#ifndef NW
+#ifndef _NW_
 #define DEBUG_CODE \
 	if ( debug_flag ) \
 	{ \
@@ -137,6 +137,7 @@ bool no_ptr_chk = true;
 		n_values[ 7 ] = curl7; \
 		n_values[ 8 ] = curl8; \
 		n_values[ 9 ] = curl9; \
+		f_values[ 0 ] = f; \
 	};
 #else
 #define DEBUG_CODE
@@ -290,6 +291,7 @@ bool no_ptr_chk = true;
 #define PATH ( ( const char * ) path )
 #define CURRENT ( var->val[ 0 ] )
 #define THIS ( p )
+#define CALLER ( c )
 #define NEXT ( p->next )
 #define NEXTS( O ) ( CHK_PTR_OBJ( O ) O->next )
 #define PARENT ( p->up )
@@ -656,8 +658,10 @@ bool no_ptr_chk = true;
 // enabled only when directly including fun_head.h (and not fun_head_fast.h)
 #ifndef FAST_LOOKUP
 
+#ifndef _NW_
 #include <tk.h>
 extern Tcl_Interp *inter;
+#endif
 
 double init_lattice( double pixW = 0, double pixH = 0, double nrow = 100, double ncol = 100, 
 					 char const lrow[ ] = "y", char const lcol[ ] = "x", char const lvar[ ] = "", 

@@ -1,6 +1,6 @@
 /*************************************************************
 
-	LSD 8.0 - March 2021
+	LSD 8.0 - May 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
@@ -30,16 +30,15 @@ Prepare variables to store saved data.
 
 Relevant flags (when defined):
 
-- FUN: user model equation file
-- NW: No Window executable
-- NP: no parallel (multi-task) processing
-- NT: no signal trapping (better when debugging in GDB)
+- _FUN_: user model equation file
+- _NW_: No Window executable
+- _NP_: no parallel (multi-task) processing
+- _NT_: no signal trapping (better when debugging in GDB)
 *************************************************************/
 
 #include "decl.h"
 
 // some program defaults
-bool grandTotal = false;	// flag to produce or not grand total in batch processing
 bool ignore_eq_file = true;	// flag to ignore equation file in configuration file
 char err_file[ ] = "LSD.err";// error log file name
 char nonavail[ ] = "NA";	// string for unavailable values (use R default)
@@ -55,23 +54,29 @@ unsigned seed = 1;			// random number generator initial seed
 
 bool batch_sequential = false;// no-window multi configuration job running
 bool brCovered = false;		// browser cover currently covered
+bool dobar = false;			// output a progress bar to the log/standard output
 bool eq_dum = false;		// current equation is dummy
 bool error_hard_thread;		// flag to error_hard() called in worker thread
 bool fast;					// safe copy of fast_mode flag
+bool grandTotal;			// flag to produce grand total in batch processing
+bool idle_loop = false;		// indicates in main idle loop (no running operation)
 bool log_ok = false;		// control for log window available
 bool message_logged = false;// new message posted in log window
+bool meta_par_in[ META_PAR_NUM ];// flag meta parameter for simulation settings found
 bool no_more_memory = false;// memory overflow when setting data save structure	
 bool no_saved = true;		// disable the usage of saved values as lagged ones
 bool no_search;				// disable the standard variable search mechanism
 bool no_window = false;		// no-window command line job
 bool no_zero_instance = true;// flag to allow deleting last object instance
 bool non_var = false;		// flag to indicate INTERACT macro condition
+bool on_bar;				// flag to indicate bar is being draw in log window
 bool parallel_mode;			// parallel mode (multithreading) status
 bool pause_run;				// pause running simulation
 bool redrawRoot;			// control for redrawing root window (.)
 bool redrawStruc;			// control for redrawing model structure window
 bool running = false;		// simulation is running
 bool save_alt_path = false;	// alternate save path flag
+bool save_ok = true;		// control if saving model configuration is possible
 bool scrollB = true;		// scroll box state in current runtime plot
 bool struct_loaded = false;	// a valid configuration file is loaded
 bool tk_ok = false;			// control for tk ready to operate
@@ -85,6 +90,7 @@ char *alt_path = NULL;		// alternative output path
 char *eq_file = NULL;		// equation file content
 char *exec_file = NULL;		// name of executable file
 char *exec_path = NULL;		// path of executable file
+char *log_filename = NULL;	// name of log file, if any
 char *rootLsd = NULL;		// path of LSD root directory
 char *path = NULL;			// path of current configuration
 char *sens_file = NULL;		// current sensitivity analysis file
@@ -98,6 +104,7 @@ char lastObj[ MAX_ELEM_LENGTH + 1 ] = "";	// last shown object for quick reload
 char lsd_eq_file[ MAX_FILE_SIZE + 1 ] = "";	// equations saved in configuration file
 char msg[ TCL_BUFF_STR + 1 ] = "";			// auxiliary Tcl buffer
 char name_rep[ MAX_PATH_LENGTH + 1 ];		// documentation report file name
+char path_rep[ MAX_PATH_LENGTH + 1 ];		// documentation report file path
 char tcl_dir[ MAX_PATH_LENGTH + 1 ];		// Tcl/Tk directory
 description *descr = NULL;	// model description structure
 eq_mapT eq_map;				// fast equation look-up map
@@ -116,8 +123,10 @@ int findexSens = 0;			// index to sequential sensitivity configuration filenames
 int log_start;				// first period to start logging to file
 int log_stop;				// last period to log to file, if any
 int macro;					// equations style (macros or C++) (bool)
-int max_threads = 1;		// maximum number of parallel threads 
+int max_runs;				// maximum number of parallel runs 
+int max_threads;			// maximum number of parallel threads per run
 int no_res = false;			// do not produce .res results files (bool)
+int no_tot = true;			// do not produce .tot totals files (bool)
 int parallel_disable = false;// flag to control parallel mode
 int platform = 0;			// OS platform (1=Linux, 2=Mac, 3=Windows)
 int prof_aggr_time = false;	// show aggregate profiling times
@@ -142,6 +151,7 @@ object *wait_delete = NULL;	// LSD object waiting for deletion
 o_setT obj_list;			// set with all existing LSD objects
 s_vecT res_list;			// list of results files last saved
 sense *rsense = NULL;		// LSD sensitivity analysis structure
+string run_log;				// consolidated runs log
 variable *cemetery = NULL;	// LSD saved data from deleted objects
 variable *last_cemetery = NULL;	// LSD last saved data from deleted objects
 FILE *log_file = NULL;		// log file, if any
@@ -156,20 +166,31 @@ const char *wnd_names[ LSD_WIN_NUM ] = LSD_WIN_NAME;
 const int signals[ REG_SIG_NUM ] = REG_SIG_CODE;
 
 // conditional variables
-#ifndef NW
+#ifndef _NW_
+#include "tables.h"
 int i_values[ 4 ];			// user temporary variables copy
 double d_values[ USER_D_VARS ];
 object *o_values[ 10 ];
 netLink *n_values[ 10 ];
+FILE *f_values[ 1 ];
 p_mapT par_map;				// variable to parent name map for AoR
 Tcl_Interp *inter = NULL;	// global Tcl interpreter in LSD
 #endif
 
-#ifndef NP
+#ifndef _NP_
+atomic < bool > parallel_ready( true );// flag to indicate variable worker is ready
 map < thread::id, worker * > thr_ptr;	// worker thread pointers
+mutex lock_run_status;		// lock run_status for parallel updating
 thread::id main_thread;		// LSD main thread ID
+thread run_monitor;			// thread monitoring parallel instances
 worker *workers = NULL;		// multi-thread parallel worker data
+vector < thread > run_threads;// parallel running instances
+vector < int > run_status;	// parallel running instances status
 #endif
+
+// command line strings
+const char lsdCmdMsg[ ] = "This is the No Window version of LSD.";
+const char lsdCmdHlp[ ] = "Command line options:\n'-f FILENAME.lsd [-s SEED] [-e RUNS] to run a single configuration file\n'-f FILE_BASE_NAME -s FIRST_NUM [-e LAST_NUM]' for batch sequential mode\n'-o PATH' to save result file(s) to a different subdirectory\n'-l FILENAME' to save all output to a (log) file\n'-t' to produce comma separated (.csv) text result file(s)\n'-r' for skipping the generation of intermediate result file(s)\n'-p' for skipping the generation of totals file\n'-g' for the generation of a single grand total file\n'-z' for preventing the generation of compressed result file(s)\n'-b' for showing a progress bar\n'-c MAX_THREADS[:MAX_RUNS]' to set maximum parallel threads/runs to use\n";
 
 
 /*********************************
@@ -178,7 +199,7 @@ worker *workers = NULL;		// multi-thread parallel worker data
 int lsdmain( int argn, char **argv )
 {
 	char *str;
-	int i, j = 0, len;
+	int i, j = 0, k = 0, len;
 
 	path = new char[ strlen( "" ) + 1 ];
 	simul_name = new char[ strlen( DEF_CONF_FILE ) + 1 ];
@@ -190,7 +211,7 @@ int lsdmain( int argn, char **argv )
 	exec_file = clean_file( argv[ 0 ] );	// global pointer to the name of executable file
 	exec_path = clean_path( exec_path );	// global pointer to path of executable file
 
-#ifndef NP
+#ifndef _NP_
 	main_thread = this_thread::get_id( );
 	max_threads = ( MAX_CORES <= 0 ) ? thread::hardware_concurrency( ) : MAX_CORES;
 #else
@@ -202,21 +223,24 @@ int lsdmain( int argn, char **argv )
 	add_description( "Root" );
 	reset_blueprint( NULL );
 
-#ifdef NW
+#ifdef _NW_
+	
+	FILE *f;
 	
 	no_window = true;
-	findex = 1;
+	no_res = no_tot = grandTotal = false;// to preserve compatibility
+	findex = -1;						// no default
 	fend = 0;							// no file number limit
 
 	if ( exec_file == NULL || exec_path == NULL )
 	{
-		fprintf( stderr, "\nInvalid LSD executable name or path.\nThis is the No Window version of LSD.\nMake sure the LSD directory is not too deep into the disk directory tree (over %d chars).\n\n", MAX_PATH_LENGTH );
+		fprintf( stderr, "\nInvalid LSD executable name or path.\n%s\nMake sure the LSD directory is not too deep into the disk directory tree (over %d chars).\n\n", lsdCmdMsg, MAX_PATH_LENGTH );
 		myexit( 5 );
 	}
 	
 	if ( argn < 3 )
 	{
-		fprintf( stderr, "\nThis is the No Window version of LSD.\nCommand line options:\n'-f FILENAME.lsd' to run a single configuration file\n'-f FILE_BASE_NAME -s FIRST_NUM [-e LAST_NUM]' for batch sequential mode\n'-o PATH' to save result file(s) to a different subdirectory\n'-t' to produce comma separated (.csv) text result file(s)\n'-r' for skipping the generation of intermediate result file(s)\n'-g' for the generation of a single grand total file\n'-z' for preventing the generation of compressed result file(s)\n'-c MAX_CORES' for defining the maximum number of CPU cores to use\n\n" );
+		fprintf( stderr, "\nNo configuration to run.\n%s\n%s\n", lsdCmdMsg, lsdCmdHlp );
 		myexit( 0 );
 	}
 	else
@@ -231,17 +255,36 @@ int lsdmain( int argn, char **argv )
 				strcpy( simul_name, argv[ 1 + i ] );
 				continue;
 			}
+			// read -o parameter : change the path for the output of result files
+			if ( argv[ i ][ 0 ] == '-' && argv[ i ][ 1 ] == 'o' && 1 + i < argn && strlen( argv[ 1 + i ] ) > 0 )
+			{
+				results_alt_path( argv[ 1 + i ] );
+				continue;
+			}
+			// read -l parameter : save all output to a (log) file
+			if ( argv[ i ][ 0 ] == '-' && argv[ i ][ 1 ] == 'l' && 1 + i < argn && strlen( argv[ 1 + i ] ) > 0 )
+			{
+				delete [ ] log_filename;
+				log_filename = new char[ strlen( argv[ 1 + i ] ) + 1 ];
+				strcpy( log_filename, argv[ 1 + i ] );				
+				continue;
+			}
+			// read -c parameter : max number of cores
+			if ( argv[ i ][ 0 ] == '-' && argv[ i ][ 1 ] == 'c' && 1 + i < argn && strlen( argv[ 1 + i ] ) > 0 )
+			{
+				sscanf( argv[ i + 1 ], "%d:%d", &j, &k );
+				continue;
+			}
 			// read -s parameter : first sequential file to process
 			if ( argv[ i ][ 0 ] == '-' && argv[ i ][ 1 ] == 's' && 1 + i < argn && strlen( argv[ 1 + i ] ) > 0 )
 			{
-				findex = atoi( argv[ i + 1 ] );
-				batch_sequential = true;   
+				sscanf( argv[ i + 1 ], "%d", & findex );
 				continue;
 			}
 			// read -e parameter : last sequential file to process
 			if ( argv[ i ][ 0 ] == '-' && argv[ i ][ 1 ] == 'e' && 1 + i < argn && strlen( argv[ 1 + i ] ) > 0 )
 			{
-				fend = atoi( argv[ i + 1 ] );
+				sscanf( argv[ i + 1 ], "%d", & fend );
 				continue;
 			}
 			// read -t parameter : produce .csv text results files
@@ -258,54 +301,69 @@ int lsdmain( int argn, char **argv )
 				no_res = true;
 				continue;
 			}
+			// read -p parameter : do not produce totals .tot files
+			if ( argv[ i ][ 0 ] == '-' && argv[ i ][ 1 ] == 'p' )
+			{
+				i--; 					// no parameter for this option
+				no_tot = true;
+				continue;
+			}
 			// read -g parameter : create grand total file (batch only)
 			if ( argv[ i ][ 0 ] == '-' && argv[ i ][ 1 ] == 'g' )
 			{
 				i--; 					// no parameter for this option
 				grandTotal = true;
-				printf( "Grand total file requested ('-g'), please don't run another instance of 'lsdNW' in this folder!\n\n" );
+				printf( "\nGrand total file requested ('-g'), don't run another instance of 'lsdNW' in this folder!\n" );
 				continue;
 			}
-			// read -g parameter : don't create compressed result files
+			// read -z parameter : don't create compressed result files
 			if ( argv[ i ][ 0 ] == '-' && argv[ i ][ 1 ] == 'z' )
 			{
 				i--; 					// no parameter for this option
 				dozip = false;
 				continue;
 			}
-			// change the path for the output of result files
-			if ( argv[ i ][ 0 ] == '-' && argv[ i ][ 1 ] == 'o' && 1 + i < argn && strlen( argv[ 1 + i ] ) > 0 )
+			// read -b parameter : show a progress bar
+			if ( argv[ i ][ 0 ] == '-' && argv[ i ][ 1 ] == 'b' )
 			{
-				results_alt_path( argv[ 1 + i ] );
-				continue;
-			}
-			// read -c parameter : max number of cores
-			if ( argv[ i ][ 0 ] == '-' && argv[ i ][ 1 ] == 'c' && 1 + i < argn && strlen( argv[ 1 + i ] ) > 0 )
-			{
-				j = atoi( argv[ i + 1 ] );
+				i--; 					// no parameter for this option
+				dobar = true;
 				continue;
 			}
 
-			fprintf( stderr, "\nOption '%c%c' not recognized.\nThis is the No Window version of LSD.\nCommand line options:\n'-f FILENAME.lsd' to run a single configuration file\n'-f FILE_BASE_NAME -s FIRST_NUM [-e LAST_NUM]' for batch sequential mode\n'-o PATH' to save result file(s) to a different subdirectory\n'-t' to produce comma separated (.csv) text result file(s)\n'-r' for skipping the generation of intermediate result file(s)\n'-g' for the generation of a single grand total file\n'-c MAX_CORES' for defining the maximum number of CPU cores to use\n'-z' for preventing the generation of compressed result file(s)\n\n", argv[ i ][ 0 ], argv[ i ][ 1 ] );
+			fprintf( stderr, "\nOption '%c%c' not recognized.\n%s\n%s\n", argv[ i ][ 0 ], argv[ i ][ 1 ], lsdCmdMsg, lsdCmdHlp );
 			myexit( 6 );
 		}
 	} 
-
-	if ( ! batch_sequential )
+	
+	str = new char[ strlen( simul_name ) + 1 ];
+	strcpy( str, simul_name );
+	strupr( str );
+	
+	if ( strstr( str, ".LSD" ) == NULL )
 	{
-		struct_file = new char[ strlen( simul_name ) + 1 ];
-		sprintf( struct_file, "%s", simul_name );
-		simul_name[ strlen( simul_name ) - 4 ] = '\0';
-	} 
+		batch_sequential = true;
+		
+		if ( findex < 0 || fend < 0 || fend < findex )
+		{
+			fprintf( stderr, "\nInvalid -s and/or -e values.\n%s\n%s\n", lsdCmdMsg, lsdCmdHlp );
+			myexit( 6 );
+		}
+		
+		struct_file = new char[ strlen( simul_name ) + ( int ) log10( findex ) + 7 ];
+		sprintf( struct_file, "%s_%d.lsd", simul_name, findex );
+	}
 	else
 	{
-		sprintf( msg, "%s_%d.lsd", simul_name, findex );
-		struct_file = new char[ strlen( msg ) + 1 ];
-		strcpy( struct_file, msg );
+		batch_sequential = false;
+		struct_file = new char[ strlen( simul_name ) + 1 ];
+		strcpy( struct_file, simul_name );
+		simul_name[ strstr( str, ".LSD" ) - str ] = '\0';
 	}
-	 
-	FILE *f = fopen( struct_file, "r" );
-	if ( f == NULL )
+	
+	delete [ ] str;
+				
+	if ( ( f = fopen( struct_file, "r" ) ) == NULL )
 	{
 		fprintf( stderr, "\nFile '%s' not found.\nThis is the no window version of LSD.\nSpecify a -f FILENAME.lsd to run a simulation or -f FILE_BASE_NAME -s 1 for\nbatch sequential simulation mode (requires configuration files:\nFILE_BASE_NAME_1.lsd, FILE_BASE_NAME_2.lsd, etc).\n\n", struct_file );
 		myexit( 7 );
@@ -319,12 +377,64 @@ int lsdmain( int argn, char **argv )
 		myexit( 8 );
 	}
 
-#ifndef NP
-	if ( j > 0 && j < max_threads )
-		max_threads = j;
-#endif	
+	if ( ! batch_sequential )
+	{
+		if ( findex > 0 )
+			seed = findex;
+		
+		if ( fend > 0 )
+			sim_num = fend;
+	}
+	
+	if ( log_filename != NULL )
+	{
+		if ( save_alt_path && strncmp( log_filename, alt_path, strlen( alt_path ) ) != 0 )
+		{
+			str = log_filename;
+			log_filename = new char[ strlen( alt_path ) + strlen( str ) + 2 ];
+			sprintf( log_filename, "%s/%s", alt_path, str );
+			delete [ ] str;
+		}
+		
+		if ( ( f = fopen( log_filename , "w+" ) ) == NULL )
+			printf( "\nCannot create log file '%s', using stdout.\n", log_filename );
+		else
+		{
+			dup2( fileno( f ), STDOUT_FILENO );
+			dup2( fileno( f ), STDERR_FILENO );
+			fclose( f );
+		}
+	}		
+
+#ifndef _NP_
+
+	if ( k > 0 )
+		max_runs = min( k, max_threads );
+	else
+		max_runs = 1;
+	
+	if ( max_runs > 1 )
+		max_threads = max( min( j, max_threads / max_runs ), 1 );
+	
+	// if parallel execution is required, just run new instances & wait to finish
+	if ( ! batch_sequential && sim_num > 1 && max_runs > 1 )
+	{
+		vector < string > log_files;
+		
+		if ( grandTotal || ! no_tot )
+		{
+			printf( "\n(Grand) total file(s) request ignored, running in parallel mode.\n" );
+			no_tot = true;
+			grandTotal = false;
+		}
+		
+		return run_parallel( no_window, argv[ 0 ], simul_name, seed, sim_num, max_threads, max_runs, log_files );
+	}
+	
+#endif
 
 #else 
+	
 	for ( i = 1; argv[ i ] != NULL; i++ )
 	{
 		if ( exec_file == NULL || exec_path == NULL )
@@ -335,7 +445,7 @@ int lsdmain( int argn, char **argv )
 		
 		if ( argv[ i ][ 0 ] != '-' || ( argv[ i ][ 1 ] != 'f' && argv[ i ][ 1 ] != 'i' && argv[ i ][ 1 ] != 'c' ) )
 		{
-			log_tcl_error( "Command line parameters", "Invalid option, available options: -i TCL_DIRECTORY / -f MODEL_NAME / -c MAX_CORES" );
+			log_tcl_error( "Command line parameters", "Invalid option, available options: -i TCL_DIRECTORY / -f MODEL_NAME / -c MAX_THREADS" );
 			myexit( 1 );
 		}
 		
@@ -357,14 +467,16 @@ int lsdmain( int argn, char **argv )
 		// read -c parameter : max number of cores
 		if ( argv[ i ][ 0 ] == '-' && argv[ i ][ 1 ] == 'c' )
 		{
-			j = atoi( argv[ i + 1 ] );
+			sscanf( argv[ i + 1 ], "%d:%d", &j, &k );
 			continue;
 		}
 	}
 
-#ifndef NP
+#ifndef _NP_
+
 	if ( j > 0 && j < max_threads )
 		max_threads = j;
+	
 #endif	
 
 	// initialize tcl/tk and set global bidirectional variables
@@ -496,13 +608,13 @@ int lsdmain( int argn, char **argv )
 
 	str = ( char * ) Tcl_GetVar( inter, "CurPlatform", 0 );
 	if ( ! strcmp( str, "linux" ) )
-		platform = LINUX;
+		platform = _LIN_;
 	else
 		if ( ! strcmp( str, "mac" ) )
-			platform = MAC;
+			platform = _MAC_;
 		else
 			if ( ! strcmp( str, "windows" ) )
-				platform = WINDOWS;
+				platform = _WIN_;
 			else
 			{
 				log_tcl_error( "Unsupported platform", "Your computer operating system is not supported by this LSD version, you may try an older version compatible with legacy systems (Windows 32-bit, Mac OS X, etc.)" );
@@ -512,6 +624,9 @@ int lsdmain( int argn, char **argv )
 
 	// create a Tcl command that calls the C discard_change function before killing LSD
 	Tcl_CreateCommand( inter, "discard_change", Tcl_discard_change, NULL, NULL );
+
+	// Tcl command to check before exiting with running background threads
+	Tcl_CreateCommand( inter, "abort_run_threads", Tcl_abort_run_threads, NULL, NULL );
 
 	// create Tcl commands that get and set LSD object/variable properties
 	Tcl_CreateCommand( inter, "get_obj_conf", Tcl_get_obj_conf, NULL, NULL );
@@ -524,6 +639,9 @@ int lsdmain( int argn, char **argv )
 
 	// create a Tcl command to get LSD variable description from equation file(s)
 	Tcl_CreateCommand( inter, "get_var_descr", Tcl_get_var_descr, NULL, NULL );
+
+	// create a Tcl command to set tooltip from LSD variable description
+	Tcl_CreateCommand( inter, "set_ttip_descr", Tcl_set_ttip_descr, NULL, NULL );
 
 	// create Tcl command to upload series data
 	Tcl_CreateObjCommand( inter, "upload_series", Tcl_upload_series, NULL, NULL );
@@ -540,7 +658,7 @@ int lsdmain( int argn, char **argv )
 	
 	// Tcl global variables
 	cmd( "set small_character [ expr { $dim_character - $deltaSize } ]" );
-	cmd( "set gpterm $gnuplotTerm" );
+	cmd( "set gpterm \"\"" );
 
 	// configure main window
 	cmd( ". configure -menu .m -background $colorsTheme(bg)" );
@@ -561,12 +679,14 @@ int lsdmain( int argn, char **argv )
 	eq_file = upload_eqfile( );
 	strcpy( lsd_eq_file, "" );
 	sprintf( name_rep, "report_%s.html", simul_name );
+	strcpy( path_rep, "" );
 
 	// fix model configuration file
 	if ( i == 0 )
 		update_model_info( );
 	
 	grandTotal = true;				// not in parallel mode: use .tot headers
+	
 #endif
 
 	// create fast equation look-up map if required
@@ -581,7 +701,7 @@ int lsdmain( int argn, char **argv )
 	strcpy( stacklog->label, "LSD Simulation Manager" );
 	stack = 0;
 
-#ifndef NW
+#ifndef _NW_
 
 	while ( 1 )
 	{
@@ -631,6 +751,7 @@ int lsdmain( int argn, char **argv )
 	delete [ ] exec_path;
 	delete [ ] simul_name;
 	delete [ ] struct_file;
+	delete [ ] log_filename;
 
 	return 0;
 }
@@ -642,12 +763,13 @@ RUN
 void run( void )
 {
 	bool batch_sequential_loop = false;
-	int i;
+	char bar_done[ 2 * BAR_DONE_SIZE ];
+	int i, perc_done, last_done;
 	FILE *f;
 	clock_t start, end, last_update;
 	result *rf;					// pointer for results files (may be zipped or not)
 
-#ifndef NP
+#ifndef _NP_
 	// check if there are parallel computing variables
 	if ( parallel_disable || max_threads < 2 )
 		parallel_mode = parallel_ready = false;
@@ -666,35 +788,42 @@ void run( void )
 	parallel_mode = false;
 #endif	
 
-#ifndef NW
+#ifndef _NW_
 	prof.clear( );			// reset profiling times
 
 	cover_browser( "Running...", "Use the buttons to control the simulation:\n\n'Stop' :  aborts the simulation\n'Pause' / 'Resume' :  pauses and resumes the simulation\n'Fast' :  accelerates the simulation by hiding information\n'Observe' :  presents more run-time information\n'Debug' :  triggers the debugger at flagged variables", true );
 #else
-	plog( "\nProcessing configuration file %s ...\n", "", struct_file );
+	plog( "\nProcessing configuration file %s...\n", "", struct_file );
 #endif
 
 	set_fast( 0 );			// should always start on OBSERVE and switch to FAST later
 	res_list.clear( );		// empty list of saved results files
+
+	// prepare progress bar
+	on_bar = false;
+	perc_done = 0;
+	last_done = -1;
+	strcpy( bar_done, "" );
 
 	for ( i = 1, quit = 0; i <= sim_num && quit != 2; ++i )
 	{
 		running = true;		// signal simulation is running
 		cur_sim = i;	 	// update the current run in the set of runs
 		actual_steps = 0;	// no steps performed yet
+		save_ok = true;		// valid structure to save
 		
 		empty_cemetery( ); 	// ensure that previous data are not erroneously mixed 
 
-#ifndef NW
+#ifndef _NW_
 		par_map.clear( );	// restart variable to parent name map for AoR
 		prepare_plot( root, i );
 #endif
 		if ( fast_mode < 2 )
 		{
 			if ( parallel_mode )
-				plog( "\nSimulation %d of %d running (up to %d parallel threads)...", "", i, sim_num, max_threads );
+				plog( "\nSimulation %d of %d running (seed=%d threads=%d)...", "", i, sim_num, seed, max_threads );
 			else
-				plog( "\nSimulation %d of %d running...", "", i, sim_num );
+				plog( "\nSimulation %d of %d running (seed=%d)...", "", i, sim_num, seed );
 		}
 		
 		// if new batch configuration file, reload all
@@ -702,7 +831,7 @@ void run( void )
 		{
 			if ( load_configuration( true ) != 0 )
 			{
-#ifndef NW 
+#ifndef _NW_ 
 				log_tcl_error( "Load configuration", "Configuration file not found or corrupted" );	
 				cmd( "ttk::messageBox -parent . -type ok -icon error -title Error -message \"Configuration file cannot be loaded\" -detail \"Check if LSD still has WRITE access to the model directory.\nLSD will close now.\"" );
 #else
@@ -717,7 +846,7 @@ void run( void )
 		if ( i > 1 )
 			if ( load_configuration( true, true ) != 0 )
 			{
-#ifndef NW 
+#ifndef _NW_ 
 				log_tcl_error( "Load configuration", "Configuration file not found or corrupted" );	
 				cmd( "ttk::messageBox -parent . -type ok -icon error -title Error -message \"Configuration file cannot be reloaded\" -detail \"Check if LSD still has WRITE access to the model directory.\nLSD will close now.\"" );
 #else
@@ -735,7 +864,7 @@ void run( void )
 
 		if ( ! alloc_save_mem( root ) )
 		{
-#ifndef NW 
+#ifndef _NW_ 
 			log_tcl_error( "Memory allocation", "Not enough memory, too many series saved for the memory available" );
 			cmd( "ttk::messageBox -parent . -type ok -icon error -title Error -message \"Not enough memory\" -detail \"Too many series saved for the available memory. Memory insufficient for %d series over %d time steps. Reduce series to save and/or time steps.\nLSD will close now.\"", series_saved, max_step );
 #else
@@ -769,7 +898,11 @@ void run( void )
 
 		for ( t = 1; quit == 0 && t <= max_step; ++t )
 		{
-#ifndef NW 
+			// update the percentage done bar, if needed
+			if ( dobar )
+				update_bar( bar_done, perc_done, last_done );	
+			
+#ifndef _NW_ 
 			// restart runtime variables color cycle
 			cur_plt = 0;
 
@@ -791,7 +924,9 @@ void run( void )
 				root->update( true, false );
 			}
 
-#ifndef NW
+			perc_done = min( 100 * ( ( i - 1 ) + ( double ) t / max_step ) / sim_num, 100 );
+			
+#ifndef _NW_
 			switch ( done_in )
 			{
 				case 1:			// Stop button in Log window / s/S key in Runtime window
@@ -804,6 +939,7 @@ void run( void )
 				break;
 
 				case 2:			// Fast button in Log window / f/F key in Runtime window
+				case 5:			// plot window DELETE_WINDOW button handler
 					set_fast( 1 );
 					debug_flag = false;
 					break;
@@ -826,13 +962,6 @@ void run( void )
 					set_fast( 0 );
 					break;
 				 
-				// plot window DELETE_WINDOW button handler
-				case 5:
-					if ( pause_run )
-						cmd( "wm title .log \"$origLogTit\"" );
-					quit = 2;
-					break;
-
 				// runtime plot events
 				case 7:  		// center button
 					center_plot( );
@@ -860,6 +989,10 @@ void run( void )
 			}
 
 			done_in = 0;
+			
+			// show run time plot if still enabled
+			if ( t == 1 && ! fast )
+				enable_plot( );
 
 			// perform scrolling if enabled
 			if ( ! pause_run )
@@ -880,13 +1013,16 @@ void run( void )
 		deb_log( false );			// close debug log file, if any
 		end = clock( );
 		
+		if ( dobar && on_bar )
+			update_bar( bar_done, perc_done, last_done );	
+
 		if ( fast_mode < 2 )
 			plog( "\nSimulation %d of %d %s at case %d (%.2f sec.)\n", "", i, sim_num, quit == 2 ? "stopped" : "finished", t - 1, ( float ) ( end - start ) / CLOCKS_PER_SEC );
 
 		if ( quit == 1 ) 			// for multiple simulation runs you need to reset quit
 			quit = 0;
 		
-#ifndef NW 
+#ifndef _NW_ 
 		cmd( ".p.b1.b configure -value %d", cur_sim );
 		cmd( ".p.b1.i configure -text \"Simulation: %d of %d ([ expr { int( 100 * %d / %d ) } ]%% done)\"", min( cur_sim + 1, sim_num ), sim_num, cur_sim, sim_num  );
 		
@@ -933,77 +1069,90 @@ void run( void )
 						plog( "Done\n" );
 				}
 
-				if ( ! grandTotal || batch_sequential )		// generate partial total files?
+				if ( ! no_tot && max_runs == 1 )
 				{
-					if ( ! batch_sequential )
-					  sprintf( msg, "%s%s%s_%d_%d.%s", save_alt_path ? alt_path : path, strlen( save_alt_path ? alt_path : path ) > 0 ? "/" : "", save_alt_path ? alt_name : simul_name, seed - i, seed - 1 + sim_num - i, docsv ? "csv" : "tot" );
+					if ( ! grandTotal || batch_sequential )		// generate partial total files?
+					{
+						if ( ! batch_sequential )
+						  sprintf( msg, "%s%s%s_%d_%d.%s", save_alt_path ? alt_path : path, strlen( save_alt_path ? alt_path : path ) > 0 ? "/" : "", save_alt_path ? alt_name : simul_name, seed - i, seed - 1 + sim_num - i, docsv ? "csv" : "tot" );
+						else
+						  sprintf( msg, "%s%s%s_%d_%d_%d.%s", save_alt_path ? alt_path : path, strlen( save_alt_path ? alt_path : path ) > 0 ? "/" : "", save_alt_path ? alt_name : simul_name, findex, seed - i, seed - 1 + sim_num - i, docsv ? "csv" : "tot" );
+					}
+					else										// generate single grand total file
+					{
+						sprintf( msg, "%s%s%s.%s", save_alt_path ? alt_path : path, strlen( save_alt_path ? alt_path : path ) > 0 ? "/" : "", save_alt_path ? alt_name : simul_name, docsv ? "csv" : "tot" );
+					}
+
+					if ( dozip )
+						strcat( msg, ".gz" );
+					
+					if ( fast_mode < 2 && i == sim_num )		// print only for last
+						plog( "\nSaving totals to file %s... ", "", msg );
+
+					if ( i == 1 && grandTotal && ! add_to_tot )
+					{
+						rf = new result( msg, "wt", dozip, docsv );	// create results file object
+						rf->title( root, 0 );					// write header
+					}
 					else
-					  sprintf( msg, "%s%s%s_%d_%d_%d.%s", save_alt_path ? alt_path : path, strlen( save_alt_path ? alt_path : path ) > 0 ? "/" : "", save_alt_path ? alt_name : simul_name, findex, seed - i, seed - 1 + sim_num - i, docsv ? "csv" : "tot" );
+						rf = new result( msg, "a", dozip, docsv );	// add results object to existing file
+
+					rf->data( root, actual_steps );				// write current data data
+					delete rf;									// close file and delete object
+
+					if ( fast_mode < 2 && i == sim_num )		// print only for last
+						plog( "Done\n" );
 				}
-				else										// generate single grand total file
-				{
-					sprintf( msg, "%s%s%s.%s", save_alt_path ? alt_path : path, strlen( save_alt_path ? alt_path : path ) > 0 ? "/" : "", save_alt_path ? alt_name : simul_name, docsv ? "csv" : "tot" );
-				}
-
-				if ( fast_mode < 2 && i == sim_num )		// print only for last
-					plog( "\nSaving totals to file %s%s... ", "", msg, dozip ? ".gz" : "" );
-
-				if ( i == 1 && grandTotal && ! add_to_tot )
-				{
-					rf = new result( msg, "wt", dozip, docsv );	// create results file object
-					rf->title( root, 0 );					// write header
-				}
-				else
-					rf = new result( msg, "a", dozip, docsv );	// add results object to existing file
-
-				rf->data( root, actual_steps );				// write current data data
-				delete rf;									// close file and delete object
-
-				if ( fast_mode < 2 && i == sim_num )		// print only for last
-					plog( "Done\n" );
 			}
 			else
 				if ( fast_mode < 2 )
 					plog( "Nothing to save: no element selected\n" );
 
-				
-			if ( batch_sequential && i == sim_num )  		// last run of current batch file?
+			if ( i == sim_num )					  				// last run?
 			{
-				findex++;									// try next file
-				sprintf( msg, "%s_%d.lsd", simul_name, findex );
-				delete [ ] struct_file;
-				struct_file = new char[ strlen( msg ) + 1 ];
-				strcpy( struct_file, msg );
-				f = fopen( struct_file, "r" );			
-				if ( f == NULL || ( fend != 0 && findex > fend ) )// no more file to process
+				if ( batch_sequential )					  		// last batch file?
 				{
-					if ( f != NULL ) 
-						fclose( f );
+					findex++;									// try next file
+					sprintf( msg, "%s_%d.lsd", simul_name, findex );
+					delete [ ] struct_file;
+					struct_file = new char[ strlen( msg ) + 1 ];
+					strcpy( struct_file, msg );
+					f = fopen( struct_file, "r" );			
+					if ( f == NULL || ( fend != 0 && findex > fend ) )// no more file to process
+					{
+						if ( f != NULL ) 
+							fclose( f );
+						if ( fast_mode < 2 )
+							plog( "\nFinished processing %s\n", "", struct_file );
+						break;
+					}
+					
 					if ( fast_mode < 2 )
-						plog( "\nFinished processing %s\n", "", simul_name );
-					break;
-				}
-				
-				if ( fast_mode < 2 )
-					plog( "\nProcessing configuration file %s ...\n", "", struct_file );
-				fclose( f );  								// process next file
+						plog( "\nProcessing configuration file %s...\n", "", struct_file );
+					fclose( f );  								// process next file
 
-				i = 0;   									// force restarting run count
-				batch_sequential_loop = true;				// force reloading configuration
-			} 
+					i = 0;   									// force restarting run count
+					batch_sequential_loop = true;				// force reloading configuration
+				}
+#ifdef _NW_
+				else
+					if ( fast_mode < 2 )
+						plog( "\nFinished processing %s\n", "", struct_file );
+#endif
+			}
 		}
 	}
 
 	if ( fast_mode == 2 )
 		plog( "\nSimulation %d of %d finished at case %d\n", "", i - 1, sim_num, t - 1 );
 
-#ifndef NW 
+#ifndef _NW_ 
 	uncover_browser( );
 	show_prof_aggr( );
 	cmd( "focustop .log" );
 #endif
 
-#ifndef NP
+#ifndef _NP_
 	// stop multi-thread workers
 	delete [ ] workers;
 	workers = NULL;
@@ -1017,7 +1166,7 @@ void run( void )
 SET_VAR
 *********************************/
 // function to set a c variable when not in a Tcl idle loop (hardcoded vars only)
-#ifndef NW   
+#ifndef _NW_   
 int Tcl_set_c_var( ClientData cdata, Tcl_Interp *inter, int argc, const char *argv[ ] )
 {
 	char vname[ MAX_ELEM_LENGTH ];
@@ -1058,7 +1207,7 @@ void set_fast( int level )
 	if ( level < 0 )
 		level = 0;
 		
-#ifndef NW
+#ifndef _NW_
 	if ( fast && level == 0 )
 		enable_plot( );
 		
@@ -1106,7 +1255,7 @@ void empty_stack( void )
 	}
 	else
 	{
-#ifndef NW 
+#ifndef _NW_ 
 		log_tcl_error( "Internal error", "LSD trace stack corrupted" );	
 		cmd( "ttk::messageBox -parent . -type ok -icon error -title Error -message \"Internal LSD error\" -detail \"The LSD trace stack is corrupted.\nLSD will close now.\"" );
 #else
@@ -1151,7 +1300,7 @@ bool alloc_save_mem( object *r )
 		if ( cv->save || cv->savei )
 			alloc_save_var( cv );
 			
-#ifndef NW 
+#ifndef _NW_ 
 		// variable to parent name map for AoR
 		par_map.insert( make_pair < string, string > ( cv->label, r->label ) );		
 #endif
@@ -1303,8 +1452,356 @@ bool search_parallel( object *r )
 	return false;
 }
 
+#ifndef _NP_
 
-#ifndef NW
+/***************************************
+RUN_PARALLEL_EXEC
+***************************************/
+void run_parallel_exec( bool nw, int id, string cmd )
+{
+	int res;
+
+#ifdef _WIN32
+	res = windows_system( cmd.c_str( ) );
+#else
+	res = system( cmd.c_str( ) );
+#endif
+
+	lock_guard < mutex > lock( lock_run_status );
+	run_status[ id ] = res;
+}
+
+
+/***************************************
+RUN_PARALLEL
+***************************************/
+#define INISTAT -1234
+int run_parallel( bool nw, const char *exec, const char *simname, int fseed, int runs, int thrrun, int parruns, vector < string > & logs )
+{
+	char *alt_name;
+	int i, j, k, num, sl;
+	
+	// check for existing running threads
+	if ( run_monitor.joinable( ) )
+		return -1;
+
+	for ( auto & thr : run_threads )
+		if ( thr.joinable( ) )
+			return -1;
+	
+	int path_len = save_alt_path ? strlen( alt_path ) : strlen( path );
+	int name_len = strlen( simname ) + ( int ) log10( fseed + runs ) + 2;
+	char dest_path[ path_len + 5 ];
+	char log_file[ path_len + name_len + 6 ];
+	char res_file[ path_len + name_len + 9 ];
+	char cmd[ strlen( exec ) + 2 * ( path_len + name_len ) + 50 ];
+	
+	alt_name = clean_file( simname );
+	
+	if ( save_alt_path )
+		sprintf( dest_path, " -o %s", alt_path );
+	else
+		strcpy( dest_path, "" );
+
+	logs.clear( );
+	res_list.clear( );					// empty list of saved results files
+	run_status.clear( );
+	run_threads.clear( );
+	
+	if ( runs > parruns )				// more than one run per thread?
+	{
+		num = runs / parruns;			// base number of cases per thread
+		sl = runs % parruns;			// remaining cases per thread
+		
+		// allocate runs by thread
+		for ( i = fseed, j = 1; j <= parruns; ++j )
+		{
+			// log file name
+			sprintf( log_file, "%s%s%s_%d.log", save_alt_path ? alt_path : path, strlen( save_alt_path ? alt_path : path ) > 0 ? "/" : "", save_alt_path ? alt_name : simname, j );
+			logs.push_back( log_file );
+			
+			// results file names
+			for ( k = i; k < i + num + ( j <= sl ? 1 : 0 ); ++k )
+			{
+				sprintf( res_file, "%s%s%s_%d.%s", save_alt_path ? alt_path : path, strlen( save_alt_path ? alt_path : path ) > 0 ? "/" : "", save_alt_path ? alt_name : simname, k, docsv ? "csv" : "res" );
+				
+				if ( dozip )
+					strcat( res_file, ".gz" );
+
+				if ( ! no_res )
+					res_list.push_back( res_file );
+			}
+
+			// command line
+			sprintf( cmd, "%s -c %d -f %s.lsd -s %d -e %d%s%s%s%s%s%s -l %s", exec, thrrun, simname, i, j <= sl ? num + 1 : num, no_res ? " -r" : "", no_tot ? " -p" : "", docsv ? " -t" : "", dozip ? "" : " -z", dobar ? " -b" : "", dest_path, log_file );
+			
+			run_status.push_back( INISTAT );
+			run_threads.push_back( thread( run_parallel_exec, nw, run_status.size( ) - 1, string( cmd ) ) );
+			
+			j <= sl ? i += num + 1 : i += num;
+		}
+	}
+	else								// just one run per thread
+	{
+		for ( i = fseed, j = 1; i < fseed + runs; ++i, ++j )
+		{
+			// log file name
+			sprintf( log_file, "%s%s%s_%d.log", save_alt_path ? alt_path : path, strlen( save_alt_path ? alt_path : path ) > 0 ? "/" : "", save_alt_path ? alt_name : simname, i );
+			logs.push_back( log_file );
+			
+			// results file name
+			sprintf( res_file, "%s%s%s_%d.%s", save_alt_path ? alt_path : path, strlen( save_alt_path ? alt_path : path ) > 0 ? "/" : "", save_alt_path ? alt_name : simname, i, docsv ? "csv" : "res" );
+			
+			if ( dozip )
+				strcat( res_file, ".gz" );
+
+			if ( ! no_res )
+				res_list.push_back( res_file );
+
+			// command line
+			sprintf( cmd, "%s -c %d -f %s.lsd -s %d -e 1%s%s%s%s%s%s -l %s", exec, thrrun, simname, i, no_res ? " -r" : "", no_tot ? " -p" : "", docsv ? " -t" : "", dozip ? "" : " -z", dobar ? " -b" : "", dest_path, log_file );
+			
+			run_status.push_back( INISTAT );
+			run_threads.push_back( thread( run_parallel_exec, nw, run_status.size( ) - 1, string( cmd ) ) );
+		}
+	}
+	
+	if ( nw )
+	{
+		// create an overall progress bar, using the average progress of threads
+		if ( dobar )
+		{
+			bool abort = false;
+			sl = -1;
+				
+			printf( "\n" );
+			
+			do
+			{
+				msleep( 1000 );
+				
+				num = monitor_logs( logs );
+				if ( num < 0 )
+				{
+					num = - num;
+					abort = true;
+				}
+				
+				update_bar( NULL, num, sl );
+			}
+			while ( num < 100 && ! abort );
+			
+			printf( "\n" );
+		}
+		
+		for ( auto & thr : run_threads )
+			if ( thr.joinable( ) )
+				thr.join( );
+		
+		consolidate_logs( nw, logs );
+
+		i = 0;
+		for ( int status : run_status )
+			if ( status != 0 )
+			{
+				i = status;
+				break;
+			}
+		
+		return i;
+	}
+	else
+		run_monitor = thread( monitor_parallel, nw, logs );
+	
+	return 0;
+}
+
+
+/***************************************
+MONITOR_LOGS
+***************************************/
+int monitor_logs( vector < string > & logs )
+{
+	int i, j, k, last, len, thr, threads, n = 0, finished = 0, sum = 0;
+	char *log = NULL, tok[ 4 ];
+	FILE *f;
+	
+	// check if threads are still running
+	threads = run_status.size( );
+	for ( thr = 0; thr < threads; ++thr )
+		if ( run_status[ thr ] != INISTAT )
+			++finished;
+	
+	thr = 0;
+	for ( string logn : logs )
+	{
+		// consider just running threads except if all threads are stopped
+		if ( run_status[ thr++ ] != INISTAT && finished < threads )
+			continue;
+		
+		if ( ( f = fopen( logn.c_str( ), "rb" ) ) == NULL )
+			continue;
+		
+		// read file content at once
+		fseek( f, 0, SEEK_END );
+		len = ftell( f );
+		log = new char [ len + 1 ];
+		rewind( f );
+		fread( ( void * ) log, sizeof log[ 0 ], len, f );
+		log[ len ] = '\0';
+		fclose( f );
+		
+		for ( i = len - 1; i >= 0; --i ) 	// move backwards in the log
+			if ( strstr( log + i, "\n0%" ) != NULL )  // it is start of bar?
+			{
+				last = strrchr( log + i, '%' ) - ( log + i );	// end of bar
+				for ( j = last; j > 0 && ( log + i )[ j ] != '.'; --j ); // last n% in bar
+				
+				if ( j > 0 ) 		// ignore the first '0%' in bar
+				{
+					++j;
+					strncpy( tok, log + i + j, min( last - j, 3 ) );
+					tok[ min( last - j, 3 ) ] = '\0';
+					if ( sscanf( tok, "%d", & k ) == 1 )
+					{
+						if ( finished < threads )
+						{
+							sum += k;
+							++n;
+						}
+						else		// all threads stopped, pick the more advanced
+						{
+							sum = max( sum, k );
+							n = 1;
+						}
+					}
+				}
+				
+				break;				// just consider last bar in log
+			}
+		
+		delete [ ] log;
+	}
+	
+	// no thread running, signal it
+	if ( finished == threads )
+		return n == 0 ? -1 : - sum / n;
+	else
+		return n == 0 ? 0 : sum / n;	// rounded-down average
+}
+
+
+/***************************************
+MONITOR_PARALLEL
+***************************************/
+void monitor_parallel( bool nw, vector < string > logs )
+{
+	for ( auto & thr : run_threads )
+		if ( thr.joinable( ) )
+			thr.join( );
+	
+	consolidate_logs( nw, logs );
+}
+
+
+/****************************************************
+CONSOLIDATE_LOGS
+Consolidate a set of parallel-run logs
+****************************************************/
+void consolidate_logs( bool nw, vector < string > logs )
+{
+	char buf[ MAX_LINE_SIZE + 1 ];
+	FILE *f;
+
+	run_log.clear( );
+	
+	for ( string log : logs )
+	{
+		f = fopen( log.c_str( ), "r" );
+		if ( f == NULL )
+		{
+			sprintf( buf, "\nCannot read '%s', consolidated log is incomplete", log.c_str( ) );
+			run_log.append( buf );
+			continue;
+		}
+		
+		while ( fgets( buf, MAX_LINE_SIZE, f ) != NULL )
+			run_log.append( buf );
+		
+		fclose( f );
+		remove( log.c_str( ) );
+	}
+	
+	
+	if ( nw )
+	{
+		puts( run_log.c_str( ) );
+		return;
+	}
+	
+#ifndef _NW_	
+
+	while ( ! idle_loop )
+		msleep( 100 );
+	
+	choice = 8;
+
+#endif
+
+}
+
+#endif
+
+/*********************************
+UPDATE_BAR
+*********************************/
+void update_bar( char *bar, int done, int & last_done )
+{
+	char perc[ 5 ];
+	int p;
+	
+	done = min ( done, 100 );
+	last_done = min ( last_done, 100 );
+	
+	if ( done <= last_done || last_done == 100 )
+		return;
+	
+	for ( p = last_done + 1; p <= done; ++p )
+		if ( p % 10 == 0 )
+		{
+			sprintf( perc, "%d%%", p );
+			
+			if ( bar != NULL )
+				strcat( bar, perc );
+			
+			// check if continuing existing bar or starting a new one
+			if ( on_bar || bar == NULL )
+				plog( "%s", "bar", perc );
+			else
+			{	
+				on_bar = true;
+				plog( "\n%s", "bar", bar );
+			}
+		}
+		else
+			if ( p % ( 100 / ( BAR_DONE_SIZE - 33 ) ) == 0 )
+			{
+				if ( bar != NULL )
+					strcat( bar, "." );
+				
+				if ( on_bar || bar == NULL )
+					plog( ".", "bar" );
+				else
+				{
+					on_bar = true;
+					plog( "\n%s", "bar", bar );
+				}
+			}
+			
+	last_done = done;
+}
+
+#ifndef _NW_
 
 /*********************************
 CREATE_LOGWINDOW
@@ -1314,7 +1811,7 @@ void create_logwindow( void )
 	if ( ! tk_ok )
 		myexit( 7 );
 
-	cmd( "newtop .log \"LSD Log\" { if [ string equal [ discard_change ] ok ] { exit } } \"\"" );
+	cmd( "newtop .log \"LSD Log\" { if { [ discard_change ] eq \"ok\" && [ abort_run_threads ] eq \"ok\" } { exit } } \"\"" );
 
 	cmd( "set w .log.text" );
 	cmd( "ttk::frame $w" );
@@ -1343,10 +1840,10 @@ void create_logwindow( void )
 	cmd( "pack $w.scrollx -side bottom -fill x" );
 	cmd( "pack $w -expand yes -fill both" );
 	
-	cmd( "bind .log.text.text <2> { \
+	cmd( "bind .log.text.text <Button-2> { \
 			tk_popup .log.text.text.menu %%X %%Y \
 		}" );	
-	cmd( "bind .log.text.text <3> { \
+	cmd( "bind .log.text.text <Button-3> { \
 			tk_popup .log.text.text.menu %%X %%Y \
 		}" );	
 
@@ -1504,7 +2001,7 @@ void cover_browser( const char *text1, const char *text2, bool run )
 		cmd( "wm title . \"$origMainTit (DISABLED)\"" );
 	}
 	
-	cmd( "update idletasks" );
+	cmd( "update" );
 	
 	brCovered = true;
 	redrawRoot = false;
@@ -1603,7 +2100,7 @@ debugger
 ********************************************/
 void deb_log( bool on, int time )
 { 
-#ifndef NW  
+#ifndef _NW_  
 	// check if should turn off
 	if ( ! on || parallel_mode || fast_mode != 0 )
 	{
