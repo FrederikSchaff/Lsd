@@ -130,6 +130,17 @@ if [ string equal $CurPlatform mac ] {
 	set bvstepM $bvstepLinux
 	set borderMadj $bborderLinux
 	
+	# use xterm as alternative for missing default/alternative terminals
+	if { [ catch { exec which [ lindex $DefaultSysTerm 0 ] } ] } {
+		set DefaultSysTerm "xterm -e"
+		foreach term $sysTermLinuxAlt {
+			if { ! [ catch { exec which [ lindex $term 0 ] } ] } {
+				set DefaultSysTerm $term
+				break
+			}
+		}
+	}
+	
 } elseif [ string equal $CurPlatform windows ] {
 	package require registry
 
@@ -179,16 +190,24 @@ if [ string equal $CurPlatform mac ] {
 	# Gnuplot on path? if not, try default install folder
 	if [ catch { exec where $gnuplotExe } ] {
 		if [ file exists "C:/Program Files/gnuplot/bin/$gnuplotExe" ] {
-			set gnuplotExe "C:/Program Files/gnuplot/bin/$gnuplotExe"
+			set gnuplotExe "\"C:/Program Files/gnuplot/bin/$gnuplotExe\""
 		}
 	}
 }
 
-# check incomplete terminal command
-if { $CurPlatform in [ list linux windows ] && [ llength $sysTerm ] < 2 } { \
-	set sysTerm "$DefaultSysTerm"
+# check old incompatible options and fix with defaults
+if { ! [ info exists sysTerm ] || ( $CurPlatform in [ list linux windows ] && [ llength $sysTerm ] < 2 ) } { \
+	set sysTerm $DefaultSysTerm
 }
 	
+if { $CurPlatform eq "mac" && ( ! [ info exists $wish ] || $wish eq "wish8.6" ) } { \
+	set wish $wishMac
+}
+	
+if { $CurPlatform eq "windows" && ( ! [ info exists $HtmlBrowser ] || $HtmlBrowser eq "open" ) } { \
+	set HtmlBrowser $browserWindows
+}
+
 # detect and update OS-dependent current/default theme configurations
 updateTheme
 
@@ -319,6 +338,7 @@ if { [ catch { set ttfam [ font actual [ ttk::style lookup TLabel -font ] -famil
 	set ttsize [ expr { [ font actual TkDefaultFont -size ] - 1 } ]
 }
 set ttfont [ font create -family "$ttfam" -size $ttsize ]
+set ttfontB [ font create -family "$ttfam" -size $ttsize -weight bold ]
 set tooltip::labelOpts [ list -background $colorsTheme(ttip) -foreground $colorsTheme(fg) \
 	 -borderwidth 0 -highlightthickness 1 -highlightbackground $colorsTheme(fg) ]
 tooltip::tooltip delay $ttipdelay

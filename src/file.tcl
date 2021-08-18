@@ -28,50 +28,6 @@ proc LsdExit { } {
 
 
 #************************************************
-# LSDHELP
-#************************************************
-proc LsdHelp { fn } {
-	global RootLsd
-	
-	LsdHtml "$RootLsd/Manual" "$fn"
-}
-
-
-#************************************************
-# LSDHTML
-#************************************************
-proc LsdHtml { dir fn } {
-	global HtmlBrowser CurPlatform termResult
-	
-	if { $dir eq "" } {
-		set fqn "$fn"
-	} else {
-		set fqn "$dir/$fn"
-	}
-	
-	if { [ file exists "$fqn" ] } {
-
-		set fqn [ file nativename "$fqn" ]
-		
-		if { $CurPlatform ne "windows" } {
-			set error [ open_terminal $fqn $HtmlBrowser ]
-		} else {
-			set error [ open_terminal "start $fqn" ]
-		}
-		
-		if { $error } {
-			ttk::messageBox -parent . -type ok -icon error -title Error -message "Browser failed to launch" -detail "Please check if the web browser is set up properly.\n\nDetail:\n$termResult"
-		}
-		
-		return 1
-		
-	} else {
-		return 0
-	}
-}
-
-
-#************************************************
 # CHECK_COMPONENTS
 # Checks if required external software components
 # are available and on the proper versions
@@ -769,10 +725,72 @@ proc open_diff { file1 file2 { file1name "" } { file2name "" } } {
 
 
 #************************************************
+# OPEN_GNUPLOT
+# Open external gnuplot application
+#************************************************
+proc open_gnuplot { { script "" } { errmsg "" } { persist false } { par ".da" } } {
+	global CurPlatform sysTerm gnuplotExe termResult
+
+	if { $persist } {
+		set opt ""
+	} else {
+		set opt "-p"
+	}
+		
+	if { $script eq "" && $CurPlatform in [ list linux mac ] } {
+		set error [ open_terminal $gnuplotExe ]
+	} else {
+		set error [ open_terminal "$opt $script" $gnuplotExe ]
+	}
+
+	if { $error } {
+		if [ string equal $errmsg "" ] {
+			set errmsg "Please check if Gnuplot is installed and set up properly."
+		}
+
+		ttk::messageBox -parent $par -type ok -icon error -title Error -message "Gnuplot failed to launch" -detail "Gnuplot returned error '$error'.\n\nDetail:\n$termResult\n\n$errmsg"
+	}
+
+	return $error
+}
+
+
+#************************************************
+# OPEN_BROWSER
+#************************************************
+proc open_browser { dir fn } {
+	global HtmlBrowser CurPlatform termResult
+	
+	if { $dir eq "" } {
+		set fqn "$fn"
+	} else {
+		set fqn "$dir/$fn"
+	}
+	
+	if { ! [ catch { set fqn [ file normalize "$fqn" ] } ] && [ file exists "$fqn" ] } {
+		if { $CurPlatform in [ list linux mac ] } {
+			set error [ open_terminal $fqn $HtmlBrowser ]
+		} else {
+			set error [ open_terminal "$HtmlBrowser $fqn" ]
+		}
+		
+		if { $error } {
+			ttk::messageBox -parent . -type ok -icon error -title Error -message "Browser failed to launch" -detail "Please check if the web browser is set up properly.\n\nDetail:\n$termResult"
+			return 0
+		}
+		
+		return 1
+	}
+	
+	return 0
+}
+
+
+#************************************************
 # OPEN_TERMINAL
 #************************************************
 proc open_terminal { cmd { term "" } } {
-	global sysTerm wish CurPlatform termResult
+	global sysTerm CurPlatform termResult
 	
 	if { $term eq "" } {
 		set term $sysTerm
@@ -786,19 +804,12 @@ proc open_terminal { cmd { term "" } } {
 		set opt [ list ]
 	}
 	
-	# whish is not system dependent
-	if { $term eq $wish } {
-		set cmdline [ concat $term $opt $cmd ]
+	# mac terminal can only get commands from applescript
+	if { $CurPlatform eq "mac" && [ string equal -nocase $term Terminal ] } {
+		set cmdline "osascript -e \"tell application \\\"$term\\\" to do script \\\"cd [ pwd ]; clear; $cmd; exit\\\"\""
+		set cmdline [ concat $cmdline "-e \"tell application \\\"$term\\\" to activate\"" ]
 	} else {
-		switch $CurPlatform {
-			windows -
-			linux {
-				set cmdline [ concat $term $opt $cmd ]
-			}
-			mac {
-				set cmdline "osascript -e tell application \"$term\" to do script \"cd [ pwd ]; clear; $cmd; exit\""
-			}
-		}
+		set cmdline [ concat $term $opt $cmd ]
 	}
 	
 	set termResult ""
@@ -807,29 +818,12 @@ proc open_terminal { cmd { term "" } } {
 
 
 #************************************************
-# OPEN_GNUPLOT
-# Open external gnuplot application
+# LSDHELP
 #************************************************
-proc open_gnuplot { { script "" } { errmsg "" } { persist false } { par ".da" } } {
-	global CurPlatform sysTerm gnuplotExe termResult
-
-		if { $script eq "" && $CurPlatform in [ list linux mac ] } {
-			set error [ open_terminal $gnuplotExe ]
-		} elseif { $persist } {
-			set error [ open_terminal $script $gnuplotExe ]
-		} else {
-			set error [ open_terminal "-p $script" $gnuplotExe ]
-		}
-
-	if { $error } {
-		if [ string equal $errmsg "" ] {
-			set errmsg "Please check if Gnuplot is installed and set up properly."
-		}
-
-		ttk::messageBox -parent $par -type ok -icon error -title Error -message "Gnuplot failed to launch" -detail "Gnuplot returned error '$error'.\n\nDetail:\n$termResult\n\n$errmsg"
-	}
-
-	return $error
+proc LsdHelp { fn } {
+	global RootLsd
+	
+	open_browser "$RootLsd/Manual" "$fn"
 }
 
 
@@ -876,13 +870,13 @@ proc make_wait { } {
 # Start a makefile as a background task
 #************************************************
 proc make_background { target threads nw macPkg } {
-	global CurPlatform MakeExe RootLsd LsdGnu targetExe iniTime makePipe res
+	global CurPlatform DefaultMakeExe RootLsd LsdGnu mainExe targetExe iniTime makePipe res
 
 	if { $nw } {
 		set makeSuffix "NW"
 	} else {
 		set makeSuffix ""
-	};
+	}
 
 	if [ string equal $CurPlatform windows ] {
 		set exeSuffix ".exe"
@@ -890,11 +884,18 @@ proc make_background { target threads nw macPkg } {
 		set exeSuffix ""
 	}
 
-	if { ! $nw && $macPkg && [ string equal $CurPlatform mac ] } {
+	if { ! $nw && $macPkg && $CurPlatform eq "mac" } {
 		set targetExe "$target.app/Contents/MacOS/$target"
 	} else {
 		set targetExe "$target$exeSuffix"
-	};
+		if [ info exists mainExe ] {
+			if { $macPkg && $CurPlatform eq "mac" } {
+				set mainExe "$mainExe.app/Contents/MacOS/$mainExe"
+			} else {
+				set mainExe "$mainExe$exeSuffix"
+			}
+		}
+	}
 
 	set iniTime [ clock seconds ]
 
@@ -924,12 +925,12 @@ proc make_background { target threads nw macPkg } {
 		}
 
 		set file [ open make.bat w ]
-		puts -nonewline $file "$MakeExe -j $threads -f makefile$makeSuffix 2> makemessage.txt\n"
+		puts -nonewline $file "$DefaultMakeExe -j $threads -f makefile$makeSuffix 2> makemessage.txt\n"
 		close $file
 
 		set makePipe [ open "| make.bat" r ]
 	} else {
-		set makePipe [ open "| $MakeExe -j $threads -f makefile$makeSuffix 2> makemessage.txt" r ]
+		set makePipe [ open "| $DefaultMakeExe -j $threads -f makefile$makeSuffix 2> makemessage.txt" r ]
 	}
 
 	fconfigure $makePipe -blocking 0

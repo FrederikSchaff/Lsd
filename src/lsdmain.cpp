@@ -45,6 +45,8 @@ char nonavail[ ] = "NA";	// string for unavailable values (use R default)
 char tabs[ ] = "5c 7.5c 10c 12.5c 15c 17.5c 20c";	// Log window tabs
 double def_res = 0;			// default equation result
 int add_to_tot = false;		// flag to append results to existing totals file (bool)
+int dobar = true;			// output a progress bar to the log/standard output
+int docsv = false;			// produce .csv text results files (bool)
 int dozip = true;			// compressed results file flag (bool)
 int max_step = 100;			// default number of simulation runs
 int overwConf = true;		// overwrite configuration on run flag (bool)
@@ -54,7 +56,6 @@ unsigned seed = 1;			// random number generator initial seed
 
 bool batch_sequential = false;// no-window multi configuration job running
 bool brCovered = false;		// browser cover currently covered
-bool dobar = false;			// output a progress bar to the log/standard output
 bool eq_dum = false;		// current equation is dummy
 bool error_hard_thread;		// flag to error_hard() called in worker thread
 bool fast;					// safe copy of fast_mode flag
@@ -70,7 +71,9 @@ bool no_window = false;		// no-window command line job
 bool no_zero_instance = true;// flag to allow deleting last object instance
 bool non_var = false;		// flag to indicate INTERACT macro condition
 bool on_bar;				// flag to indicate bar is being draw in log window
+bool parallel_abort;		// indicate parallel threads were aborted
 bool parallel_mode;			// parallel mode (multithreading) status
+bool parallel_monitor;		// parallel monitor thread status
 bool pause_run;				// pause running simulation
 bool redrawRoot;			// control for redrawing root window (.)
 bool redrawStruc;			// control for redrawing model structure window
@@ -114,7 +117,6 @@ int choice_g;               // Tcl menu control variable (structure window)
 int cur_plt;				// current graph plot number
 int cur_sim;				// current simulation run
 int debug_flag = false;		// debug enable control (bool)
-int docsv = false;			// produce .csv text results files (bool)
 int done_in;				// Tcl menu control variable (log window)
 int fast_mode;				// level of LOG messages & runtime plot
 int fend;					// last multi configuration job to run
@@ -149,11 +151,10 @@ object *currObj = NULL;		// pointer to current object in browser
 object *root = NULL;		// LSD root object
 object *wait_delete = NULL;	// LSD object waiting for deletion
 o_setT obj_list;			// set with all existing LSD objects
-s_vecT res_list;			// list of results files last saved
 sense *rsense = NULL;		// LSD sensitivity analysis structure
-string run_log;				// consolidated runs log
 variable *cemetery = NULL;	// LSD saved data from deleted objects
-variable *last_cemetery = NULL;	// LSD last saved data from deleted objects
+variable *last_cemetery = NULL;// LSD last saved data from deleted objects
+vector < string > res_list;	// list of results files last saved
 FILE *log_file = NULL;		// log file, if any
 
 // constant arrays
@@ -166,31 +167,37 @@ const char *wnd_names[ LSD_WIN_NUM ] = LSD_WIN_NAME;
 const int signals[ REG_SIG_NUM ] = REG_SIG_CODE;
 
 // conditional variables
-#ifndef _NW_
-#include "tables.h"
-int i_values[ 4 ];			// user temporary variables copy
-double d_values[ USER_D_VARS ];
-object *o_values[ 10 ];
-netLink *n_values[ 10 ];
-FILE *f_values[ 1 ];
-p_mapT par_map;				// variable to parent name map for AoR
-Tcl_Interp *inter = NULL;	// global Tcl interpreter in LSD
-#endif
-
 #ifndef _NP_
 atomic < bool > parallel_ready( true );// flag to indicate variable worker is ready
-map < thread::id, worker * > thr_ptr;	// worker thread pointers
+map < thread::id, worker * > thr_ptr;// worker thread pointers
+mutex lock_run_logs;		// lock run_logs for parallel updating
+mutex lock_run_pids;		// lock run_pids for parallel updating
 mutex lock_run_status;		// lock run_status for parallel updating
+string run_log;				// consolidated runs log
 thread::id main_thread;		// LSD main thread ID
 thread run_monitor;			// thread monitoring parallel instances
-worker *workers = NULL;		// multi-thread parallel worker data
-vector < thread > run_threads;// parallel running instances
+vector < handleT > run_pids;// parallel running instances process id's
 vector < int > run_status;	// parallel running instances status
+vector < string > run_logs;	// list of log files produced in parallel runs
+vector < string > run_results;// parallel run results files
+vector < thread > run_threads;// parallel running instances
+worker *workers = NULL;		// multi-thread parallel worker data
 #endif
 
+#ifndef _NW_
+#include "tables.h"
+double d_values[ USER_D_VARS ];
+int i_values[ 4 ];			// user temporary variables copy
+netLink *n_values[ 10 ];
+object *o_values[ 10 ];
+p_mapT par_map;				// variable to parent name map for AoR
+FILE *f_values[ 1 ];
+Tcl_Interp *inter = NULL;	// global Tcl interpreter in LSD
+#else
 // command line strings
 const char lsdCmdMsg[ ] = "This is the No Window version of LSD.";
 const char lsdCmdHlp[ ] = "Command line options:\n'-f FILENAME.lsd [-s SEED] [-e RUNS] to run a single configuration file\n'-f FILE_BASE_NAME -s FIRST_NUM [-e LAST_NUM]' for batch sequential mode\n'-o PATH' to save result file(s) to a different subdirectory\n'-l FILENAME' to save all output to a (log) file\n'-t' to produce comma separated (.csv) text result file(s)\n'-r' for skipping the generation of intermediate result file(s)\n'-p' for skipping the generation of totals file\n'-g' for the generation of a single grand total file\n'-z' for preventing the generation of compressed result file(s)\n'-b' for showing a progress bar\n'-c MAX_THREADS[:MAX_RUNS]' to set maximum parallel threads/runs to use\n";
+#endif
 
 
 /*********************************
@@ -199,8 +206,8 @@ const char lsdCmdHlp[ ] = "Command line options:\n'-f FILENAME.lsd [-s SEED] [-e
 int lsdmain( int argn, char **argv )
 {
 	char *str;
-	int i, j = 0, k = 0, len;
-
+	int i, j = 0, k = 0;
+	
 	path = new char[ strlen( "" ) + 1 ];
 	simul_name = new char[ strlen( DEF_CONF_FILE ) + 1 ];
 	exec_path = new char[ MAX_PATH_LENGTH + 1 ]; 
@@ -225,10 +232,9 @@ int lsdmain( int argn, char **argv )
 
 #ifdef _NW_
 	
-	FILE *f;
-	
-	no_window = true;
-	no_res = no_tot = grandTotal = false;// to preserve compatibility
+	false;
+	dozip = no_window = true;			// to preserve compatibility
+	dobar = docsv = no_res = no_tot = grandTotal = false;
 	findex = -1;						// no default
 	fend = 0;							// no file number limit
 
@@ -362,7 +368,8 @@ int lsdmain( int argn, char **argv )
 	}
 	
 	delete [ ] str;
-				
+	FILE *f;
+		
 	if ( ( f = fopen( struct_file, "r" ) ) == NULL )
 	{
 		fprintf( stderr, "\nFile '%s' not found.\nThis is the no window version of LSD.\nSpecify a -f FILENAME.lsd to run a simulation or -f FILE_BASE_NAME -s 1 for\nbatch sequential simulation mode (requires configuration files:\nFILE_BASE_NAME_1.lsd, FILE_BASE_NAME_2.lsd, etc).\n\n", struct_file );
@@ -411,7 +418,12 @@ int lsdmain( int argn, char **argv )
 	if ( k > 0 )
 		max_runs = min( k, max_threads );
 	else
+	{
 		max_runs = 1;
+		
+		if ( j > 0 )
+			max_threads = j;
+	}
 	
 	if ( max_runs > 1 )
 		max_threads = max( min( j, max_threads / max_runs ), 1 );
@@ -419,8 +431,6 @@ int lsdmain( int argn, char **argv )
 	// if parallel execution is required, just run new instances & wait to finish
 	if ( ! batch_sequential && sim_num > 1 && max_runs > 1 )
 	{
-		vector < string > log_files;
-		
 		if ( grandTotal || ! no_tot )
 		{
 			printf( "\n(Grand) total file(s) request ignored, running in parallel mode.\n" );
@@ -428,13 +438,18 @@ int lsdmain( int argn, char **argv )
 			grandTotal = false;
 		}
 		
-		return run_parallel( no_window, argv[ 0 ], simul_name, seed, sim_num, max_threads, max_runs, log_files );
+		return run_parallel( no_window, argv[ 0 ], simul_name, seed, sim_num, max_threads, max_runs );
 	}
-	
+				
+#else
+
+	if ( k != 0 )
+		printf( "\nMulti-run request ignored, running in sequential mode.\n" );
+
 #endif
 
 #else 
-	
+		
 	for ( i = 1; argv[ i ] != NULL; i++ )
 	{
 		if ( exec_file == NULL || exec_path == NULL )
@@ -452,11 +467,14 @@ int lsdmain( int argn, char **argv )
 		if ( argv[ i ][ 1 ] == 'f' )
 		{
 			delete [ ] simul_name;
-			simul_name = new char[ strlen( argv[ i + 1 ] ) + 3 ];
+			simul_name = new char[ strlen( argv[ i + 1 ] ) + 5 ];
+			str = new char[ strlen( argv[ i + 1 ] ) + 1 ];
 			strcpy( simul_name, argv[ i + 1 ] );
-			len = strlen( simul_name );
-			if ( len > 4 && ! strcmp( ".lsd", simul_name + len - 4 ) )
-				*( simul_name + len - 4 ) = '\0';
+			strcpy( str, argv[ i + 1 ] );
+			strupr( str );
+			if ( strstr( str, ".LSD" ) != NULL )
+				simul_name[ strstr( str, ".LSD" ) - str ] = '\0';
+			delete [ ] str;
 			i++;
 		}
 		if ( argv[ i ][ 1 ] == 'i' )
@@ -659,6 +677,7 @@ int lsdmain( int argn, char **argv )
 	// Tcl global variables
 	cmd( "set small_character [ expr { $dim_character - $deltaSize } ]" );
 	cmd( "set gpterm \"\"" );
+	cmd( "set modelDir \"%s\"", exec_path );
 
 	// configure main window
 	cmd( ". configure -menu .m -background $colorsTheme(bg)" );
@@ -899,7 +918,7 @@ void run( void )
 		for ( t = 1; quit == 0 && t <= max_step; ++t )
 		{
 			// update the percentage done bar, if needed
-			if ( dobar )
+			if ( no_window && dobar )
 				update_bar( bar_done, perc_done, last_done );	
 			
 #ifndef _NW_ 
@@ -929,7 +948,7 @@ void run( void )
 #ifndef _NW_
 			switch ( done_in )
 			{
-				case 1:			// Stop button in Log window / s/S key in Runtime window
+				case 1:			// Stop button / s/S key
 					if ( pause_run )
 					{
 						cmd( "wm title .log \"$origLogTit\"" );
@@ -938,13 +957,13 @@ void run( void )
 					quit = 2;
 				break;
 
-				case 2:			// Fast button in Log window / f/F key in Runtime window
+				case 2:			// Fast button / f/F key
 				case 5:			// plot window DELETE_WINDOW button handler
 					set_fast( 1 );
 					debug_flag = false;
 					break;
 
-				case 3:			// Debug button in Log window / d/D key in Runtime window
+				case 3:			// Debug button / d/D key
 					if ( ! pause_run )
 					{
 						when_debug = t + 1;
@@ -958,7 +977,7 @@ void run( void )
 					}
 					break;
 
-				case 4:			// Observe button in Log window / o/O key in Runtime window
+				case 4:			// Observe button / o/O key
 					set_fast( 0 );
 					break;
 				 
@@ -1461,11 +1480,7 @@ void run_parallel_exec( bool nw, int id, string cmd )
 {
 	int res;
 
-#ifdef _WIN32
-	res = windows_system( cmd.c_str( ) );
-#else
-	res = system( cmd.c_str( ) );
-#endif
+	res = run_system( cmd.c_str( ), id );
 
 	lock_guard < mutex > lock( lock_run_status );
 	run_status[ id ] = res;
@@ -1476,18 +1491,10 @@ void run_parallel_exec( bool nw, int id, string cmd )
 RUN_PARALLEL
 ***************************************/
 #define INISTAT -1234
-int run_parallel( bool nw, const char *exec, const char *simname, int fseed, int runs, int thrrun, int parruns, vector < string > & logs )
+int run_parallel( bool nw, const char *exec, const char *simname, int fseed, int runs, int thrrun, int parruns )
 {
 	char *alt_name;
 	int i, j, k, num, sl;
-	
-	// check for existing running threads
-	if ( run_monitor.joinable( ) )
-		return -1;
-
-	for ( auto & thr : run_threads )
-		if ( thr.joinable( ) )
-			return -1;
 	
 	int path_len = save_alt_path ? strlen( alt_path ) : strlen( path );
 	int name_len = strlen( simname ) + ( int ) log10( fseed + runs ) + 2;
@@ -1503,10 +1510,12 @@ int run_parallel( bool nw, const char *exec, const char *simname, int fseed, int
 	else
 		strcpy( dest_path, "" );
 
-	logs.clear( );
-	res_list.clear( );					// empty list of saved results files
+	run_logs.clear( );
+	run_pids.clear( );
 	run_status.clear( );
 	run_threads.clear( );
+	run_results.clear( );
+	parallel_abort = false;
 	
 	if ( runs > parruns )				// more than one run per thread?
 	{
@@ -1518,7 +1527,7 @@ int run_parallel( bool nw, const char *exec, const char *simname, int fseed, int
 		{
 			// log file name
 			sprintf( log_file, "%s%s%s_%d.log", save_alt_path ? alt_path : path, strlen( save_alt_path ? alt_path : path ) > 0 ? "/" : "", save_alt_path ? alt_name : simname, j );
-			logs.push_back( log_file );
+			run_logs.push_back( log_file );
 			
 			// results file names
 			for ( k = i; k < i + num + ( j <= sl ? 1 : 0 ); ++k )
@@ -1529,12 +1538,13 @@ int run_parallel( bool nw, const char *exec, const char *simname, int fseed, int
 					strcat( res_file, ".gz" );
 
 				if ( ! no_res )
-					res_list.push_back( res_file );
+					run_results.push_back( res_file );
 			}
 
 			// command line
 			sprintf( cmd, "%s -c %d -f %s.lsd -s %d -e %d%s%s%s%s%s%s -l %s", exec, thrrun, simname, i, j <= sl ? num + 1 : num, no_res ? " -r" : "", no_tot ? " -p" : "", docsv ? " -t" : "", dozip ? "" : " -z", dobar ? " -b" : "", dest_path, log_file );
 			
+			run_pids.resize( run_pids.size( ) + 1 );
 			run_status.push_back( INISTAT );
 			run_threads.push_back( thread( run_parallel_exec, nw, run_status.size( ) - 1, string( cmd ) ) );
 			
@@ -1547,7 +1557,7 @@ int run_parallel( bool nw, const char *exec, const char *simname, int fseed, int
 		{
 			// log file name
 			sprintf( log_file, "%s%s%s_%d.log", save_alt_path ? alt_path : path, strlen( save_alt_path ? alt_path : path ) > 0 ? "/" : "", save_alt_path ? alt_name : simname, i );
-			logs.push_back( log_file );
+			run_logs.push_back( log_file );
 			
 			// results file name
 			sprintf( res_file, "%s%s%s_%d.%s", save_alt_path ? alt_path : path, strlen( save_alt_path ? alt_path : path ) > 0 ? "/" : "", save_alt_path ? alt_name : simname, i, docsv ? "csv" : "res" );
@@ -1556,11 +1566,12 @@ int run_parallel( bool nw, const char *exec, const char *simname, int fseed, int
 				strcat( res_file, ".gz" );
 
 			if ( ! no_res )
-				res_list.push_back( res_file );
+				run_results.push_back( res_file );
 
 			// command line
 			sprintf( cmd, "%s -c %d -f %s.lsd -s %d -e 1%s%s%s%s%s%s -l %s", exec, thrrun, simname, i, no_res ? " -r" : "", no_tot ? " -p" : "", docsv ? " -t" : "", dozip ? "" : " -z", dobar ? " -b" : "", dest_path, log_file );
 			
+			run_pids.resize( run_pids.size( ) + 1 );
 			run_status.push_back( INISTAT );
 			run_threads.push_back( thread( run_parallel_exec, nw, run_status.size( ) - 1, string( cmd ) ) );
 		}
@@ -1580,7 +1591,7 @@ int run_parallel( bool nw, const char *exec, const char *simname, int fseed, int
 			{
 				msleep( 1000 );
 				
-				num = monitor_logs( logs );
+				num = monitor_logs( );
 				if ( num < 0 )
 				{
 					num = - num;
@@ -1598,7 +1609,7 @@ int run_parallel( bool nw, const char *exec, const char *simname, int fseed, int
 			if ( thr.joinable( ) )
 				thr.join( );
 		
-		consolidate_logs( nw, logs );
+		log_parallel( nw );
 
 		i = 0;
 		for ( int status : run_status )
@@ -1611,7 +1622,7 @@ int run_parallel( bool nw, const char *exec, const char *simname, int fseed, int
 		return i;
 	}
 	else
-		run_monitor = thread( monitor_parallel, nw, logs );
+		run_monitor = thread( monitor_parallel, nw );
 	
 	return 0;
 }
@@ -1620,7 +1631,7 @@ int run_parallel( bool nw, const char *exec, const char *simname, int fseed, int
 /***************************************
 MONITOR_LOGS
 ***************************************/
-int monitor_logs( vector < string > & logs )
+int monitor_logs( void )
 {
 	int i, j, k, last, len, thr, threads, n = 0, finished = 0, sum = 0;
 	char *log = NULL, tok[ 4 ];
@@ -1633,7 +1644,7 @@ int monitor_logs( vector < string > & logs )
 			++finished;
 	
 	thr = 0;
-	for ( string logn : logs )
+	for ( string logn : run_logs )
 	{
 		// consider just running threads except if all threads are stopped
 		if ( run_status[ thr++ ] != INISTAT && finished < threads )
@@ -1692,58 +1703,134 @@ int monitor_logs( vector < string > & logs )
 
 
 /***************************************
+STOP_PARALLEL
+***************************************/
+#define WAIT_SECS 5
+bool stop_parallel( void )
+{
+	int id, res = 0, secs = 0;
+	
+	parallel_abort = true;
+	
+	if ( ! parallel_monitor )
+		return true;
+	
+	for ( id = 0; id < ( int ) run_pids.size( ); ++id )
+		res += kill_system( id );
+		
+	if ( res < ( int ) run_pids.size( ) )
+		return false;
+
+	while ( parallel_monitor && secs++ < WAIT_SECS )
+		msleep( 1000 );
+	
+	for ( string & results : run_results )
+		remove( results.c_str( ) );
+	
+	for ( string & log : run_logs )
+		remove( log.c_str( ) );
+	
+	run_results.clear( );
+	run_logs.clear( );
+	
+	if ( parallel_monitor )
+		return false;
+	
+	if ( run_monitor.joinable( ) )
+		run_monitor.join( );
+	
+#ifndef _NW_
+
+	plog( "\nParallel background run aborted!\n" );
+	
+#endif
+
+	return true;
+}
+
+
+/***************************************
+DETACH_PARALLEL
+***************************************/
+void detach_parallel( void )
+{
+	parallel_abort = true;
+	
+	for ( auto & thr : run_threads )
+		if ( thr.joinable( ) )
+			thr.detach( );
+	
+	if ( run_monitor.joinable( ) )
+		run_monitor.detach( );
+}
+
+
+/***************************************
 MONITOR_PARALLEL
 ***************************************/
-void monitor_parallel( bool nw, vector < string > logs )
+void monitor_parallel( bool nw )
 {
+	parallel_monitor = true;
+	
 	for ( auto & thr : run_threads )
 		if ( thr.joinable( ) )
 			thr.join( );
 	
-	consolidate_logs( nw, logs );
+	log_parallel( nw );
+	
+	parallel_monitor = false;
 }
 
 
 /****************************************************
-CONSOLIDATE_LOGS
+LOG_PARALLEL
 Consolidate a set of parallel-run logs
 ****************************************************/
-void consolidate_logs( bool nw, vector < string > logs )
+void log_parallel( bool nw )
 {
 	char buf[ MAX_LINE_SIZE + 1 ];
 	FILE *f;
 
 	run_log.clear( );
 	
-	for ( string log : logs )
+	if ( parallel_abort )
+		return;
+	else
 	{
-		f = fopen( log.c_str( ), "r" );
-		if ( f == NULL )
+		lock_guard < mutex > lock( lock_run_logs );
+		
+		for ( string & log : run_logs )
 		{
-			sprintf( buf, "\nCannot read '%s', consolidated log is incomplete", log.c_str( ) );
-			run_log.append( buf );
-			continue;
+			f = fopen( log.c_str( ), "r" );
+			if ( f == NULL )
+			{
+				sprintf( buf, "\nCannot read '%s', consolidated log is incomplete", log.c_str( ) );
+				run_log.append( buf );
+				continue;
+			}
+			
+			while ( fgets( buf, MAX_LINE_SIZE, f ) != NULL )
+				run_log.append( buf );
+			
+			fclose( f );
+			remove( log.c_str( ) );
 		}
 		
-		while ( fgets( buf, MAX_LINE_SIZE, f ) != NULL )
-			run_log.append( buf );
-		
-		fclose( f );
-		remove( log.c_str( ) );
+		run_logs.clear( );
 	}
-	
 	
 	if ( nw )
 	{
 		puts( run_log.c_str( ) );
 		return;
 	}
-	
+
 #ifndef _NW_	
 
 	while ( ! idle_loop )
 		msleep( 100 );
 	
+	res_list = run_results;	
 	choice = 8;
 
 #endif

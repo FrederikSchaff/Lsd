@@ -1132,10 +1132,10 @@ FILE *f;
 bridge *cb;
 object *n, *cur, *cur1, *cur2;
 variable *cv, *cv1;
-vector < string > log_files;
 result *rf;					// pointer for results files (may be zipped or not)
 sense *cs;
 description *cd;
+vector < string > logs;
 struct stat stExe, stMod;
 
 if ( ! redrawReq )
@@ -2442,7 +2442,9 @@ case 76:
 		cmd( "bind $T <Control-f> { .prop.v.o.fun invoke }; bind $T <Control-F> { .prop.v.o.fun invoke }" );
 		
 		cmd( "showtop $T" );
-		cmd( "mousewarpto $T.b.ok" );
+		cmd( "mousewarpto $T.b.ok 0" );
+		cmd( "$T.n.e selection range 0 end" );
+		cmd( "focus $T.n.e" );
 
 		*choice = 0;
 	}
@@ -2698,7 +2700,9 @@ case 78:
 		cmd( "bind $T <KeyPress-Return> { set choice $lag }" );
 		
 		cmd( "showtop $T" );
-		cmd( "mousewarpto $T.b.ok" );
+		cmd( "mousewarpto $T.b.ok 0" );
+		cmd( "$T.n.e selection range 0 end" );
+		cmd( "focus $T.n.e" );
 		
 		*choice = -1;
 		while ( *choice == -1 )			// wait for user action
@@ -2888,7 +2892,9 @@ case 96:
 	cmd( "bind $T.f.d.e2 <KeyPress-Return> { focus $T.f.e.e2; $T.f.e.e2 selection range 0 end }" );
 	
 	cmd( "showtop $T" );
-	cmd( "mousewarpto $T.b.ok" );
+	cmd( "mousewarpto $T.b.ok 0" );
+	cmd( "$T.f.c.e2 selection range 0 end" );
+	cmd( "focus $T.f.c.e2" );
 
 	*choice = 0;
 	while ( *choice == 0 )
@@ -3408,7 +3414,9 @@ case 22:
 	cmd( "bind $T.f.f.e2 <KeyPress-Return>  { focus $T.b.ok }" );
 
 	cmd( "showtop $T" );
-	cmd( "mousewarpto $T.b.ok" );
+	cmd( "mousewarpto $T.b.ok 0" );
+	cmd( "$T.f.c.e2 selection range 0 end" );
+	cmd( "focus $T.f.c.e2" );
 
 	*choice = 0;
 	while ( *choice == 0 )
@@ -3521,20 +3529,6 @@ case 26:
 break;
 
 
-// Remove all the debugging flags
-case 27:
-
-	cmd( "set answer [ ttk::messageBox -parent . -type yesno -default yes -icon question -title Confirmation -message \"Remove debug flags?\" -detail \"Confirm the removal of all debugging information. Debugger will not stop in any variable update.\" ]; switch $answer { yes { set choice 1 } no { set choice 2 } }" );
-
-	if ( *choice == 1 )
-	{
-		clean_debug( root );
-		unsaved_change( true );		// signal unsaved change
-	}
-
-break;
-
-
 // Change Equation File from which to take the code to show
 case 28:
 
@@ -3569,20 +3563,6 @@ case 29:
 
 	*choice = 0;	// point . window as parent for the following window
 	show_eq( lab_old, choice );
-
-break;
-
-
-// Remove all the save flags
-case 30:
-
-	cmd( "set answer [ ttk::messageBox -parent . -type yesno -default yes -icon question -title Confirmation -message \"Remove save flags?\" -detail \"Confirm the removal of all saving information. No data will be saved.\" ]; switch $answer { yes { set choice 1 } no { set choice 2 } }" );
-
-	if ( *choice == 1 )
-	{
-		clean_save( root );
-		unsaved_change( true );		// signal unsaved change
-	}
 
 break;
 
@@ -3696,6 +3676,21 @@ case 56:
 break;
 
 
+// Remove all the save flags
+case 30:
+
+	cmd( "set answer [ ttk::messageBox -parent . -type yesno -default yes -icon question -title Confirmation -message \"Remove save flags?\" -detail \"Confirm the removal of all saving information. No data will be saved.\" ]; switch $answer { yes { set choice 1 } no { set choice 2 } }" );
+
+	if ( *choice == 1 )
+	{
+		clean_save( root );
+		unsaved_change( true );				// signal unsaved change
+		redrawRoot = redrawStruc = true;	// force browser/structure redraw
+	}
+
+break;
+
+
 // Remove all the plot flags
 case 31:
 
@@ -3704,7 +3699,23 @@ case 31:
 	if ( *choice == 1 )
 	{
 		clean_plot( root );
-		unsaved_change( true );		// signal unsaved change
+		unsaved_change( true );				// signal unsaved change
+		redrawRoot = redrawStruc = true;	// force browser/structure redraw
+	}
+
+break;
+
+
+// Remove all the debugging flags
+case 27:
+
+	cmd( "set answer [ ttk::messageBox -parent . -type yesno -default yes -icon question -title Confirmation -message \"Remove debug flags?\" -detail \"Confirm the removal of all debugging information. Debugger will not stop in any variable update.\" ]; switch $answer { yes { set choice 1 } no { set choice 2 } }" );
+
+	if ( *choice == 1 )
+	{
+		clean_debug( root );
+		unsaved_change( true );				// signal unsaved change
+		redrawRoot = redrawStruc = true;	// force browser/structure redraw
 	}
 
 break;
@@ -3718,7 +3729,8 @@ case 87:
 	if ( *choice == 1 )
 	{
 		clean_parallel( root );
-		unsaved_change( true );		// signal unsaved change
+		unsaved_change( true );				// signal unsaved change
+		redrawRoot = redrawStruc = true;	// force browser/structure redraw
 	}
 
 break;
@@ -3929,7 +3941,9 @@ case 37:
 	cmd( "bind .n <KeyPress-Return> { set choice 1 }" );
 
 	cmd( "showtop .n" );
-	cmd( "mousewarpto .n.b.ok" );
+	cmd( "mousewarpto .n.b.ok 0" );
+	cmd( ".n.n.e selection range 0 end" );  
+	cmd( "focus .n.n.e" );
 
 	while ( *choice == 0 )
 		Tcl_DoOneEvent( 0 );
@@ -4098,7 +4112,9 @@ case 48:
 	cmd( "okXhelpcancel .a b Default { set temp_var mozilla } { set choice 1 } { LsdHelp LSD_macros.html#V } { set choice 2 }" );
 
 	cmd( "showtop .a" );
-	cmd( "mousewarpto .a.b.ok" );
+	cmd( "mousewarpto .a.b.ok 0" );
+	cmd( ".a.v_num2 selection range 0 end" );
+	cmd( "focus .a.v_num2" );
 
 	*choice = 0;
 	while ( *choice == 0 )
@@ -4611,7 +4627,9 @@ case 71:
 		cmd( "okhelpcancel .s b { set choice 1 } { LsdHelp menudata_sa.html#mcpoint } { set choice 2 }" );
 
 		cmd( "showtop .s" );
-		cmd( "mousewarpto .s.b.ok" );
+		cmd( "mousewarpto .s.b.ok 0" );
+		cmd( ".s.i.e selection range 0 end" );
+		cmd( "focus .s.i.e" );
 
 		*choice = 0;
 		while ( *choice == 0 )
@@ -4843,7 +4861,9 @@ case 80:
 		cmd( "okhelpcancel .s b { set choice 1 } { LsdHelp menudata_sa.html#mcrange } { set choice 2 }" );
 		
 		cmd( "showtop .s" );
-		cmd( "mousewarpto .s.b.ok" );
+		cmd( "mousewarpto .s.b.ok 0" );
+		cmd( ".s.i.e selection range 0 end" );
+		cmd( "focus .s.i.e" );
 		
 		*choice = 0;
 		while ( *choice == 0 )
@@ -4960,7 +4980,9 @@ case 81:
 		cmd( "okhelpcancel .s b { set choice 1 } { LsdHelp menudata_sa.html#ee } { set choice 2 }" );
 		
 		cmd( "showtop .s" );
-		cmd( "mousewarpto .s.b.ok" );
+		cmd( "mousewarpto .s.b.ok 0" );
+		cmd( ".s.i.e1 selection range 0 end" );
+		cmd( "focus .s.i.e1" );
 		
 		*choice = 0;
 		while ( *choice == 0 )
@@ -5302,16 +5324,17 @@ case 68:
 			break;
 
 	// check for existing NW executable
-	sprintf( ch, "%s/lsdNW", exec_path );			// form full executable name
+	sprintf( ch, "%s/lsdNW", exec_path );				// form full executable name
 	if ( platform == _WIN_ )
 		strcat( ch, ".exe" );							// add Windows ending
 
 	if ( ( f = fopen( ch, "rb" ) ) == NULL ) 
 	{
-		cmd( "ttk::messageBox -parent . -type ok -icon error -title Error -message \"Executable file 'lsdNW\\[.exe\\]' not found\" -detail \"Please create the required executable file using the option 'Model'/'Generate 'No Window' Version' in LMM menu.\"" );
-		break;
+		if ( ! make_no_window( ) )
+			break;
 	}
-	fclose( f );
+	else
+		fclose( f );
 	
 	// check if NW executable file is older than running executable file
 	sprintf( lab_old, "%s/%s", exec_path, exec_file );	// form full exec name
@@ -5321,9 +5344,18 @@ case 68:
 	{
 		if ( difftime( stExe.st_mtime, stMod.st_mtime ) < 0 )
 		{
-			cmd( "set answer [ ttk::messageBox -parent . -title Warning -icon warning -type okcancel -default ok -message \"Old executable file\" -detail \"The existing 'No Window' executable file is older than the current executable.\n\nPress 'OK' to continue anyway or 'Cancel' to abort. Please recompile the model using the option 'Model'/'Generate 'No Window' Version' in LMM menu.\" ]; if [ string equal $answer ok ] { set choice 1 } { set choice 2 }" );
+			cmd( "switch [ ttk::messageBox -parent . -title Warning -icon warning -type yesnocancel -default yes -message \"Recompile 'lsdNW'?\" -detail \"The existing 'No Window' executable file ('lsdNW') is older than the current executable.\n\nPress 'Yes' to recompile, 'No' continue anyway, or 'Cancel' to abort.\" ] { \
+					yes { set choice 0 } \
+					no { set choice 1 } \
+					cancel { set choice 2 } \
+				}" );
+				
 			if ( *choice == 2 )
 				break;
+			
+			if ( *choice == 0 )
+				if ( ! make_no_window( ) )
+					break;
 		}
 	}
 	
@@ -5460,7 +5492,9 @@ case 68:
 	cmd( "bind .s.c.e <KeyPress-Return> { .s.b.ok invoke }" );
 	
 	cmd( "showtop .s" );
-	cmd( "mousewarpto .s.b.ok" );
+	cmd( "mousewarpto .s.b.ok 0" );
+	cmd( ".s.c.e selection range 0 end" );
+	cmd( "focus .s.c.e" );
 	
 	*choice = 0;
 	while ( *choice == 0 )
@@ -5567,7 +5601,7 @@ case 68:
 		fprintf( f, "echo \"Use %s.sh LSD_EXEC CONFIG_PATH to change default paths\"\n", out_bat );
 	}
 	
-	log_files.clear( );
+	logs.clear( );
 
 	if ( fSeq && ( fnext - ffirst ) > param )	// if possible, work in blocks
 	{
@@ -5576,7 +5610,7 @@ case 68:
 		for ( i = ffirst, j = 1; j <= param; ++j )	// allocates files by the number of cores
 		{
 			sprintf( lab_old, "%s_%d.log", out_file, j );
-			log_files.push_back( lab_old );
+			logs.push_back( lab_old );
 			
 			if ( *choice == 1 || *choice == 4 )	// Windows
 				fprintf( f, "start \"LSD Process %d\" /B \"%%LSD_EXEC%%\" -c %d -f \"%%LSD_CONFIG_PATH%%\\%s\" -s %d -e %d%s%s%s%s -l \"%%LSD_CONFIG_PATH%%\\%s\"\r\n", j, nature, out_file, i, j <= sl ? i + num : i + num - 1, no_res ? " -r" : "", no_tot ? " -p" : "", docsv ? " -t" : "", dozip ? "" : " -z", lab_old );
@@ -5612,7 +5646,7 @@ case 68:
 					fprintf( f, "$LSD_EXEC -c %d -f \"$LSD_CONFIG_PATH\"/%s.lsd%s%s%s%s -l \"$LSD_CONFIG_PATH\"/%s &\n", nature, out_file, no_res ? " -r" : "", no_tot ? " -p" : "", docsv ? " -t" : "", dozip ? "" : " -z", lab_old );
 			}
 			
-			log_files.push_back( lab_old );
+			logs.push_back( lab_old );
 		}
 	}
 	
@@ -5658,7 +5692,7 @@ case 68:
 		cmd( "cd $path" );
 
 	cmd( "catch { exec %s & }", lab );
-	show_logs( path, log_files );
+	show_logs( out_dir, logs );
 		
 	cmd( "set path $oldpath; cd $path" );
 	
@@ -5668,12 +5702,24 @@ break;
 // Start NO WINDOW job as a separate background process
 case 69:
 
+#ifndef _NP_
+
 	// check if background are not being run already
-	if ( run_monitor.joinable( ) )
+	if ( parallel_monitor )
 	{ 
-		cmd( "ttk::messageBox -parent . -type ok -icon error -title Error -message \"Parallel run already running\" -detail \"Please wait until the current background parallel run finishes.\n\nTo abort the background run, simply close LSD Browser, and confirm when requested.\"" );
-		break;
+		cmd( "if { [ ttk::messageBox -parent . -type okcancel -default ok -icon warning -title Warning -message \"Abort running simulation?\" -detail \"A set of parallel simulation runs is being executed in background. You may choose to interrupt it now and proceed, or wait until it finishes before running a new one.\" ] eq \"ok\" } { set choice 1 } { set choice 0 }" );
+		
+		if ( *choice == 0 )
+			break;
+		
+		if ( ! stop_parallel( ) )
+		{
+			cmd( "ttk::messageBox -parent . -type ok -icon error -title Error -message \"Failed to abort running simulation\" -detail \"Please wait until the current parallel run finishes before trying to start a new one.\"" );
+			break;
+		}
 	}
+	
+#endif
 	
 	// check a model is already loaded
 	if ( ! struct_loaded )
@@ -5689,10 +5735,11 @@ case 69:
 
 	if ( ( f = fopen( lab, "rb" ) ) == NULL ) 
 	{
-		cmd( "ttk::messageBox -parent . -type ok -icon error -title Error -message \"Executable file 'lsdNW\\[.exe\\]' not found\" -detail \"Please create the required executable file using the option 'Model'/'Generate 'No Window' Version' in LMM.\"" );
-		break;
+		if ( ! make_no_window( ) )
+			break;
 	}
-	fclose( f );
+	else
+		fclose( f );
 	
 	// check if NW executable file is older than running executable file
 	sprintf( lab_old, "%s/%s", exec_path, exec_file );	// form full exec name
@@ -5702,14 +5749,24 @@ case 69:
 	{
 		if ( difftime( stExe.st_mtime, stMod.st_mtime ) < 0 )
 		{
-			cmd( "set answer [ ttk::messageBox -parent . -title Warning -icon warning -type okcancel -default ok -message \"Old executable file\" -detail \"The existing 'No Window' executable file is older than the current executable.\n\nPress 'OK' to continue anyway or 'Cancel' to abort. Please recompile the model using the option 'Model'/'Generate 'No Window' Version' in LMM menu.\" ]; if [ string equal $answer ok ] { set choice 1 } { set choice 2 }" );
+			cmd( "switch [ ttk::messageBox -parent . -title Warning -icon warning -type yesnocancel -default yes -message \"Recompile 'lsdNW'?\" -detail \"The existing 'No Window' executable file ('lsdNW') is older than the current executable.\n\nPress 'Yes' to recompile, 'No' continue anyway, or 'Cancel' to abort.\" ] { \
+					yes { set choice 0 } \
+					no { set choice 1 } \
+					cancel { set choice 2 } \
+				}" );
+				
 			if ( *choice == 2 )
 				break;
+			
+			if ( *choice == 0 )
+				if ( ! make_no_window( ) )
+					break;
 		}
 	}
 	
 	Tcl_LinkVar( inter, "no_res", ( char * ) & no_res, TCL_LINK_BOOLEAN );
 	Tcl_LinkVar( inter, "no_tot", ( char * ) & no_tot, TCL_LINK_BOOLEAN );
+	Tcl_LinkVar( inter, "dobar", ( char * ) & dobar, TCL_LINK_BOOLEAN );
 	Tcl_LinkVar( inter, "docsv", ( char * ) & docsv, TCL_LINK_BOOLEAN );
 	Tcl_LinkVar( inter, "dozip", ( char * ) & dozip, TCL_LINK_BOOLEAN );
 	Tcl_LinkVar( inter, "overwConf", ( char * ) & overwConf, TCL_LINK_BOOLEAN );
@@ -5863,8 +5920,9 @@ case 69:
 				$b.f4.l3 configure -text \"\n\" \
 			} \
 		}", path, strlen( path ) > 0 ? "/" : "", path, strlen( path ) > 0 ? "/" : "" );
+	cmd( "ttk::checkbutton $b.f6.dobar -text \"Show progress bar in logs\" -variable dobar" );
 	cmd( "ttk::checkbutton $b.f6.tosave -text \"Update configuration file\" -variable overwConf" );
-	cmd( "pack $b.f6.nores $b.f6.notot $b.f6.dozip $b.f6.docsv %s -anchor w", overwConf ? "$b.f6.tosave" : "" );
+	cmd( "pack $b.f6.nores $b.f6.notot $b.f6.dozip $b.f6.docsv $b.f6.dobar %s -anchor w", overwConf ? "$b.f6.tosave" : "" );
 	
 	cmd( "pack $b.f1 $b.f2 $b.f3 $b.f4 $b.f5 $b.f6 -padx 5 -pady 5" );
 		
@@ -5883,6 +5941,7 @@ case 69:
 	
 	Tcl_UnlinkVar( inter, "no_res" );
 	Tcl_UnlinkVar( inter, "no_tot" );
+	Tcl_UnlinkVar( inter, "dobar" );
 	Tcl_UnlinkVar( inter, "docsv" );
 	Tcl_UnlinkVar( inter, "dozip" );
 	Tcl_UnlinkVar( inter, "overwConf" );
@@ -5925,18 +5984,18 @@ case 69:
 #ifdef _NP_
 
 	sprintf( lab_old, "%s.log", simul_name );
-	cmd( "catch { exec %s -f %s%s%s%s%s -l %s & }", lab, struct_file, no_res ? " -r" : "", no_tot ? " -p" : "", docsv ? " -t" : "", dozip ? "" : " -z", lab_old );
-	log_files.clear( );
-	log_files.push_back( lab_old );	
+	cmd( "catch { exec %s -f %s%s%s%s%s%s -l %s & }", lab, struct_file, no_res ? " -r" : "", no_tot ? " -p" : "", docsv ? " -t" : "", dozip ? "" : " -z", dobar ? " -b" : "", lab_old );
+	run_logs.clear( );
+	run_logs.push_back( lab_old );	
 
 #else
 	
 	plog( "\n\nProcessing parallel background run (threads=%d runs=%d)...", "", nature, param );
-	run_parallel( false, lab, simul_name, seed, sim_num, nature, param, log_files );
+	run_parallel( false, lab, simul_name, seed, sim_num, nature, param );
 	
 #endif
 
-	show_logs( path, log_files );
+	show_logs( path, run_logs );
 	
 	cmd( "set path $oldpath; cd $path" );
 	
@@ -6274,7 +6333,20 @@ case 8:
 	if ( run_monitor.joinable( ) )
 		run_monitor.join( );
 
-	plog( "\n%s", "", run_log.c_str( ) );
+	plog( "\n" );
+	
+	j = TCL_BUFF_STR - 50;			// buffer size in cmd() in util.cpp
+	lab1 = new char[ j + 1 ];
+	lab1[ j ] = '\0';
+	
+	for ( i = 0; i < ( int ) run_log.size( ); i += j )
+	{
+		strncpy( lab1, run_log.c_str( ) + i, j );
+		plog( "%s", "", lab1 );
+	}
+	
+	delete [ ] lab1;
+	
 	plog( "\nFinished parallel background run\n" );
 	
 #endif
@@ -7094,7 +7166,7 @@ SENSITIVITY_CREATED
 ****************************************************/
 void sensitivity_created( void )
 {
-	cmd( "ttk::messageBox -parent . -type ok -icon info -title \"Sensitivity Analysis\" -message \"Configuration files created\" -detail \"LSD has created configuration files (.lsd) for all the sensitivity analysis required points.\n\nTo run the analysis first you have to create a 'No Window' version of the model program, using the 'Model'/'Generate 'No Window' Version' menu option in LMM. This step has to be done every time you modify your equations file.\n\nSecond, start the processing of sensitivity configuration files by selecting 'Run'/'Create/Run Parallel Batch...' menu option.\n\nAlternatively, open a command prompt (terminal window) and execute the following command in the directory of the model:\n\n> lsdNW  -f  <configuration_file>  -s  <n>\n\nReplace <configuration_file> with the name of your original configuration file WITHOUT the '.lsd' extension and <n> with the number of the first configuration file to be run (usually 1). If your configuration files are in a subdirectory of your model directory, please add their relative path before the configuration file name (<path>/<configuration_file>).\"" );
+	cmd( "ttk::messageBox -parent . -type ok -icon info -title \"Sensitivity Analysis\" -message \"Configuration files created\" -detail \"LSD has created configuration files (.lsd) for all the sensitivity analysis required points.\n\nTo run the analysis you have to start the processing of sensitivity configuration files by selecting 'Run'/'Create/Run Parallel Batch...' menu option.\n\nAlternatively, open a command prompt (terminal window) and execute the following command in the directory of the model:\n\n> lsdNW  -f  <configuration_file>  -s  <n>\n\nReplace <configuration_file> with the name of your original configuration file WITHOUT the '.lsd' extension and <n> with the number of the first configuration file to be run (usually 1). If your configuration files are in a subdirectory of your model directory, please add their relative path before the configuration file name (<path>/<configuration_file>).\"" );
 }
 
 
@@ -7322,7 +7394,7 @@ bool discard_change( bool checkSense, bool senseOnly, const char title[ ] )
 	// don't stop if simulation is running
 	if ( running )
 	{
-		cmd( "ttk::messageBox -parent . -type ok -icon error -title Error -message \"Cannot quit LSD\" -detail \"Cannot quit while simulation is running. Press 'OK' to continue simulation processing. If you really want to abort the simulation, press 'Stop' in the 'Log' window first.\"" );
+		cmd( "ttk::messageBox -parent . -type ok -icon error -title Error -message \"Cannot quit LSD\" -detail \"Cannot quit while simulation is running.\n\n Press 'OK' to continue simulation processing. If you really want to abort the simulation, press 'Stop' first.\"" );
 		return false;
 	}
 	
@@ -7378,19 +7450,36 @@ Returns: 0: cancel, 1: continue with exit
 ****************************************************/
 bool abort_run_threads( void )
 {
+	
+#ifndef _NP_
+
+	int ans;
+	
 	// confirm aborting running parallel processes
-	if ( run_monitor.joinable( ) )
+	if ( parallel_monitor )
 	{
-		cmd( "if [ string equal [ ttk::messageBox -parent . -type okcancel -icon warning -title Warning -message \"Exiting LSD will stop background execution\" -detail \"A parallel run is being executed in background and exiting LSD will interrupt it.\n\nIf you really want to abort the execution, press 'Ok'.\" ] ok ] { \
-				set ans 1 \
-			} else { \
-				set ans 0 \
+		cmd( "switch [ ttk::messageBox -parent . -type yesnocancel -default yes -icon warning -title Warning -message \"Abort running simulation?\" -detail \"A set of parallel simulation runs is being executed in background. You may choose to interrupt it now, or let it to continue (results and log files will be produced in the configuration file's directory).\n\nChoose 'Yes' to abort before exiting, 'No' to exit without aborting, or 'Cancel' to just return to LSD.\" ] { \
+				yes { set ans 2 } \
+				no { set ans 1 } \
+				cancel { set ans 0 } \
 			}" );
-		if ( atoi( Tcl_GetVar( inter, "ans", 0 ) ) != 1 )
+		
+		ans = get_int( "ans" );
+		
+		if ( ans == 2 )
+			if ( ! stop_parallel( ) )
+				cmd( "ttk::messageBox -parent . -type ok -icon error -title Error -message \"Failed to abort running simulation\" -detail \"LSD is exiting but the parallel simulation runs will continue (results and log files will be produced in the configuration file's directory).\"" );
+		
+		if ( ans == 1 )
+			detach_parallel( );
+		
+		if ( ans == 0 )
 			return false;
 		else
 			return true;
 	}
+
+#endif
 	
 	return true;
 }
