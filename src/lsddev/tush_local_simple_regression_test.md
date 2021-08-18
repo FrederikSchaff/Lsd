@@ -9,9 +9,9 @@ Note: In the current specification, only the linux test is enabled as this scrip
 
 ```tush build LMM for Ubuntu
 # Clean any old files
-$ cd ../.. && make clean -f makefile-linux >> lsddev/tushLogNull.log
+$ cd ../.. && make clean -f makefile.LMM-linux >> lsddev/tushLogNull.log
 # Build
-$ cd ../.. && make -f makefile-linux >> lsddev/tushLogNull.log
+$ cd ../.. && make -f makefile.LMM-linux >> lsddev/tushLogNull.log
 ```
 
 ## Regression test for LSD no window version
@@ -19,18 +19,40 @@ Tests for all existing test models should be included with tests that compile an
 Because one cannot call tush-scripts recursively, the script `macros_regression_test.sh` is called instead. 
 
 Exemplarily, the first test `/Test/test_0001_tush` is also added here:
+_Note: The receipe is normaly inside the `/Test/test_0001_tush/description.txt` file and only added here for documentation_
 
-```tush build lsd no window version and run it
-#Clean any old files
-$ cd ../Test && make clean -f makefileNWtush MODEL=test_0001_tush  >> ../tushLogNull.log
-# build executable
-$ cd ../Test && make -f makefileNWtush MODEL=test_0001_tush >> ../tushLogNull.log
+### Preparation
+Firstly, we make the specific no window version if it was not already created (i.e. only in single run)
 
-# run model, do not use the output for testing (because, e.g., timing and other output is not controlled)
-$ cd ../Test/test_0001_tush && ./lsdTush -f tushTest.lsd >> ../../tushLogNull.log
+Get the model name which is the name of the temporary dir (not the path, only the dir)
+Note: This is test code here. We cannot assign it to a variable here as each $ is a new shell.
 
-# parse the controlled output from the log file and compare it to the expected output written below
-$ cd ../Test/test_0001_tush && cat tushTestLog.log
+$ cd ../Test/test_0001_tush/ && echo $(pwd | grep -oP '^.*\/\K(\w*)')
+| test_0001_tush
+
+#### Create the special no window makefile.
+Step 1: Copy content from makefile-tush-settings.txt
+$ cd ../Test/test_0001_tush/ && cat ../makefile-tush-settings.txt > makefileNW
+
+Step 2: Exchange 'MODEL=' with the dir name / model name
+$ cd ../Test/test_0001_tush/ && modelName=$(pwd | grep -oP '^.*\/\K(\w*)') && sed -i s/MODEL=/MODEL=$modelName/g makefileNW
+
+Step 3: Append the file with the content of the makefile-NW.txt
+$ cd ../Test/test_0001_tush/ && cat ../../../makefile-NW.txt >> makefileNW
+
+#### Compile the executable - but do not consider std output of compilation in this test
+$ cd ../Test/test_0001_tush/ && if [ -f lsdNW ]; then rm lsdNW; fi
+$ cd ../Test/test_0001_tush/ && make -f makefileNW >> tushLogNull.log
+
+
+### Run Model
+Secondly, we run the tushTest.lsd and expect it to not fail. Important: Pipe stdout to a trash file, to ignore it.
+Otherwise you would, e.g., include timing issues.
+$ cd ../Test/test_0001_tush/ && ./lsdNW -f tushTest.lsd >> tushLogNull.log
+
+### Validate Results
+Thirdly, we compare the output with the expected output. Here we use tush explicitly.
+$ cd ../Test/test_0001_tush/ && cat tushTestLog.log
 | Begin of test logs for 'test_0001_tush'
 | 
 | 
@@ -41,7 +63,7 @@ $ cd ../Test/test_0001_tush && cat tushTestLog.log
 | 
 | End of test logs for 'test_0001_tush'
 
-```
+Test done.
 
 ## Creating regression tests
 You could also run the test by navigating to the folder `/Test/test_0001_tush` 
