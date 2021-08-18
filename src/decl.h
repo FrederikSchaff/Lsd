@@ -29,13 +29,11 @@ Relevant flags (when defined):
 
 // standard libraries used
 #include <cstdarg>
-#include <cctype>
 #include <cfloat>
 #include <limits>
 #include <algorithm>
 #include <random>
 #include <chrono>
-#include <string>
 #include <list>
 #include <map>
 #include <set>
@@ -212,6 +210,7 @@ bool save_sensitivity( FILE *f );
 bool search_parallel( object *r );
 bool sensitivity_too_large( long numSaPts, int *choice );
 bool sort_listbox( int box, int order, object *r );
+bool stop_parallel( void );
 bool unsaved_change( bool );
 bool unsaved_change( void );
 char *NOLH_valid_tables( int k, char* ch );
@@ -235,10 +234,10 @@ int load_configuration( bool reload, bool quick = false );
 int load_sensitivity( FILE *f );
 int logic_op_code( char const *lop, char const *errmsg );
 int min_hborder( int *choice, int pdigits, double miny, double maxy );
-int monitor_logs( vector < string > & logs );
+int monitor_logs( void );
 int num_sensitivity_variables( sense *rsens );
 int rnd_int( int min, int max );
-int run_parallel( bool nw, const char *exec, const char *simname, int fseed, int runs, int thrrun, int parruns, vector < string > & logs );
+int run_parallel( bool nw, const char *exec, const char *simname, int fseed, int runs, int thrrun, int parruns );
 int shrink_gnufile( void );
 int uniform_int_0( int max );
 long num_sensitivity_points( sense *rsens );
@@ -267,7 +266,6 @@ void clean_plot( object *n );
 void clean_save( object *n );
 void close_sim( void );
 void collect_inst( object *r, o_setT &list );
-void consolidate_logs( bool nw, vector < string > logs );
 void control_tocompute(object *r, char *ch);
 void copy_descendant( object *from, object *to );
 void count( object *r, int *i );
@@ -283,6 +281,7 @@ void create_table_init( object *r, FILE *frep );
 void dataentry_sensitivity( int *choice, sense *s, int nval = 0 );
 void deb_show( object *r, const char *hl_var, int mode );
 void delete_bridge( object *d );
+void detach_parallel( void );
 void disable_plot( void );
 void draw_buttons( void );
 void draw_obj( object *t, object *sel, int level = 0, int center = 0, int from = 0, bool zeroinst = false );
@@ -316,7 +315,8 @@ void insert_obj_num( object *r, const char *tag, const char *ind, int *idx, int 
 void insert_object( const char *w, object *r, bool netOnly = false, object *above = NULL );
 void insert_store_mem( object *r, int *num_v, char *lab = NULL );
 void link_cells( object *root, char *lab );
-void monitor_parallel( bool nw, vector < string > logs );
+void log_parallel( bool nw );
+void monitor_parallel( bool nw );
 void move_obj( char const *lab, char const *dest );
 void plog_series( int *choice );
 void plot( int type, int *start, int *end, char **str, char **tag, int *choice, bool norm );
@@ -428,6 +428,8 @@ extern bool message_logged;		// new message posted in log window
 extern bool meta_par_in[ ];		// flag meta variables for simulation settings found
 extern bool non_var;			// flag to indicate INTERACT macro condition
 extern bool on_bar;				// flag to indicate bar is being draw in log window
+extern bool parallel_abort;		// indicate parallel threads were aborted
+extern bool parallel_monitor;	// parallel monitor thread status
 extern bool redrawRoot;			// control for redrawing root window (.)
 extern bool redrawStruc;		// control for redrawing model structure window
 extern bool running;			// simulation is running
@@ -467,6 +469,7 @@ extern int actual_steps;		// number of executed time steps
 extern int add_to_tot;			// type of totals file generated (bool)
 extern int choice_g;			// Tcl menu control variable ( structure window)
 extern int cur_plt;				// current graph plot number
+extern int dobar;				// output a progress bar to the log/standard output
 extern int docsv;				// produce .csv text results files (bool)
 extern int dozip;				// compressed results file flag (bool)
 extern int findexSens;			// index to sequential sensitivity configuration filenames
@@ -498,18 +501,20 @@ extern object *blueprint;   	// LSD blueprint (effective model in use )
 extern object *currObj;			// pointer to current object in browser
 extern object *wait_delete;		// LSD object waiting for deletion
 extern o_setT obj_list;			// list with all existing LSD objects
-extern s_vecT res_list;			// list of results files last saved
 extern sense *rsense;       	// LSD sensitivity analysis structure
-extern string run_log;			// consolidated runs log
 extern variable *cemetery;  	// LSD saved data from deleted objects
 extern variable *last_cemetery;	// LSD last saved data from deleted objects
+extern vector < string > res_list;// list of results files last saved
 extern void *random_engine;		// current random number generator engine
 
 // multi-threading control 
 #ifndef _NP_
 extern atomic < bool > parallel_ready;// flag to indicate multitasking is available
 extern map< thread::id, worker * > thr_ptr;// worker thread pointers
-extern thread run_monitor;			// thread monitoring parallel instances
+extern mutex lock_run_logs;		// lock run_logs for parallel updating
+extern string run_log;			// consolidated runs log
+extern thread run_monitor;		// thread monitoring parallel instances
+extern vector < string > run_logs;// list of log files produced in parallel run
 #endif
 
 // Tcl/Tk specific definitions (for the windowed version only)

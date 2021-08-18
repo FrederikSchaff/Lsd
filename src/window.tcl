@@ -236,19 +236,27 @@ proc showtop { w { pos none } { resizeX no } { resizeY no } { grab yes } { sizeX
 	# grab focus, if required, updating the grabbing list
 	if { $grab && $w != "." && [ lsearch $noParLst [ string range $w 0 3 ] ] < 0 } {
 
-		set parWndLst [ linsert $parWndLst 0 $w ]
-
-		if { ! [ info exists grabLst ] || [ lsearch -glob $grabLst "$w *" ] < 0 } {
-			lappend grabLst "$w [ grab current $w ]"
+		# try to catch twice because of slow systems
+		if { [ catch { grab set $w } ] } {
+			after 50
+			if { [ catch { grab set $w } ] } {
+				set grab 0
+			}
 		}
+		
+		if { $grab } {
+			set parWndLst [ linsert $parWndLst 0 $w ]
 
-		grab set $w
+			if { ! [ info exists grabLst ] || [ lsearch -glob $grabLst "$w *" ] < 0 } {
+				lappend grabLst "$w [ grab current $w ]"
+			}
 
-		# reposition window because of macOS bug when grabbing
-		if { [ string equal [ tk windowingsystem ] aqua ] && $gm != "" } {
-			wm geometry $w $gm
+			# reposition window because of macOS bug when grabbing
+			if { [ string equal [ tk windowingsystem ] aqua ] && $gm != "" } {
+				wm geometry $w $gm
+			}
 		}
-
+		
 		raise $w
 	}
 
@@ -672,7 +680,7 @@ proc focustop { w1 { w2 "" } { force no } } {
 		}
 		
 		if { $force } {
-			focus -force $w1
+			catch { focus -force $w1 }
 		} else {
 			focus $w1
 		}
@@ -1512,38 +1520,45 @@ proc abortretryignore { w fr comAbort comRetry comIgnore } {
 # Move the mouse pointer to widget (button) w
 # If disableMouseWarp is 1, does nothing
 #************************************************
-proc mousewarpto w {
+proc mousewarpto { w { foc 1 } } {
 	global mouseWarp curX curY
 	
 	update
 	
-	if { $mouseWarp && [ winfo exists $w ] && [ winfo viewable $w ] } {
-		set wX [ expr { [ winfo width $w ] / 2 } ]
-		set wY [ expr { [ winfo height $w ] / 2 } ]
-		set curX 0
-		set curY 0
+	if { [ winfo exists $w ] && [ winfo viewable $w ] } {
+		if { $mouseWarp } {
+			set wX [ expr { [ winfo width $w ] / 2 } ]
+			set wY [ expr { [ winfo height $w ] / 2 } ]
+			set curX 0
+			set curY 0
 		
-		bind $w <Motion> {
-			set curX %x
-			set curY %y
-		}
+			bind $w <Motion> {
+				set curX %x
+				set curY %y
+			}
 		
-		after 100
-		focus $w
+			after 100
+			
+			if { $foc } {
+				focus $w
+			}
 		
-		# first move pointer to toplevel to bypass Tk bug
-		set t [ winfo toplevel $w ]
-		event generate $t <Motion> -warp 1 -x [ expr { [ winfo width $t ] / 2 } ] -y [ expr { [ winfo height $t ] / 2 } ]
-		update idletasks
-
-		# do it as required to bypass Tk bug (first warps just go to the dialog not the button)
-		for { set tries 0 } { ( $curX != $wX || $curY != $wY ) && $tries < 10 } { incr tries } {
-			event generate $w <Motion> -warp 1 -x $wX -y $wY
+			# first move pointer to toplevel to bypass Tk bug
+			set t [ winfo toplevel $w ]
+			event generate $t <Motion> -warp 1 -x [ expr { [ winfo width $t ] / 2 } ] -y [ expr { [ winfo height $t ] / 2 } ]
 			update idletasks
-		}
+
+			# do it as required to bypass Tk bug (first warps just go to the dialog not the button)
+			for { set tries 0 } { ( $curX != $wX || $curY != $wY ) && $tries < 10 } { incr tries } {
+				event generate $w <Motion> -warp 1 -x $wX -y $wY
+				update idletasks
+			}
 		
-		bind $w <Motion> { }
-		unset curX curY
+			bind $w <Motion> { }
+			unset curX curY
+		} elseif { $foc }  {
+			focus $w
+		}
 	}
 	
 	update idletasks

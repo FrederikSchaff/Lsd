@@ -296,8 +296,14 @@ void draw_obj( object *t, object *sel, int level, int center, int from, bool zer
 			case 2:								// second line objects
 				max_wid = min( 15 * h_fact, 80 * h_fact / k );
 				break;
-			default:							// all other lines
+			case 3:
 				max_wid = min( 7 * h_fact, 10 * h_fact / k );
+				break;
+			case 4:
+				max_wid = min( 4 * h_fact, 6 * h_fact / k );
+				break;
+			default:							// all other lines
+				max_wid = min( 2 * h_fact, 3 * h_fact / k );
 		}
 		
 	
@@ -505,6 +511,8 @@ void put_text( char *str, char *n, int x, int y, char *str2 )
 					catch { wm attributes .list -alpha 0.99 }; \
 					wm positionfrom .list program; \
 					wm withdraw .list; \
+					label .list.t -text \"%s (#%s)\" -font \"$ttfontB\" -foreground $colorsTheme(obj) -background $colorsTheme(ttip); \
+					pack .list.t -anchor w -ipadx 1; \
 					set res_g_i 0; \
 					foreach res_g_t $tlist_%s res_g_s $slist_%s { \
 						label .list.e$res_g_i -text \"$res_g_t\" -font \"$ttfont\" -foreground $colorsTheme($res_g_s) -background $colorsTheme(ttip); \
@@ -519,11 +527,11 @@ void put_text( char *str, char *n, int x, int y, char *str2 )
 					wm deiconify .list; \
 					catch { raise .list }; \
 					if { $CurPlatform eq \"mac\" } { \
-						after idle { focus -force $__focus__ } \
+						after idle { catch { focus -force $__focus__ } } \
 					} \
 				} ] \
 			} \
-		}", str2, str2, str2, str2, str2 );
+		}", str2, str2, str2, str, n, str2, str2 );
 
 	cmd( ".str.f.c bind %s <Leave> { \
 			if { [ info exists res_g_id ] } { \

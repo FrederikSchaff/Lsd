@@ -41,5 +41,5 @@ jobs:
       id: build-LMM
       run: |
         cd src
-        make clean -f makefile-linux
-        make -f makefile-linux
+        make clean -f makefile.LMM-linux
+        make -f makefile.LMM-linux

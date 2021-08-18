@@ -14,9 +14,9 @@ See [developer-setup](developer-setup.md) for detailed instructions on how to se
 
 ### Tush shell scripted testing
 With [`tush_local_simple_regression_test.md`](tush_local_simple_regression_test.md) a small number of 'tests' are implemented to ensure that
-- LMM compiles (LMM: LSD Model Manager - the IDE that allows to manage LSD models and develop the code)
+- LMM compiles on linux (LMM: LSD Model Manager - the IDE that allows to manage LSD models and develop the code)
 - LSD headless version ("no window") compiles and executes models correctly
-- LSD window version compiles and starts correctly
+- to do: LSD window version compiles and starts correctly
 - *Note: This is not yet complete!*
 
 With [`macros_regression_test.sh`](macros_regression_test.sh) a simple shell script is implemented which iterates over all test models contained in [`src/ldddev/Test`](Test/), executing them and reporting any test that failed.

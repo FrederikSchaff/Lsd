@@ -107,8 +107,6 @@ set hsizeLatMax	1024; # maximum lattice horizontal size in pixels
 set vsizeLatMax	1024; # maximum lattice vertical size in pixels
 set hsizeLat	420	; # default lattice horizontal size in pixels
 set vsizeLat	420	; # default lattice vertical size in pixels
-set hsizeR		500	; # horizontal size in pixels
-set vsizeR		300	; # vertical size in pixels
 
 # main windows margins
 set hmargin		20	; # horizontal right margin from the screen borders
@@ -134,6 +132,8 @@ set rinitM		750	; # horizontal initial width (4 root sons)
 set rincrM		100	; # horizontal width increase step
 
 # runtime windows margins and defaults
+set hsizeR		500	; # horizontal size in pixels
+set vsizeR		300	; # vertical size in pixels
 set botvsizeR	50	; # bottom part height
 set sclhsizeR	75	; # scale width
 set cvhmarginR	8	; # horizontal margin for canvas
@@ -142,9 +142,9 @@ set sclvmarginR	3	; # vertical margin for scale
 set hticksR		5	; # number of horizontal run-time plot legend ticks
 set vticksR		2	; # number of vertical run-time plot legend ticks
 set ticmarginR	5	; # margin for legend ticks
-set lablinR		5	; # labels per line
 set linlabR		3	; # lines of label
-set linvsizeR	18	; # label lines height
+set labvpadR	3	; # vertical label padding
+set labhpadR	10	; # horizontal label padding
 set pdigitsR	3	; # default precision digits
 set shiftR		20	; # new window shift
 
@@ -160,7 +160,7 @@ set hmbordsizeP	40	; # minimum width of plot horizontal (left/right) border area
 set tbordsizeP	5	; # width of plot top border area (for legends)
 set bbordsizeP	90	; # width of plot bottom border area (for legends)
 set sbordsizeP	0	; # width of plot scroll border area
-set htmarginP	4	; # horizontal margin for legends text in plots
+set htmarginP	5	; # horizontal margin for legends text in plots
 set vtmarginP	2	; # vertical margin for legends text in plots
 set grayscaleP	0	; # default color mode for plots (0=color)
 set gridP		1	; # defaut grid mode (0=no grid)
@@ -181,7 +181,7 @@ set cscaleLat	1.0	; # default color scale (1:1.0)
 # mouse defaults
 set sfmwheel	1	; # increase to accelerate mouse wheel and decrease to slow down
 set winmwscale	30	; # scroll minimum wheel movement (precision) factor in Windows
-set mouseWarp	1	; # set to 0 to disable auto-snapping (ignored in Windows)
+set mouseWarp	0	; # set to 0 to disable auto-snapping (ignored in Windows)
 	
 # internal plot defaults
 set fontP		{ Helvetica 9 normal }; # default plot text font/size/mode
@@ -206,7 +206,8 @@ set themeLinux			"awlight"	; # Adwaita light theme
 set themeLinuxDark		"awdark"	; # Adwaita dark theme
 set themeWindows		"vista"		; # native Windows light theme
 set themeWindowsDark	"awblack"	; # Windows dark theme
-set darkThemeSuffixes	[ list dark black obscure ]; # words identifying Linux dark themes
+set darkThemeSuffixes	[ list dark black obscure dusk nokto night inverse oxygen ]; # words identifying Linux dark themes
+set winManLinux			[ list gnome kde plasma xfce cinnamon mate lxde lxqt ]; # window managers to detect theme
 
 # OS specific monospaced font name
 set fontMac				"Monaco"			; # "Courier"
@@ -259,9 +260,10 @@ set exeMac 				"LSD"
 set exeWindows 			"LSD"
 
 # OS specific default system terminal
-set sysTermMac			"Terminal"		; # "Terminal", "xterm"
-set sysTermLinux		"xterm -e"		; # "gnome-terminal --", "xterm -e", "uxterm -e"
-set sysTermWindows		"cmd /c"		;
+set sysTermMac			"Terminal"			; # "Terminal", "xterm"
+set sysTermWindows		"cmd /c"			;
+set sysTermLinux		"gnome-terminal --"	; # "gnome-terminal --", "xterm -e", "uxterm -e"
+set sysTermLinuxAlt		[ list "konsole -e" "xfce4-terminal -e" "mate-terminal -e" "lxterminal -e" "qterminal -e" ]
 
 # OS specific default debugger command
 set dbgMac				"lldb"		; # "gdb"
@@ -269,12 +271,12 @@ set dbgLinux			"gdb"		;
 set dbgWindows			"gdb"		;
 
 # OS specific default browser (open=system default)
-set browserMac			"open"		; # "open", "firefox", "safari"
-set browserLinux		"firefox"	; # "open", "firefox", "chrome"
-set browserWindows		"open"		; # "open", "firefox", "chrome"
+set browserMac			"open"			; # "open", "firefox", "safari"
+set browserLinux		"x-www-browser"	; # "x-www-browser", "firefox", "chrome"
+set browserWindows		"start"			; # "start", "firefox", "chrome"
 
 # OS specific default wish utility
-set wishMac				"wish8.6"
+set wishMac				"wish"
 set wishLinux			"wish"
 set wishWindows			"wish86.exe"
 
@@ -287,7 +289,7 @@ set makeWinMingw		"mingw32-make.exe"
 # OS specific default gnuplot terminal (empty string=gnuplot default)
 set gnuplotMac			"gnuplot"
 set gnuplotLinux		"gnuplot"
-set gnuplotindows		"wgnuplot.exe"
+set gnuplotWindows		"wgnuplot.exe"
 
 # default diff application settings
 set diffApp				"tkdiff.tcl"; # command line diff application to use
