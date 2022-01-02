@@ -1,6 +1,8 @@
  # This workflow keeps the 8.0 beta branch in sync with the upstream branch. Note: Force is used! (all changes to local 8.0 will be lost)
-name: Synchronise `8.0 beta` branch
+name: Synchronise 8.0 beta branch
+
 on:
+  workflow_dispatch:  
   schedule:
   - cron: 0 0 * * * # At the end of each day
 jobs:
