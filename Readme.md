@@ -36,10 +36,12 @@ This file will serve as a kind of roadmap and summary for this endeavour and wil
 
 ----
 - [8.0-beta](https://github.com/FrederikSchaff/Lsd/tree/8.0-beta): direct fork of [upstream 8.0-beta](https://github.com/marcov64/Lsd/tree/8.0-beta)
-  - bug-fixes only for upstream merge.
+  - no changes here, as it is automatically updated with a github action every day.
 - [8.0-beta-test-automation](https://github.com/FrederikSchaff/Lsd/tree/8.0-beta-test-automation): CI-CD branch
   - improved development experience
   - github actions (CI)
+  - keep in sync with 8.0 and test automatically (to do). 
+    - If the test succeeds, automatically merge into `8.0-beta-integration`
 - [8.0-beta-integration](https://github.com/FrederikSchaff/Lsd/tree/8.0-beta-integration): Integrate changes for upstream merge.
   - shall integrate `8.0-beta-test-automation` and `gis-integration` upstream
 ----
