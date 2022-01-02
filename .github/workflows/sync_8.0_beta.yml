@@ -1,0 +1,16 @@
+ # This workflow keeps the 8.0 beta branch in sync with the upstream branch. Note: Force is used! (all changes to local 8.0 will be lost)
+
+on:
+  schedule:
+  - cron: 0 0 * * * # At the end of each day
+jobs:
+  git-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: git-sync
+        uses: wei/git-sync@v3
+        with:
+          source_repo: "marcov64/Lsd"
+          source_branch: "8.0-beta"
+          destination_repo: "FrederikSchaff/Lsd"
+          destination_branch: "8.0-beta"
