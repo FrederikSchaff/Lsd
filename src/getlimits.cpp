@@ -1,6 +1,6 @@
 /*************************************************************
 
-	LSD 8.0 - May 2021
+	LSD 8.0 - September 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
@@ -9,7 +9,7 @@
 
 	See Readme.txt for copyright information of
 	third parties' code used in LSD
-	
+
  *************************************************************/
 
 /*************************************************************
@@ -61,10 +61,8 @@ char *sens_file = NULL;		// current sensitivity analysis file
 char *simul_name = NULL;	// name of current simulation configuration
 char *struct_file = NULL;	// name of current configuration file
 char equation_name[ MAX_PATH_LENGTH ] = "";	// equation file name
-char lsd_eq_file[ MAX_FILE_SIZE + 1 ] = "";	// equations saved in configuration file
-char msg[ TCL_BUFF_STR ] = "";				// auxiliary Tcl buffer
-char name_rep[ MAX_PATH_LENGTH + 1 ] = "";	// documentation report file name
-char path_rep[ MAX_PATH_LENGTH + 1 ] = "";	// documentation report file path
+char lsd_eq_file[ MAX_FILE_SIZE ] = "";	// equations saved in configuration file
+char name_rep[ MAX_PATH_LENGTH ] = "";	// documentation report file name
 char nonavail[ ] = "NA";	// string for unavailable values (use R default)
 int actual_steps = 0;		// number of executed time steps
 int debug_flag = false;		// debug enable control (bool)
@@ -110,7 +108,7 @@ const char lsdCmdHlp[ ] = "Command line options:\n'-f FILENAME.lsd' the configur
 /*********************************
  LSDMAIN
  *********************************/
-int lsdmain( int argn, char **argv )
+int lsdmain( int argn, const char **argv )
 {
 	int i, confs;
 	char *sep;
@@ -219,39 +217,39 @@ int lsdmain( int argn, char **argv )
 
 		// write .csv header
 		fprintf( f, "Name%sType%sLag%sFormat%sValue%sMinimum%sMaximum%sDescription\n", sep, sep, sep, sep, sep, sep, sep );
-		
+
 		// write all parameters and initial conditions
 		get_sa_limits( root, f, sep );
-		
+
 		// write simulation setting, if not already set
 		if ( ! meta_par_in[ 0 ] )
-			fprintf( f, "_timeSteps_%ssetting%s0%sinteger%s%d%s%d%s%d%s%s\n", 
+			fprintf( f, "_timeSteps_%ssetting%s0%sinteger%s%d%s%d%s%d%s%s\n",
 				 	 sep, sep, sep, sep, max_step, sep, MIN_STEP, sep, MAX_STEP, sep, DESC_STEP );
-				 	 
+
 		if ( ! meta_par_in[ 1 ] )
-			fprintf( f, "_numRuns_%ssetting%s0%sinteger%s%d%s%d%s%d%s%s\n", 
+			fprintf( f, "_numRuns_%ssetting%s0%sinteger%s%d%s%d%s%d%s%s\n",
 				 	 sep, sep, sep, sep, sim_num, sep, MIN_RUNS, sep, MAX_RUNS, sep, DESC_RUNS );
-				 	 
+
 		if ( ! meta_par_in[ 2 ] )
-			fprintf( f, "_rndSeed_%ssetting%s0%sinteger%s%d%s%d%s%d%s%s\n", 
+			fprintf( f, "_rndSeed_%ssetting%s0%sinteger%s%d%s%d%s%d%s%s\n",
 				 	 sep, sep, sep, sep, seed, sep, MIN_SEED, sep, MAX_SEED, sep, DESC_SEED );
-		
+
 		fclose( f );
 	}
 	else	// send to stdout
 	{
 		get_sa_limits( root, stdout, "\t" );
-		
+
 		if ( ! meta_par_in[ 0 ] )
-			fprintf( stdout, "_timeSteps_%ssetting%s0%sinteger%s%d%s%d%s%d%s%s\n", 
+			fprintf( stdout, "_timeSteps_%ssetting%s0%sinteger%s%d%s%d%s%d%s%s\n",
 				 	 sep, sep, sep, sep, max_step, sep, MIN_STEP, sep, MAX_STEP, sep, DESC_STEP );
-				 	 
+
 		if ( ! meta_par_in[ 1 ] )
-			fprintf( stdout, "_numRuns_%ssetting%s0%sinteger%s%d%s%d%s%d%s%s\n", 
+			fprintf( stdout, "_numRuns_%ssetting%s0%sinteger%s%d%s%d%s%d%s%s\n",
 				 	 sep, sep, sep, sep, sim_num, sep, MIN_RUNS, sep, MAX_RUNS, sep, DESC_RUNS );
-				 	 
+
 		if ( ! meta_par_in[ 2 ] )
-			fprintf( stdout, "_rndSeed_%ssetting%s0%sinteger%s%d%s%d%s%d%s%s\n", 
+			fprintf( stdout, "_rndSeed_%ssetting%s0%sinteger%s%d%s%d%s%d%s%s\n",
 				 	 sep, sep, sep, sep, seed, sep, MIN_SEED, sep, MAX_SEED, sep, DESC_SEED );
 	}
 

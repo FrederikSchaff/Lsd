@@ -50,8 +50,8 @@ _INSTALL_SCHEMES = {
     'nt': {
         'stdlib': '{installed_base}/lib/python{py_version_short}',
         'platstdlib': '{base}/lib/python{py_version_short}',
-        'purelib': '{base}/lib/python{py_version_short}',
-        'platlib': '{base}/lib/python{py_version_short}',
+        'purelib': '{base}/lib/python{py_version_short}/site-packages',
+        'platlib': '{base}/lib/python{py_version_short}/site-packages',
         'include': '{installed_base}/include/python{py_version_short}',
         'platinclude': '{installed_base}/include/python{py_version_short}',
         'scripts': '{base}/bin',
@@ -432,6 +432,7 @@ def _generate_posix_vars():
             'INCLDIRSTOMAKE', 'INCLUDEDIR', 'INCLUDEPY',
             'LIBDEST', 'LIBDIR', 'LIBPC', 'LIBPL', 'MACHDESTLIB',
             'MANDIR', 'SCRIPTDIR', 'datarootdir', 'exec_prefix',
+            'TZPATH',
         ]
 
         prefix = build_time_vars['BINDIR'][:-4]

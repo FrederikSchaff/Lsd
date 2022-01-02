@@ -1,6 +1,6 @@
 /*************************************************************
 
-	LSD 8.0 - May 2021
+	LSD 8.0 - September 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
@@ -9,7 +9,7 @@
 
 	See Readme.txt for copyright information of
 	third parties' code used in LSD
-	
+
  *************************************************************/
 
 /*************************************************************
@@ -18,23 +18,23 @@ Execute the lsd_confgen command line utility.
 
 Generates new configurations from a base one.
 
-The input CSV file defines the elements to change (parameters 
-or variables' initial conditions) in the rows and the different 
-configurations in the columns. 
+The input CSV file defines the elements to change (parameters
+or variables' initial conditions) in the rows and the different
+configurations in the columns.
 
-First column contain the element names and optional lag number 
-for variables. Lags, if specified, must be separated by spaces 
-from variable name and be always negative integers (-1:first lag, 
--2:second,...). If a lag is not specified, it is assumed as 
-the first lag (-1). Subsequent columns contain the values to be 
-used for elements in each configuration file to be generated 
+First column contain the element names and optional lag number
+for variables. Lags, if specified, must be separated by spaces
+from variable name and be always negative integers (-1:first lag,
+-2:second,...). If a lag is not specified, it is assumed as
+the first lag (-1). Subsequent columns contain the values to be
+used for elements in each configuration file to be generated
 (1 column = 1 configuration).
 
-A first header (column names) row is compulsory and must contain 
-the same number of columns as the other rows but its values are 
+A first header (column names) row is compulsory and must contain
+the same number of columns as the other rows but its values are
 not used.
 
-Example of a CSV file changing the value of one parameter (K), 
+Example of a CSV file changing the value of one parameter (K),
 two lagged values of a variable (A), and generating two
 configurations:
 
@@ -74,10 +74,8 @@ char *sens_file = NULL;		// current sensitivity analysis file
 char *simul_name = NULL;	// name of current simulation configuration
 char *struct_file = NULL;	// name of current configuration file
 char equation_name[ MAX_PATH_LENGTH ] = "";	// equation file name
-char lsd_eq_file[ MAX_FILE_SIZE + 1 ] = "";	// equations saved in configuration file
-char msg[ TCL_BUFF_STR ] = "";				// auxiliary Tcl buffer
-char name_rep[ MAX_PATH_LENGTH + 1 ] = "";	// documentation report file name
-char path_rep[ MAX_PATH_LENGTH + 1 ] = "";	// documentation report file path
+char lsd_eq_file[ MAX_FILE_SIZE ] = "";	// equations saved in configuration file
+char name_rep[ MAX_PATH_LENGTH ] = "";	// documentation report file name
 char nonavail[ ] = "NA";	// string for unavailable values (use R default)
 int actual_steps = 0;		// number of executed time steps
 int debug_flag = false;		// debug enable control (bool)
@@ -131,7 +129,7 @@ const char lsdCmdHlp[ ] = "Command line options:\n'-f FILENAME.lsd' the original
 /*********************************
  LSDMAIN
  *********************************/
-int lsdmain( int argn, char **argv )
+int lsdmain( int argn, const char **argv )
 {
 	int i, confs;
 	FILE *f;
@@ -274,7 +272,7 @@ int load_confs_csv( char *config )
 {
 	int i, j, lag;
 	double value;
-	char buf[ MAX_LINE_SIZE + 1 ], var[ MAX_ELEM_LENGTH + 1 ], *line, *tok;
+	char buf[ MAX_LINE_SIZE ], var[ MAX_ELEM_LENGTH ], *line, *tok;
 	FILE *f = fopen( config, "r" );
 	set< string > existing;
 
@@ -317,7 +315,7 @@ int load_confs_csv( char *config )
 		if ( strcmp( buf, "" ) )
 		{
 			tok = strtok( buf, SEP );
-			sscanf( tok, " %s", var );		// remove spaces
+			sscanf( tok, " %99s", var );	// remove spaces
 			if ( ! strcmp( var, "" ) )
 				continue;					// no name, go next line
 			// check if name already exists and abort if so
@@ -351,7 +349,7 @@ int load_confs_csv( char *config )
 		{
 			lag = -1;
 			tok = strtok( buf, SEP );
-			sscanf( tok, " %s %u", var, & lag );	// get name & lags
+			sscanf( tok, " %99s %u", var, & lag );	// get name & lags
 			if ( ! strcmp( var, "" ) )
 				continue;					// no name, go next line
 
