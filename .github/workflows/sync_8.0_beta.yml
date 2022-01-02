@@ -18,4 +18,4 @@ jobs:
         source_repo: "marcov64/Lsd"
         source_branch: "8.0-beta"
         destination_branch: "8.0-beta"
-        github_token: ${{ secrets.REPO_ACCESS_TOKEN }}
+        github_token: ${{ secrets.GITHUB_TOKEN }}
