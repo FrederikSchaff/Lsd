@@ -1,0 +1,42 @@
+# Intention: Create PR to merge 8.0-beta into 8.0-beta-test-automation
+#
+# This workflow will automatically create a PR when updates on 8.0-beta are detected, updating any existing PR that is not yet closed.
+# The PR is also automatically tested and, if the test is successful, it is automatically merged into the test automation branch.
+name: "CI-for-8.0-beta--into--8.0-beta-test-automation"
+
+env:
+  SOURCE_BRANCH: "8.0-beta"
+  TARGET_BRANCH: "8.0-beta-test-automation"
+  CI_BRANCH: "CI/PR-8.0-beta--into--test-automation"
+
+on:
+    workflow-dispatch:
+      branches: [${{ env.SOURCE_BRANCH }}]
+    push:
+      branches: [${{ env.SOURCE_BRANCH }}]
+
+jobs:
+  create-or-update-PR:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout-target-branch
+      uses: actions/checkout@v2
+      with:
+        ref: ${{ env.TARGET_BRANCH }}
+    - name: merge-in-source-branch
+      run: |
+        git fetch --unshallow
+        git merge --no-ff --no-commit ${{ env.SOURCE_BRANCH }}         
+    - name: create-PR for merge
+      uses: FrederikSChaff/create-or-update-pull-request-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          title: "Automatic PR [${{ env.SOURCE_BRANCH }}] to [8.0-beta-test-automation]"
+          branch: ${{ env.CI_BRANCH }}
+          commit-message: "Sync: Merge upstream [${{ env.SOURCE_BRANCH }}] changes (automatic PR)"
+          author: "Frederik Schaff <frederik.schaff@thinkcomplex.eu>"
+          labels: CI/CD
+          assignees: FrederikSchaff
+          reviewers: FrederikSchaff
+          update-pull-request-title-and-body: false
