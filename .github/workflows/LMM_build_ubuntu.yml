@@ -1,9 +1,16 @@
-# This is a basic workflow that is manually triggered
-name: LMM build (ubuntu)
+# TEST: Build LMM (LSD Model Manager) for Ubuntu.
+# This workflow (currently) tests the Ubuntu build.
+# A) Can we build LMM
+# B) Can we build the simple example LSD model
+# C) Can we build the simple example LSD model in no-window mode
+# We do not actually run the model.
+# To make maintanance simple/consistent, we use the Tush-test file for building LSD models.
+name: Ubuntu build test
 
 # Controls when the action will run. Workflow runs when manually triggered using the UI
 # or API.
 on:
+  workflow_call:
   workflow_dispatch:
     # Inputs the workflow accepts.
     inputs:
@@ -11,12 +18,12 @@ on:
         # Friendly description to be shown in the UI instead of 'name'
         description: 'Provide a reason for the trigger'
         # Default value if no value is explicitly provided
-        default: 'Full LMM Build'
+        default: 'Full Ubuntu build test'
         # Input has to be provided for the workflow to run
         required: true
         
 jobs:
-  build_LMM_ubuntu:
+  ubuntu-build-test:
   
     runs-on: ubuntu-latest
 
@@ -32,14 +39,31 @@ jobs:
           sudo apt-get install tcl8.6-dev
           sudo apt-get install tk8.6-dev
           echo "✅ dependencies successfully installed"
-    - name: Checkout and System Info
+    - name: Checkout
       uses: actions/checkout@v2
-    - name: Get system info
-      uses: kenchan0130/actions-system-info@master
-      id: system-info
     - name: build LMM
       id: build-LMM
       run: |
         cd src
         make clean -f makefile.LMM-linux
         make -f makefile.LMM-linux
+        echo "✔ LMM build successfully 🎉"
+    - name: make tush available
+      id: enable-tush
+      run: |
+          sudo cp src/lsddev/tush/bin/overwrite /usr/local/bin/overwrite
+          sudo chmod 755 /usr/local/bin/overwrite
+          sudo cp src/lsddev/tush/bin/tush-check /usr/local/bin/tush-check
+          sudo chmod 755 /usr/local/bin/tush-check
+          sudo cp src/lsddev/tush/bin/tush-run /usr/local/bin/tush-run
+          sudo chmod 755 /usr/local/bin/tush-run
+          sudo cp src/lsddev/tush/bin/tush-run-raw /usr/local/bin/tush-run-raw
+          sudo chmod 755 /usr/local/bin/tush-run-raw
+          echo "✅ tush setup complete"
+    - name: build LSD example model
+      id: build-LSD
+      run: |
+          cd src/lsddev 
+          tush-check tush_build_LSD_test_ubuntu.md
+          echo "✔ LSD model build successfully (no-window and with LSD Browser) 🎉"
+        
