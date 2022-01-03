@@ -40,4 +40,4 @@ jobs:
         author: "Frederik Schaff <frederik.schaff@thinkcomplex.eu>"
         labels: CI/CD
         reviewers: FrederikSchaff
-        update-pull-request-title-and-body: false
+        update-pull-request-title-and-body: true
