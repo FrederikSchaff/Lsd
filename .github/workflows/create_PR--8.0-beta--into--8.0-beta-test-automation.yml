@@ -10,13 +10,13 @@ env:
   CI_BRANCH: "CI/PR-8.0-beta--into--test-automation"
 
 on:
-    workflow-dispatch:
-      branches: [${{ env.SOURCE_BRANCH }}]
-    push:
-      branches: [${{ env.SOURCE_BRANCH }}]
+  workflow_dispatch:      
+  push:
+    branches: [8.0-beta]
 
 jobs:
   create-or-update-PR:
+    if: ${{ $GITHUB_REF_NAME == $SOURCE_BRANCH}}
     runs-on: ubuntu-latest
     steps:
     - name: checkout-target-branch
@@ -26,17 +26,16 @@ jobs:
     - name: merge-in-source-branch
       run: |
         git fetch --unshallow
-        git merge --no-ff --no-commit ${{ env.SOURCE_BRANCH }}         
+        git merge --no-ff --no-commit $SOURCE_BRANCH        
     - name: create-PR for merge
       uses: FrederikSChaff/create-or-update-pull-request-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          title: "Automatic PR [${{ env.SOURCE_BRANCH }}] to [8.0-beta-test-automation]"
-          branch: ${{ env.CI_BRANCH }}
-          commit-message: "Sync: Merge upstream [${{ env.SOURCE_BRANCH }}] changes (automatic PR)"
-          author: "Frederik Schaff <frederik.schaff@thinkcomplex.eu>"
-          labels: CI/CD
-          assignees: FrederikSchaff
-          reviewers: FrederikSchaff
-          update-pull-request-title-and-body: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        title: "Automatic PR [$SOURCE_BRANCH] to [$TARGET_BRANCH]"
+        branch: ${{ env.CI_BRANCH }}
+        commit-message: "Sync: Merge upstream [$SOURCE_BRANCH] changes (automatic PR)"
+        author: "Frederik Schaff <frederik.schaff@thinkcomplex.eu>"
+        labels: CI/CD
+        reviewers: FrederikSchaff
+        update-pull-request-title-and-body: false
