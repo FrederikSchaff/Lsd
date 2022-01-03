@@ -2,7 +2,7 @@
 #
 # This workflow will automatically create a PR when updates on 8.0-beta are detected, updating any existing PR that is not yet closed.
 # The PR is also automatically tested and, if the test is successful, it is automatically merged into the test automation branch.
-name: "CI-for-8.0-beta--into--8.0-beta-test-automation"
+name: "CI create/update PR [8.0-beta] -> [8.0-beta-test-automation]"
 
 env:
   SOURCE_BRANCH: "origin/8.0-beta"
@@ -33,7 +33,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        title: "Automatic PR [$SOURCE_BRANCH] to [$TARGET_BRANCH]"
+        title: "Automatic PR [${{ env.SOURCE_BRANCH }}] to [${{ env.TARGET_BRANCH}} ]"
+        body: "This PR has been created automatically and is updated each time the local fork of ${{ env.SOURCE_BRANCH }} is updated."
         branch: ${{ env.CI_BRANCH }}
         commit-message: "Sync: Merge upstream [$SOURCE_BRANCH] changes (automatic PR)"
         author: "Frederik Schaff <frederik.schaff@thinkcomplex.eu>"
