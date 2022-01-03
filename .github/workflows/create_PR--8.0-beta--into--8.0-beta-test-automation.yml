@@ -25,6 +25,8 @@ jobs:
     - name: merge-in-source-branch
       run: |
         git fetch --unshallow
+        git config --global user.email "frederik.schaff@thinkcomplex.eu"
+        git config --global user.name "Frederik Schaff"
         git merge --no-ff --no-commit $SOURCE_BRANCH        
     - name: create-PR for merge
       uses: FrederikSChaff/create-or-update-pull-request-action@master
