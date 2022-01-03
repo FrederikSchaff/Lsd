@@ -16,7 +16,6 @@ on:
 
 jobs:
   create-or-update-PR:
-    if: ${{ $GITHUB_REF_NAME == $SOURCE_BRANCH}}
     runs-on: ubuntu-latest
     steps:
     - name: checkout-target-branch
