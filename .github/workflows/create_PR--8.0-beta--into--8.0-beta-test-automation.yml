@@ -5,7 +5,7 @@
 name: "CI-for-8.0-beta--into--8.0-beta-test-automation"
 
 env:
-  SOURCE_BRANCH: "8.0-beta"
+  SOURCE_BRANCH: "origin/8.0-beta"
   TARGET_BRANCH: "8.0-beta-test-automation"
   CI_BRANCH: "CI/PR-8.0-beta--into--test-automation"
 
