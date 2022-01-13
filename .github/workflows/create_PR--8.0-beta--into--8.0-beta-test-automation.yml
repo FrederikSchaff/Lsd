@@ -36,6 +36,7 @@ jobs:
         title: "Automatic PR [${{ env.SOURCE_BRANCH }}] to [${{ env.TARGET_BRANCH}} ]"
         body: "This PR has been created automatically and is updated each time the local fork of ${{ env.SOURCE_BRANCH }} is updated."
         branch: ${{ env.CI_BRANCH }}
+        target-branch: ${{ env.TARGET_BRANCH }} #works only with adjusted create-or-update-pull-request-action
         commit-message: "Sync: Merge upstream [$SOURCE_BRANCH] changes (automatic PR)"
         author: "Frederik Schaff <frederik.schaff@thinkcomplex.eu>"
         labels: CI/CD
