@@ -4,6 +4,7 @@ name: LSD user macros complete regression test
 # Controls when the action will run. Workflow runs when manually triggered using the UI
 # or API.
 on:
+  pull_request:
   workflow_dispatch:
     # Inputs the workflow accepts.
     inputs:
