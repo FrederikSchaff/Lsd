@@ -1,12 +1,12 @@
 #**************************************************************
 #
-#	LSD 8.0 - May 2021
+#	LSD 8.0 - September 2021
 #	written by Marco Valente, Universita' dell'Aquila
 #	and by Marcelo Pereira, University of Campinas
 #
 #	Copyright Marco Valente and Marcelo Pereira
 #	LSD is distributed under the GNU General Public License
-#	
+#
 #**************************************************************
 
 #**************************************************************
@@ -21,7 +21,7 @@
 CC=g++
 WRC=windres
 TARGET=LMM
-SWITCH_CC=-D_LMM_ -D_NP_ -O3 -mthreads -mwindows -static-libstdc++
+SWITCH_CC=-D_LMM_ -D_NP_ -O3 -Wall -mthreads -mwindows -static-libstdc++
 
 # from here you should not need to modify anything
 
