@@ -5,7 +5,7 @@
 name: CI create/update PR [8.0-beta] -> [8.0-beta-test-automation]
 
 env:
-  SOURCE_BRANCH: "8.0-beta"
+  SOURCE_BRANCH: "origin/8.0-beta"
   TARGET_BRANCH: "8.0-beta-test-automation"
   CI_BRANCH: "CI/PR-8.0-beta--into--test-automation"
 
@@ -36,7 +36,7 @@ jobs:
         title: "Automatic PR [${{ env.SOURCE_BRANCH }}] to [${{ env.TARGET_BRANCH}} ]"
         body: "This PR has been created automatically and is updated each time the local fork of ${{ env.SOURCE_BRANCH }} is updated."
         branch: ${{ env.CI_BRANCH }}
-        target-branch: ${{ env.TARGET_BRANCH }} #works only with adjusted create-or-update-pull-request-action
+        target-branch: origin/${{ env.TARGET_BRANCH }} #works only with adjusted create-or-update-pull-request-action
         commit-message: "Sync: Merge upstream [${{ env.SOURCE_BRANCH }}] changes (automatic PR)"
         author: "Frederik Schaff <frederik.schaff@thinkcomplex.eu>"
         labels: CI/CD
