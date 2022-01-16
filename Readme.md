@@ -26,6 +26,8 @@ This file will serve as a kind of roadmap and summary for this endeavour and wil
 
 ## Branching concept
 
+`upstream` is `marcov64/LSD`
+
 ### Branches
 
 - [GIS-master](https://github.com/FrederikSchaff/Lsd/tree/GIS-master): Contains the current state of the LSD initially forked and developed for my PhD and future work.
@@ -35,15 +37,14 @@ This file will serve as a kind of roadmap and summary for this endeavour and wil
   - bug-fixes only (as planned)
 
 ----
-- [8.0-beta](https://github.com/FrederikSchaff/Lsd/tree/8.0-beta): direct fork of [upstream 8.0-beta](https://github.com/marcov64/Lsd/tree/8.0-beta)
+- [8.0-beta](https://github.com/FrederikSchaff/Lsd/tree/8.0-beta): direct fork of [upstream/8.0-beta](https://github.com/marcov64/Lsd/tree/8.0-beta)
   - no changes here, as it is automatically updated with a github action every day.
+  - a PR from this branch to `8.0-beta-test-automation` is created and updated automatically
 - [8.0-beta-test-automation](https://github.com/FrederikSchaff/Lsd/tree/8.0-beta-test-automation): CI-CD branch
-  - improved development experience
-  - github actions (CI)
-  - keep in sync with 8.0 and test automatically (to do). 
-    - If the test succeeds, automatically merge into `8.0-beta-integration`
+  - in sync with `upstream/8.0-beta`, but only if automatic tests succeed
 - [8.0-beta-integration](https://github.com/FrederikSchaff/Lsd/tree/8.0-beta-integration): Integrate changes for upstream merge.
   - shall integrate `8.0-beta-test-automation` and `gis-integration` upstream
+  - also contains the `gis-integration-project`, which is irregularly merged back in.
 ----
 - [gis-integration-project](https://github.com/FrederikSchaff/Lsd/tree/gis-integration-project): The branch containing, e.g., this file.
   - contain `8.0-beta-integration` plus some additional documentation
@@ -52,7 +53,7 @@ This file will serve as a kind of roadmap and summary for this endeavour and wil
   - Currently some 7.1 beta
   - Aim (perhaps) forward step-by-step as integration of GIS-beta commences, until we are equal with then current upstream LSD beta.
 - [gis-integration](https://github.com/FrederikSchaff/Lsd/tree/gis-integration): Integration branch for portation of GIS-beta to upstream LSD
-  - without project documentation
+  - without project documentation and ci/cd parts
 
 ### CD
 
@@ -81,6 +82,3 @@ _Note_: This may not be up to date! And not all is automated.
 | Metric     | Coverage |
 |------------|----------|
 | LSD Macros | ? / ?    |
-| GIS Macros | 0 / 0    |
-
-
