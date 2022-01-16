@@ -15,16 +15,16 @@ xmlns="http://www.w3.org/TR/REC-html40">
 <!--[if gte mso 9]><xml>
  <o:DocumentProperties>
   <o:LastAuthor>Marcelo Pereira</o:LastAuthor>
-  <o:Revision>82</o:Revision>
-  <o:TotalTime>969</o:TotalTime>
+  <o:Revision>84</o:Revision>
+  <o:TotalTime>981</o:TotalTime>
   <o:Created>2018-04-14T19:11:00Z</o:Created>
-  <o:LastSaved>2021-07-26T23:01:00Z</o:LastSaved>
+  <o:LastSaved>2021-09-15T19:41:00Z</o:LastSaved>
   <o:Pages>1</o:Pages>
-  <o:Words>3700</o:Words>
-  <o:Characters>19982</o:Characters>
-  <o:Lines>166</o:Lines>
-  <o:Paragraphs>47</o:Paragraphs>
-  <o:CharactersWithSpaces>23635</o:CharactersWithSpaces>
+  <o:Words>3817</o:Words>
+  <o:Characters>20618</o:Characters>
+  <o:Lines>171</o:Lines>
+  <o:Paragraphs>48</o:Paragraphs>
+  <o:CharactersWithSpaces>24387</o:CharactersWithSpaces>
   <o:Version>16.00</o:Version>
  </o:DocumentProperties>
 </xml><![endif]-->
@@ -752,7 +752,8 @@ p.MsoTitle, li.MsoTitle, div.MsoTitle
 	color:#254061;
 	font-weight:bold;}
 a:link, span.MsoHyperlink
-	{mso-style-priority:99;
+	{mso-style-noshow:yes;
+	mso-style-priority:99;
 	color:blue;
 	text-decoration:underline;
 	text-underline:single;}
@@ -1365,7 +1366,7 @@ break-word'>
 in LSD<o:p></o:p></span></p>
 
 <h1><span lang=EN-US style='mso-fareast-font-family:"Times New Roman";
-mso-ansi-language:EN-US'>Version 8.0 (September 2021)<o:p></o:p></span></h1>
+mso-ansi-language:EN-US'>Version 8.0 (December 2021)<o:p></o:p></span></h1>
 
 <p class=MsoNormal><span lang=EN-US style='mso-ansi-language:EN-US'>The version
 introduces an improved user interface and other improvements:<o:p></o:p></span></p>
@@ -1439,6 +1440,17 @@ lang=EN-US style='font-family:Symbol;mso-fareast-font-family:Symbol;mso-bidi-fon
 Symbol;mso-ansi-language:EN-US'><span style='mso-list:Ignore'>·<span
 style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </span></span></span><![endif]><b><span lang=EN-US style='mso-ansi-language:
+EN-US'>Last configuration automatic load.</span></b><span lang=EN-US
+style='mso-ansi-language:EN-US'> The last used model configuration file (.lsd),
+if any, is automatically reopened on LSD Browser launch, at the same Object
+previously selected.<o:p></o:p></span></p>
+
+<p class=MsoListParagraph style='margin-top:6.0pt;margin-right:0cm;margin-bottom:
+5.0pt;margin-left:35.85pt;text-indent:-18.0pt;mso-list:l0 level1 lfo2'><![if !supportLists]><span
+lang=EN-US style='font-family:Symbol;mso-fareast-font-family:Symbol;mso-bidi-font-family:
+Symbol;mso-ansi-language:EN-US'><span style='mso-list:Ignore'>·<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span></span><![endif]><b><span lang=EN-US style='mso-ansi-language:
 EN-US'>Other interface improvements</span></b><span lang=EN-US
 style='mso-ansi-language:EN-US'>. Several small usability improvements. Tabbed
 interface for <a href="runtime.html">Run-time</a> and <a
@@ -1470,6 +1482,22 @@ of simulation runs</a> larger than one, LSD will automatically offer to execute
 the runs in parallel, using up to the number of available (virtual) cores. This
 feature is also available when using the <a href="LMM.html#nowindow">command-line
 version</a> of the model.<o:p></o:p></span></p>
+
+<p class=MsoListParagraph style='margin-top:6.0pt;margin-right:0cm;margin-bottom:
+5.0pt;margin-left:35.85pt;text-indent:-18.0pt;mso-list:l0 level1 lfo2'><![if !supportLists]><span
+lang=EN-US style='font-family:Symbol;mso-fareast-font-family:Symbol;mso-bidi-font-family:
+Symbol;mso-ansi-language:EN-US'><span style='mso-list:Ignore'>·<span
+style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span></span></span><![endif]><b><span lang=EN-US style='mso-ansi-language:
+EN-US'>Automatic segregation of results and sensitivity analysis files.</span></b><span
+lang=EN-US style='mso-ansi-language:EN-US'> When creating results files from
+multiple simulation runs or configuration files for sensitivity analysis, LSD
+will automatically create a new subfolder to hold those files whenever there is
+risk of data from different configurations to be (improperly) mixed. It also
+prevents the user from creating such files in the main model directory. The
+subfolder is named as the respective configuration file. All tools, including R
+packages, automatically recognize the proper file locations without user
+intervention.<o:p></o:p></span></p>
 
 <p class=MsoListParagraph style='margin-top:6.0pt;margin-right:0cm;margin-bottom:
 5.0pt;margin-left:35.85pt;text-indent:-18.0pt;mso-list:l0 level1 lfo2'><![if !supportLists]><span
@@ -1512,13 +1540,14 @@ lang=EN-US style='mso-ansi-language:EN-US'> and </span><span class=Cdigo><span
 lang=EN-US style='mso-ansi-language:EN-US'><a href="LSD_macros.html#THIS">GRANDPARENTS(…)</a></span></span><span
 lang=EN-US style='mso-ansi-language:EN-US'> allow navigating the </span><a
 href="LSD_faqs.html#modelstructure"><span lang=EN-US style='mso-ansi-language:
-EN-US'>model structure</span></a><span lang=EN-US style='mso-ansi-language:
-EN-US'> without using the C++ complex pointer syntax with the important benefit
-of full pointer checking by default, preventing obscure crashes and providing
-identification of problem location in code. </span><span class=Cdigo><a
-href="LSD_macros.html#DELETING"><span lang=EN-US style='mso-ansi-language:EN-US'>DELETING</span></a></span><span
-lang=EN-US style='mso-ansi-language:EN-US'> allows checking for deferred Object
-deletions due to Variables still computing. </span><span class=Cdigo><a
+EN-US'>model structure</span></a><span style='mso-ansi-language:EN-US'> <span
+lang=EN-US>without using the C++ complex pointer syntax with the important
+benefit of full pointer checking by default, preventing obscure crashes and
+providing identification of problem location in code. </span></span><span
+class=Cdigo><a href="LSD_macros.html#DELETING"><span lang=EN-US
+style='mso-ansi-language:EN-US'>DELETING</span></a></span><span lang=EN-US
+style='mso-ansi-language:EN-US'> allows checking for deferred Object deletions
+due to Variables still computing. </span><span class=Cdigo><a
 href="LSD_macros.html#SORT"><span lang=EN-US style='mso-ansi-language:EN-US'>SORTL(…)</span><span
 lang=EN-US style='font-family:"Arial",sans-serif;mso-ansi-language:EN-US'>/</span><span
 lang=EN-US style='mso-ansi-language:EN-US'>SORT2L(…)</span></a></span><span
@@ -1591,9 +1620,9 @@ style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&
 </span></span></span><![endif]><b><span lang=EN-US style='mso-ansi-language:
 EN-US'>Embedded Windows 64-bit compiler.</span></b><span lang=EN-US
 style='mso-ansi-language:EN-US'> The C++ compiler preinstalled with LSD in
-Windows computers was updated to a modern, 64-bit version (10.2) of GCC
-compiler. This allows the generation of faster models, better error messages,
-and support of virtually unlimited memory.<o:p></o:p></span></p>
+Windows computers was updated to a modern, 64-bit version (10.2) of GCC compiler.
+This allows the generation of faster models, better error messages, and support
+of virtually unlimited memory.<o:p></o:p></span></p>
 
 <p class=MsoListParagraph style='margin-top:6.0pt;margin-right:0cm;margin-bottom:
 5.0pt;margin-left:35.85pt;text-indent:-18.0pt;mso-list:l0 level1 lfo2'><![if !supportLists]><span
@@ -1882,14 +1911,14 @@ Symbol;mso-ansi-language:EN-US'><span style='mso-list:Ignore'>·<span
 style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </span></span></span><![endif]><b style='mso-bidi-font-weight:normal'><span
 lang=EN-US style='mso-ansi-language:EN-US'>Pointer checking</span></b><span
-lang=EN-US style='mso-ansi-language:EN-US'>. By default, LSD now checks all
-pointers used in Macros for validity. As this may have performance impact for
-some models, new Macros (</span><span class=Cdigo><span lang=EN-US
-style='mso-ansi-language:EN-US'>USE_POINTER_CHECK</span></span><span
-lang=EN-US style='mso-ansi-language:EN-US'> and </span><span class=Cdigo><span
-lang=EN-US style='mso-ansi-language:EN-US'>NO_POINTER_CHECK</span></span><span
-lang=EN-US style='mso-ansi-language:EN-US'>) are available for the modeler
-control <a href="LSD_macros.html#POINTER_CHECK">pointer checking</a>.<o:p></o:p></span></p>
+lang=EN-US style='mso-ansi-language:EN-US'>. By default, LSD now checks all pointers
+used in Macros for validity. As this may have performance impact for some
+models, new Macros (</span><span class=Cdigo><span lang=EN-US style='mso-ansi-language:
+EN-US'>USE_POINTER_CHECK</span></span><span lang=EN-US style='mso-ansi-language:
+EN-US'> and </span><span class=Cdigo><span lang=EN-US style='mso-ansi-language:
+EN-US'>NO_POINTER_CHECK</span></span><span lang=EN-US style='mso-ansi-language:
+EN-US'>) are available for the modeler control <a
+href="LSD_macros.html#POINTER_CHECK">pointer checking</a>.<o:p></o:p></span></p>
 
 <p class=MsoListParagraph style='margin-top:6.0pt;margin-right:0cm;margin-bottom:
 5.0pt;margin-left:35.7pt;text-indent:-17.85pt;mso-list:l1 level1 lfo4'><![if !supportLists]><span

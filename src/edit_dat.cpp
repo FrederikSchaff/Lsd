@@ -1,22 +1,22 @@
 /*************************************************************
 
-	LSD 8.0 - May 2021
+	LSD 8.0 - September 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
 	Copyright Marco Valente and Marcelo Pereira
 	LSD is distributed under the GNU General Public License
-	
+
 	See Readme.txt for copyright information of
 	third parties' code used in LSD
-	
+
  *************************************************************/
 
 /*************************************************************
 EDIT_DAT.CPP
 Called by INTERF.CPP shows all the lagged variables and parameters
 to be initialized for one object. Prepares the spread-sheet window
-and the bindings. 
+and the bindings.
 
 This interface shows a maximum of 100 columns, though it allows to set all
 the initial values of the model by using the setall options. In case
@@ -25,27 +25,25 @@ by this function, use the Data Browse option.
 
 The main functions contained in this file are:
 
-- void edit_data( object *r, int *choice, char *lab )
+- void edit_data( object *r, const char *lab )
 Initialize the window, calls search_title and link_data, then wait for a
 message from user.
 
-- void search_title( object *r, char *tag, int *i, char *lab, int *incr )
+- void search_title( object *r, const char *tag, int *i, const char *lab, int *incr )
 It is a recursive routine. Scan the model structure looking for the object
 of type as r and prepare the relative tag for any object. The tag is then
 used by set_title to be printed as columns headers
 
-- void set_title( object *c, char *lab, char *tag, int *incr );
+- void set_title( object *c, const char *lab, const char *tag, int *incr );
 prints the column headers
 
-- void link_cells( object *r, char *lab );
+- void link_cells( object *r, const char *lab );
 prints the line headers and create the cells, each linked to one variable value
 of the model
 
-- void unlink_cells( object *r, char *tag, char *lab );
+- void unlink_cells( object *r, const char *tag, const char *lab );
 called before exiting, removes all the links between tcl variables and model
 values
-- void save_cell( object *r, char *tag, char *lab );
-called called to copy entry widgets to linked variables
 *************************************************************/
 
 #include "decl.h"
@@ -58,7 +56,7 @@ bool iniShowOnce = false;		// prevent repeating warning on # of columns
 /****************************************************
 EDIT_DATA
 ****************************************************/
-void edit_data( object *r, int *choice, char *lab )
+void edit_data( object *r, const char *lab )
 {
 	char ch[ 2 * MAX_ELEM_LENGTH ], ch1[ MAX_ELEM_LENGTH ];
 	int i, counter, lag;
@@ -68,11 +66,11 @@ void edit_data( object *r, int *choice, char *lab )
 
 	first = r->search( lab );
 	cmd( "set cwidth 11" );
-	
-	cmd( "newtop .inid \"%s%s - LSD Initial Values Editor\" { set choice 1 }", unsaved_change( ) ? "*" : " ", simul_name );
+
+	cmd( "newtop .inid \"%s%s - LSD Initial Values Editor\" { set choice 1 }", unsaved_change( ) ? "*" : " ", strlen( simul_name ) > 0 ? simul_name : NO_CONF_NAME );
 
 	cmd( "ttk::frame .inid.t" );		// top frame to pack
-	
+
 	// create single top frame to grid, where the initial values spreadsheet can be built
 	cmd( "set g .inid.t.grid" );
 	cmd( "ttk::frame $g" );
@@ -82,7 +80,7 @@ void edit_data( object *r, int *choice, char *lab )
 	cmd( "grid propagate $g 0" );	// allow frame resizing later, after cells are created
 	cmd( "set lastIniSz { 0 0 }" );	// handle first configuration
 	cmd( "set iniDone 0" );
-	
+
 	// adjust spreadsheet size when toplevel window resizes
 	cmd( "bind .inid <Configure> { \
 			if { ! [ info exists iniConfRun ] } { \
@@ -115,20 +113,20 @@ void edit_data( object *r, int *choice, char *lab )
 	cmd( "grid $g.can $g.ys -sticky nsew" );
 	cmd( "grid $g.xs -sticky ew" );
 	cmd( "mouse_wheel $g.can" );
-	
+
 	// single frame in canvas to hold all spreadsheet cells
 	cmd( "set w $g.can.f" );
 	cmd( "ttk::frame $w" );
 	cmd( "$g.can create window 0 0 -window $w -anchor nw" );
 	cmd( "mouse_wheel $w" );
-	
+
 	// title row
-	strncpy( ch1, lab, MAX_ELEM_LENGTH - 1 );
-	ch1[ MAX_ELEM_LENGTH - 1 ] = '\0';
+	strcpyn( ch1, lab, MAX_ELEM_LENGTH );
+
 	cmd( "ttk::label $w.tit_empty -style boldSmall.TLabel -text %s", ch1 );
 	cmd( "grid $w.tit_empty -sticky w -padx { 2 5 }" );
 	cmd( "mouse_wheel $w.tit_empty" );
-	
+
 	cmd( "ttk::label $w.tit_typ -style hl.TLabel -text (Obj)" );
 	cmd( "grid $w.tit_typ -row 0 -column 1 -padx 1" );
 	cmd( "mouse_wheel $w.tit_typ" );
@@ -136,18 +134,18 @@ void edit_data( object *r, int *choice, char *lab )
 	// explore the tree searching for each instance of such object and create:
 	// - titles
 	// - entry cells linked to the values
-	
+
 	strcpy( ch, "" );
 	i = 0;
 	counter = 1;
 	colOvflw = false;
 	search_title( r, ch, &i, lab, &counter );
 	link_cells( r, lab );
-	
+
 	cmd( "set line_counter %d", counter );
 
 	cmd( "pack .inid.t -expand 1 -fill both" );
-	
+
 	cmd( "ttk::label .inid.err -text \"\"" );
 	cmd( "pack .inid.err -padx 5 -pady 5" );
 
@@ -175,24 +173,22 @@ void edit_data( object *r, int *choice, char *lab )
 	cmd( "set iniDone 1" );
 
 	editloop:
-	
+
 	cmd( "update idletasks" );
 	cmd( "if { [ info exists lastFocus ] && $lastFocus != \"\" && [ winfo exists $lastFocus ] } { focus $lastFocus; $lastFocus selection range 0 end; unset lastFocus }" );
 
 	// editor main command loop
-	*choice = 0;
-	while ( *choice == 0 )
+	choice = 0;
+	while ( choice == 0 )
 		Tcl_DoOneEvent( 0 );
 
 	save_cells( r, lab );
 
-	if ( *choice == 2 )
-	{	
-		if ( Tcl_GetVar( inter, "var_name", 0 ) != NULL )
+	if ( choice == 2 )
+	{
+		if ( get_str( "var_name", ch, 2 * MAX_ELEM_LENGTH ) != NULL )
 		{
-			strcpy( ch, ( char * ) Tcl_GetVar( inter, "var_name", 0 ) );
-			*choice = 4;	// point .inid window as parent for the set_all window
-			set_all( choice, first, ch, lag );
+			set_all( first, ch, lag, ".inid" );
 			show_cells( r, lab );
 		}
 
@@ -200,7 +196,7 @@ void edit_data( object *r, int *choice, char *lab )
 	}
 
 	cmd( "destroytop .inid" );
-	
+
 	unlink_cells( r, lab );
 	Tcl_UnlinkVar( inter, "lag");
 }
@@ -209,7 +205,7 @@ void edit_data( object *r, int *choice, char *lab )
 /****************************************************
 SEARCH_TITLE
 ****************************************************/
-void search_title( object *r, char *tag, int *i, char *lab, int *incr )
+void search_title( object *r, const char *tag, int *i, const char *lab, int *incr )
 {
 	char ch[ 2 * MAX_ELEM_LENGTH ];
 	int multi, counter;
@@ -219,28 +215,28 @@ void search_title( object *r, char *tag, int *i, char *lab, int *incr )
 	set_title( r, lab, tag, incr );
 
 	for ( cb = r->b, counter = 1; cb != NULL; cb = cb->next, counter = 1 )
-	{  
+	{
 		if ( cb->head == NULL )
 			continue;
-		
+
 		c = cb->head;
 		*i = *i + 1;
-		
+
 		if ( c->next != NULL )
 			multi=1;
 		else
 			multi = 0;
-		
+
 		for ( cur = c; cur != NULL; ++counter, cur = go_brother( cur ) )
 		{
 			if ( multi == 1 )
 				if ( strlen( tag ) != 0 )
-					sprintf( ch, "%s-%d", tag, counter );
+					snprintf( ch, 2 * MAX_ELEM_LENGTH, "%s-%d", tag, counter );
 				else
-					sprintf( ch, "%d", counter );
+					snprintf( ch, 2 * MAX_ELEM_LENGTH, "%d", counter );
 			else
-				sprintf( ch, "%s", tag );
-	 
+				strcpyn( ch, tag, 2 * MAX_ELEM_LENGTH );
+
 			if ( *incr <= MAX_COLS )
 				search_title( cur, ch, i, lab, incr );
 
@@ -252,20 +248,16 @@ void search_title( object *r, char *tag, int *i, char *lab, int *incr )
 /****************************************************
 SET_TITLE
 ****************************************************/
-void set_title( object *c, char *lab, char *tag, int *incr )
+void set_title( object *c, const char *lab, const char *tag, int *incr )
 {
 	char ch1[ MAX_ELEM_LENGTH ], ch2[ MAX_ELEM_LENGTH ];
 
 	if ( ! strcmp( c->label, lab ) )
 	{
-		ch1[ MAX_ELEM_LENGTH - 1 ] = '\0';
-		strncpy( ch1, c->label, MAX_ELEM_LENGTH - 1 );
-		
+		strcpyn( ch1, c->label, MAX_ELEM_LENGTH );
+
 		if ( strlen( tag ) != 0 )
-		{  
-			strncpy( ch2, tag, MAX_ELEM_LENGTH - 1 );
-			ch2[ MAX_ELEM_LENGTH - 1 ] = '\0';
-		}
+			strcpyn( ch2, tag, MAX_ELEM_LENGTH );
 		else
 			strcpy( ch2, "  " );
 
@@ -274,12 +266,12 @@ void set_title( object *c, char *lab, char *tag, int *incr )
 		cmd( "ttk::label $w.c%d_tit -text ${titheader_%d} -style boldSmall.TLabel", *incr ,*incr );
 		cmd( "grid $w.c%d_tit -row 0 -column [ expr { 2 + %d } ] ", *incr, *incr );
 		cmd( "mouse_wheel $w.c%d_tit", *incr );
-		
+
 		if ( strlen( tag ) == 0 )
 			cmd( "set tag_%d \"\"", *incr );
 		else
 			cmd( "set tag_%d %s", *incr, tag );
-		
+
 		++( *incr );
 	}
 }
@@ -288,24 +280,23 @@ void set_title( object *c, char *lab, char *tag, int *incr )
 /****************************************************
 LINK_CELLS
 ****************************************************/
-void link_cells( object *r, char *lab )
+void link_cells( object *r, const char *lab )
 {
 	int i, j, k;
 	bool lastFocus = false;
-	char previous[ MAX_ELEM_LENGTH + 20 ], ch1[ MAX_ELEM_LENGTH ];
+	char previous[ 2 * MAX_ELEM_LENGTH ], ch1[ MAX_ELEM_LENGTH ];
 	object *cur, *cur1;
 	variable *cv, *cv1;
 
 	cur1 = r->search( lab );
 	strcpy( previous, "" );
-	
+
 	for ( cv1 = cur1->v, j = 0, k = 1; cv1 != NULL; )
 	{
 		if ( cv1->param == 1 )
-		{ 
-			strncpy( ch1, cv1->label, MAX_ELEM_LENGTH - 1 );
-			ch1[ MAX_ELEM_LENGTH - 1 ] = '\0';
-			
+		{
+			strcpyn( ch1, cv1->label, MAX_ELEM_LENGTH );
+
 			cmd( "ttk::label $w.tit_t%s -text %s", cv1->label, ch1 );
 			cmd( "grid $w.tit_t%s -row %d -sticky w -padx { 2 5 }", cv1->label, k );
 			cmd( "mouse_wheel $w.tit_t%s", cv1->label );
@@ -315,19 +306,18 @@ void link_cells( object *r, char *lab )
 			cmd( "ttk::button $w.t%s -text \"Set All\" -width -1 -takefocus 0 -style small.TButton -command { set var_name %s; set lag %d; set lastFocus $w.c1_v%sp; set choice 2 }", cv1->label, cv1->label, j, cv1->label );
 			cmd( "grid $w.t%s -row %d -column 2", cv1->label, k );
 			cmd( "mouse_wheel $w.t%s", cv1->label );
-			
+
 			cmd( "set tit $w.tit_t%s", cv1->label );
-			set_ttip_descr( ( char * ) Tcl_GetVar( inter, "tit", 0 ), cv1->label, -1, false );
+			set_ttip_descr( get_str( "tit" ), cv1->label, -1, false );
 			cmd( "tooltip::tooltip $w.typ_t%s \"Parameter '%s'\nin object '%s'\"", cv1->label, cv1->label, cur1->label );
 			cmd( "tooltip::tooltip $w.t%s \"Set all or a subset of\n'%s' instances\"", cv1->label, cv1->label );
 		}
 		else
-		{ 
+		{
 			if ( j < cv1->num_lag )
 			{
-				strncpy( ch1, cv1->label, MAX_ELEM_LENGTH - 1 );
-				ch1[ MAX_ELEM_LENGTH - 1 ] = '\0';
-				
+				strcpyn( ch1, cv1->label, MAX_ELEM_LENGTH );
+
 				cmd( "ttk::label $w.tit_t%s_%d -text %s", cv1->label, j, ch1 );
 				cmd( "grid $w.tit_t%s_%d -row %d -sticky w -padx { 2 5 }", cv1->label, j, k );
 				cmd( "mouse_wheel $w.tit_t%s_%d", cv1->label, j );
@@ -337,9 +327,9 @@ void link_cells( object *r, char *lab )
 				cmd( "ttk::button $w.t%s_%d -text \"Set All\" -width -1 -takefocus 0 -style small.TButton -command { set var_name %s; set lag %d; set lastFocus $w.c1_v%s_%d; set choice 2 }", cv1->label, j, cv1->label, j, cv1->label, j );
 				cmd( "grid $w.t%s_%d -row %d -column 2", cv1->label, j, k );
 				cmd( "mouse_wheel $w.t%s_%d", cv1->label, j );
-			
+
 				cmd( "set tit $w.tit_t%s_%d", cv1->label, j );
-				set_ttip_descr( ( char * ) Tcl_GetVar( inter, "tit", 0 ), cv1->label, -1, false );
+				set_ttip_descr( get_str( "tit" ), cv1->label, -1, false );
 				cmd( "tooltip::tooltip $w.typ_t%s_%d \"Variable '%s' (lag %d)\nin object '%s'\"", cv1->label, j, cv1->label, j + 1, cur1->label );
 				cmd( "tooltip::tooltip $w.t%s_%d \"Set all or a subset of\n'%s' instances\"", cv1->label, j, cv1->label );
 			}
@@ -349,23 +339,23 @@ void link_cells( object *r, char *lab )
 		{
 			cv = cur->search_var( cur, cv1->label );
 			cv->data_loaded = '+';
-			
+
 			if ( cv->param == 1 )
-			{ 
-				sprintf( ch1, "p%s_%d", cv->label, i );
+			{
+				snprintf( ch1, MAX_ELEM_LENGTH, "p%s_%d", cv->label, i );
 				Tcl_LinkVar( inter, ch1, ( char * ) &( cv->val[ 0 ] ), TCL_LINK_DOUBLE );
-				
+
 				cmd( "ttk::entry $w.c%d_v%sp -width $cwidth -justify center -validate focusout -validatecommand { set n %%P; if [ string is double -strict $n ] { set p%s_%d $n; return 1 } { %%W delete 0 end; %%W insert 0 ${p%s_%d}; return 0 } } -invalidcommand { bell }", i, cv->label, cv->label, i, cv->label, i, cv->label, i );
 				cmd( "$w.c%d_v%sp insert 0 [ formatfloat ${p%s_%d} ]", i, cv->label, cv->label, i );
 				cmd( "grid $w.c%d_v%sp -row %d -column [ expr { 2 + %d } ] -padx 1", i, cv->label, k, i );
 				cmd( "mouse_wheel $w.c%d_v%sp", i, cv->label );
-				
+
 				cmd( "if { [ info exists tag_%d ] && $tag_%d ne \"\" } { \
 						tooltip::tooltip $w.c%d_v%sp \"Parameter '%s'\ninstance $tag_%d\" \
 					} else { \
 						tooltip::tooltip $w.c%d_v%sp \"Parameter '%s'\" \
 					}", i, i, i, cv->label, cv->label, i, i, cv->label, cv->label );
-				
+
 				if ( strlen( previous ) != 0 )
 				{
 					cmd( "bind %s <Return> { selectcell $g.can $w.c%d_v%sp }", previous, i, cv->label );
@@ -381,9 +371,9 @@ void link_cells( object *r, char *lab )
 					cmd( "bind %s <Tab> { break }", previous );
 					cmd( "bind $w.c%d_v%sp <Shift-Tab> { break }", i, cv->label );
 				}
-				
-				sprintf( previous, "$w.c%d_v%sp", i, cv->label );
-				
+
+				snprintf( previous, 2 * MAX_ELEM_LENGTH, "$w.c%d_v%sp", i, cv->label );
+
 				if ( ! lastFocus )
 				{
 					cmd( "set lastFocus $w.c%d_v%sp", i, cv->label );
@@ -391,17 +381,17 @@ void link_cells( object *r, char *lab )
 				}
 			}
 			else
-			{ 
+			{
 				if ( j < cv->num_lag )
 				{
-					sprintf( ch1, "v%s_%d_%d", cv->label, i, j );
+					snprintf( ch1, MAX_ELEM_LENGTH, "v%s_%d_%d", cv->label, i, j );
 					Tcl_LinkVar( inter, ch1, ( char * ) &( cv->val[ j ] ), TCL_LINK_DOUBLE );
-					
+
 					cmd( "ttk::entry $w.c%d_v%s_%d -width $cwidth -justify center -validate focusout -validatecommand { set n %%P; if [ string is double -strict $n ] { set v%s_%d_%d $n; return 1 } { %%W delete 0 end; %%W insert 0 ${v%s_%d_%d}; return 0 } } -invalidcommand { bell }", i, cv->label, j, cv->label, i, j, cv->label, i, j, cv->label, i, j );
 					cmd( "$w.c%d_v%s_%d insert 0 [ formatfloat ${v%s_%d_%d} ]", i, cv->label, j, cv->label, i, j );
 					cmd( "grid $w.c%d_v%s_%d -row %d -column [ expr { 2 + %d } ] -padx 1", i, cv->label, j, k, i );
 					cmd( "mouse_wheel $w.c%d_v%s_%d", i, cv->label, j );
-					
+
 					cmd( "if { [ info exists tag_%d ] && $tag_%d ne \"\" } { \
 							tooltip::tooltip $w.c%d_v%s_%d \"Variable '%s' (lag %d)\ninstance $tag_%d\" \
 						} else { \
@@ -423,9 +413,9 @@ void link_cells( object *r, char *lab )
 						cmd( "bind %s <Tab> { break }", previous );
 						cmd( "bind  $w.c%d_v%s_%d <Shift-Tab> { break }", i, cv->label, j );
 					}
-					
-					sprintf( previous, "$w.c%d_v%s_%d", i, cv->label, j );
-					
+
+					snprintf( previous, 2 * MAX_ELEM_LENGTH, "$w.c%d_v%s_%d", i, cv->label, j );
+
 					if ( ! lastFocus )
 					{
 						cmd( "set lastFocus $w.c%d_v%s_%d", i, cv->label, j );
@@ -434,7 +424,7 @@ void link_cells( object *r, char *lab )
 				}
 			}
 		}
-	  
+
 		// missing binds for last cell
 		if ( strlen( previous ) != 0 )
 		{
@@ -442,7 +432,7 @@ void link_cells( object *r, char *lab )
 			cmd( "bind %s <Tab> { break }", previous );
 			cmd( "bind %s <Down> { break }", previous );
 		}
-		
+
 		// indicate columns overflow (>MAX_COLS)
 		if ( ! colOvflw && cur != NULL )
 			colOvflw = true;
@@ -453,10 +443,10 @@ void link_cells( object *r, char *lab )
 			cv = cur->search_var( cur, cv1->label );
 			cv->data_loaded = '+';
 		}
-		
+
 		if ( cv1->param == 1 || cv1->num_lag > 0 )
 			++k;
-		
+
 		if ( cv1->param == 0 && j + 1 < cv1->num_lag )
 			++j;
 		else
@@ -471,14 +461,14 @@ void link_cells( object *r, char *lab )
 /****************************************************
 SHOW_CELLS
 ****************************************************/
-void show_cells( object *r, char *lab )
+void show_cells( object *r, const char *lab )
 {
 	int j, i;
 	object *cur;
 	variable *cv;
-	
+
 	cur = r->search( lab );
-	
+
 	for ( i = 1; i <= MAX_COLS && cur != NULL; cur = cur->hyper_next( lab ), ++i )
 		for ( cv = cur->v; cv != NULL; cv = cv->next )
 			if ( cv->param == 1 )
@@ -498,14 +488,14 @@ void show_cells( object *r, char *lab )
 /****************************************************
 SAVE_CELLS
 ****************************************************/
-void save_cells( object *r, char *lab )
+void save_cells( object *r, const char *lab )
 {
 	int j, i;
 	object *cur;
 	variable *cv;
-	
+
 	cur = r->search( lab );
-	
+
 	for ( i = 1; i <= MAX_COLS && cur != NULL; cur = cur->hyper_next( lab ), ++i )
 		for ( cv = cur->v; cv != NULL; cv = cv->next )
 			if ( cv->param == 1 )
@@ -519,26 +509,26 @@ void save_cells( object *r, char *lab )
 /****************************************************
 UNLINK_CELLS
 ****************************************************/
-void unlink_cells( object *r, char *lab )
+void unlink_cells( object *r, const char *lab )
 {
 	char ch1[ 2 * MAX_ELEM_LENGTH ];
 	int j, i;
 	object *cur;
 	variable *cv;
-	
+
 	cur = r->search( lab );
-	
+
 	for ( i = 1; i <= MAX_COLS && cur != NULL; cur = cur->hyper_next( lab ), ++i )
 		for ( cv = cur->v; cv != NULL; cv = cv->next )
 			if ( cv->param == 1 )
-			{ 
-				sprintf( ch1,"p%s_%d", cv->label, i );
+			{
+				snprintf( ch1, 2 * MAX_ELEM_LENGTH,"p%s_%d", cv->label, i );
 				Tcl_UnlinkVar( inter, ch1 );
 			}
 			else
 				for ( j = 0; j < cv->num_lag; ++j )
 				{
-					sprintf( ch1,"v%s_%d_%d", cv->label, i, j );
+					snprintf( ch1, 2 * MAX_ELEM_LENGTH,"v%s_%d_%d", cv->label, i, j );
 					Tcl_UnlinkVar( inter, ch1 );
 				}
 }

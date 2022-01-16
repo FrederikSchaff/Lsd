@@ -1,19 +1,19 @@
 /*************************************************************
 
-	LSD 8.0 - May 2021
+	LSD 8.0 - September 2021
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
 	Copyright Marco Valente and Marcelo Pereira
 	LSD is distributed under the GNU General Public License
-	
+
 	See Readme.txt for copyright information of
 	third parties' code used in LSD
-	
+
  *************************************************************/
 
 /*************************************************************
-SHOW_EQ.CPP 
+SHOW_EQ.CPP
 Show one window containig the equation for the label clicked on.
 
 Less simple as it seems, given that it has to deal with all weird characters
@@ -26,9 +26,9 @@ open and closed, and when it meets the last parenthesis exits.
 
 Everything is within just one single function:
 
-- void show_eq( char *lab )
+- void show_eq( const char *lab, const char *parWnd )
 
-- void scan_used_lab( char *lab, int *choice )
+- void scan_used_lab( const char *lab, const char *parWnd )
 Looks in the equation file whether the variable or parameter lab is contained
 in some equations. It creates a window containing the list of the equations
 using in any way the variable indicated. By clicking on the names in the
@@ -43,39 +43,41 @@ is recognized.
 /****************************************************
 SHOW_EQ
 ****************************************************/
-void show_eq( char *lab, int *choice )
+void show_eq( const char *lab, const char *parWnd )
 {
 	bool done;
-	char c1_lab[ MAX_LINE_SIZE ], c2_lab[ MAX_LINE_SIZE ], c3_lab[ MAX_LINE_SIZE ], full_name[ 2 * MAX_PATH_LENGTH ], updt_in[ MAX_ELEM_LENGTH + 1 ], *app, *fname;
+	char c1_lab[ MAX_LINE_SIZE ], c2_lab[ MAX_LINE_SIZE ], c3_lab[ MAX_LINE_SIZE ], full_name[ MAX_PATH_LENGTH ], updt_in[ MAX_ELEM_LENGTH ];
+	const char *fname, *app;
 	int i, k, bra, start, printing_var = 0, comment_line = 0, temp_var = 0;
 	FILE *f1, *f2;
 
-	cmd( "if [ string compare [ info command .eq_%s ] .eq_%s ] { set ex yes } { set ex no }", lab, lab );
-	app= ( char * ) Tcl_GetVar( inter, "ex", 0 );
-	strcpy( msg, app );
-	if ( strcmp( msg, "yes" ) )
+	cmd( "if [ string compare [ info command .eq_%s ] .eq_%s ] { set res 1 } { set res 0 }", lab, lab );
+	if ( ! get_bool( "res" ) )
 		return;
 
 	// define the correct parent window
-	cmd( "switch %d { 0 { set parWnd . } 1 { set parWnd .chgelem } 2 { set parWnd .da } 3 { set parWnd .deb } default { set parWnd . } }", *choice );
+	if ( parWnd != NULL && strlen( parWnd ) > 0 )
+		cmd( "set parWnd %s", parWnd );
+	else
+		cmd( "set parWnd ." );
 
 	start:
-	
+
 	fname = equation_name;
-	sprintf( full_name, "%s/%s", exec_path, fname );
+	snprintf( full_name, MAX_PATH_LENGTH, "%s/%s", exec_path, fname );
 	if ( ( f1 = fopen( full_name, "r" ) ) == NULL )
 	{
-		cmd( "set answer [ ttk::messageBox -parent . -type okcancel -default ok -icon error -title Error -message \"Equation file not found\" -detail \"Check equation file name '%s' and press 'OK' to search it.\" ]; switch $answer { ok { set choice 1 } cancel { set choice 2 } }", equation_name  );
-		cmd( "if { $choice == 1 } { set res [ tk_getOpenFile -parent . -title \"Load Equation File\" -initialdir \"%s\" -filetypes { { {LSD Equation Files} {.cpp} } { {All Files} {*} } } ]; if [ fn_spaces \"$res\" . ] { set res \"\" } { set res [ file tail $res ] } }", exec_path );
+		cmd( "switch [ ttk::messageBox -parent . -type okcancel -default ok -icon error -title Error -message \"Equation file not found\" -detail \"Check equation file name '%s' and press 'OK' to search it.\" ] { ok { set ans 1 } cancel { set ans 0 } }", equation_name  );
+		cmd( "if { $ans } { set res [ tk_getOpenFile -parent . -title \"Load Equation File\" -initialdir \"%s\" -filetypes { { {LSD Equation Files} {.cpp} } { {All Files} {*} } } ]; if [ fn_spaces \"$res\" . ] { set res \"\" } { set res [ file tail $res ] } }", exec_path );
 
-		if ( *choice == 1 )
+		if ( get_bool( "ans" ) )
 		{
-			app = ( char * ) Tcl_GetVar( inter, "res", 0 );
+			app = get_str( "res" );
 			if ( app == NULL || strlen( app ) == 0 )
 				return;
-			
-			strncpy( equation_name, app, MAX_PATH_LENGTH - 1 );
-			
+
+			strcpyn( equation_name, app, MAX_PATH_LENGTH );
+
 			goto start;
 		}
 		else
@@ -87,21 +89,22 @@ void show_eq( char *lab, int *choice )
 	// search in all source files
 	cmd( "set source_files [ get_source_files \"%s\" ]", exec_path );
 	cmd( "if { [ lsearch -exact $source_files \"%s\" ] == -1 } { lappend source_files \"%s\" }", equation_name, equation_name );
-	cmd( "set choice [ llength $source_files ]" );
-	
-	for ( done = false, k = 0; done == false && k < *choice; ++k )
+	cmd( "set i [ llength $source_files ]" );
+	i = get_int( "i" );
+
+	for ( done = false, k = 0; done == false && k < i; ++k )
 	{
 		cmd( "set brr [ lindex $source_files %d ]", k );
 		cmd( "if { ! [ file exists $brr ] && [ file exists \"%s/$brr\" ] } { set brr \"%s/$brr\" }", exec_path, exec_path );
-		fname = ( char * ) Tcl_GetVar( inter, "brr", 0 );
+		fname = get_str( "brr" );
 		if ( ( f2 = fopen( fname, "r" ) ) == NULL )
 			continue;
-		
+
 		while ( ! done && fgets( c1_lab, MAX_LINE_SIZE - 1, f2 ) != NULL )
 			if ( is_equation_header( c1_lab, c2_lab, updt_in ) )
 				if ( ! strcmp( c2_lab, lab ) )
 					done = true;
-				
+
 		if ( ! done )
 			fclose( f2 );
 	}
@@ -119,7 +122,7 @@ void show_eq( char *lab, int *choice )
 		}", lab, lab );
 	cmd( "set _W_%s $w", lab );
 	cmd( "set s \"\"" );
-	
+
 	cmd( "newtop $w \"'%s' %s Equation (%s)\" \"destroytop $w; focus $parWnd\" $parWnd", lab, eq_dum ? "Dummy" : "", fname );
 
 	cmd( "ttk::frame $w.f" );
@@ -156,7 +159,7 @@ void show_eq( char *lab, int *choice )
 			showtop $W.s centerW; \
 			$W.s.e selection range 0 end; \
 			focus $W.s.e \
-		} { LsdHelp equation.html } \"destroytop $w; focus $parWnd\"", lab  );
+		} { LsdHelp equation.html } \"destroytop $w; focus $parWnd\"", lab	);
 	cmd( "bind $w <Control-f> { $_W_%s.b.search invoke }; bind $w <Control-F> { $_W_%s.b.search invoke }", lab, lab );
 	cmd( "bind $w <F3> { \
 			set W $_W_%s; \
@@ -190,7 +193,7 @@ void show_eq( char *lab, int *choice )
 
 	cmd( "showtop $w centerW 1 1" );
 	cmd( "mousewarpto $w.b.cancel" );
-	
+
 	cmd( "tooltip::tooltip $w.b.search \"Search for text\"" );
 
 	cmd( "$w.f.text tag conf vars -foreground $colorsTheme(str)" );
@@ -209,14 +212,14 @@ void show_eq( char *lab, int *choice )
 		start = 0;
 		bra = 2;
 	}
-	
-	strcpy( c3_lab, c1_lab );						// save original first line
-			
+
+	strcpyn( c3_lab, c1_lab, MAX_LINE_SIZE );			// save original first line
+
 	do
-	{	
-		strcpy( c2_lab, c1_lab );
+	{
+		strcpyn( c2_lab, c1_lab, MAX_LINE_SIZE );
 		clean_spaces( c2_lab );
-		
+
 		// handle dummy equations without RESULT closing
 		if ( eq_dum && strcmp( c1_lab, c3_lab ) && ( ! strncmp( c2_lab, "EQUATION(", 9 ) || ! strncmp( c2_lab, "EQUATION_DUMMY(", 15 ) || ! strncmp( c2_lab, "FUNCTION(", 9 ) || ! strncmp( c2_lab, "MODELEND", 8 ) ) )
 		{
@@ -224,16 +227,16 @@ void show_eq( char *lab, int *choice )
 				cmd( "$w.f.text insert end \"\n(DUMMY EQUATION: variable '%s' updated in '%s')\"", lab, updt_in );
 			else
 				cmd( "$w.f.text insert end \"\n(DUMMY EQUATION: variable '%s' not updated here)\"", lab );
-				
+
 			break;
 		}
-	
+
 		if ( ! strncmp( c2_lab,"RESULT(", 7 ) )
 			bra--;
 
 		for ( i = 0; c1_lab[ i ] != 0; ++i )
 		{
-			if ( c1_lab[ i ] == '\r' ) 
+			if ( c1_lab[ i ] == '\r' )
 			i++;
 			if ( c1_lab[ i ] == '{' )
 			{
@@ -259,7 +262,7 @@ void show_eq( char *lab, int *choice )
 						else
 							if ( c1_lab[ i ] == ']' )
 							{
-								cmd( "$w.f.text insert end \\]  $mytag" );
+								cmd( "$w.f.text insert end \\]	$mytag" );
 								if ( temp_var == 1 )
 								{
 									temp_var = 0;
@@ -317,7 +320,7 @@ void show_eq( char *lab, int *choice )
 														cmd( "$w.f.text insert end \"%c\"  $mytag", c1_lab[ i ] );
 													else
 													{
-														cmd( "$w.f.text insert end \\n  $mytag" );
+														cmd( "$w.f.text insert end \\n	$mytag" );
 														if ( comment_line == 1 )
 														{
 															cmd( "set mytag \"\"" );
@@ -326,8 +329,8 @@ void show_eq( char *lab, int *choice )
 													}
 		}
 	}
-	while ( ( bra > 1 || start == 1 ) && fgets( c1_lab, MAX_LINE_SIZE, f2 ) != NULL  );
-	
+	while ( ( bra > 1 || start == 1 ) && fgets( c1_lab, MAX_LINE_SIZE, f2 ) != NULL	 );
+
 	fclose( f2 );
 
 	cmd( "$w.f.text mark set insert 1.0" );
@@ -338,28 +341,28 @@ void show_eq( char *lab, int *choice )
 /****************************************************
 SCAN_USED_LAB
 ****************************************************/
-void scan_used_lab( char *lab, int *choice )
+void scan_used_lab( const char *lab, const char *parWnd )
 {
 	bool exist, no_window;
-	char c1_lab[ MAX_LINE_SIZE ], c2_lab[ MAX_LINE_SIZE ], *fname;
-	int i, j, k, nfiles, done, caller = *choice;
+	char c1_lab[ MAX_LINE_SIZE ], c2_lab[ MAX_LINE_SIZE ];
+	const char *fname;
+	int i, j, k, nfiles, done;
 	FILE *f;
 
-	no_window = ( *choice == -1 ) ? true : false;
+	no_window = ( parWnd != NULL && strlen( parWnd ) == 0 ) ? true : false;
 
 	// define the correct parent window
-	cmd( "if { %d == 1 } { \
-			set list .chgelem.listusing_%s \
+	cmd( "if { \"%s\" eq \".chgelem\" } { \
+			set list .chgelem.listused_%s \
 		} else { \
-			set list .listusing_%s \
-		}", caller, lab, lab );
+			set list .listused_%s \
+		}", parWnd != NULL ? parWnd : ".", lab, lab );
 
 	if ( ! no_window )
 	{
-		cmd( "if [ winfo exists $list ] { set choice 1 } { set choice 0 }" );
-		if ( *choice == 1 )
+		if ( exists_window( "$list" ) )
 			return;
-		
+
 		cmd( "newtop $list \"Used In\" \"destroytop $list\""  );
 
 		cmd( "ttk::frame $list.lf " );
@@ -376,7 +379,7 @@ void scan_used_lab( char *lab, int *choice )
 		cmd( "bind $list.l.l <Home> \"selectinlist $list.l.l 0; break\"" );
 		cmd( "bind $list.l.l <End> \"selectinlist $list.l.l end; break\"" );
 
-		if ( caller != 1 )
+		if ( strcmp( parWnd, ".chgelem" ) != 0 )
 			cmd( "ttk::label $list.l3 -justify center -text \"(double-click to\nobserve the element)\"" );
 		else
 			cmd( "ttk::label $list.l3" );
@@ -391,40 +394,40 @@ void scan_used_lab( char *lab, int *choice )
 	cmd( "if { [ lsearch -exact $source_files \"%s\" ] == -1 } { lappend source_files \"%s\" }", equation_name, equation_name );
 	cmd( "set res [ llength $source_files ]" );
 	nfiles = get_int( "res" );
-	
+
 	cmd( "unset -nocomplain list_used" );
 
 	for ( exist = false, k = 0; k < nfiles; ++k )
 	{
 		cmd( "set brr [ lindex $source_files %d ]", k );
 		cmd( "if { ! [ file exists $brr ] && [ file exists \"%s/$brr\" ] } { set brr \"%s/$brr\" }", exec_path, exec_path );
-		fname = ( char * ) Tcl_GetVar( inter, "brr", 0 );
-		
+		fname = get_str( "brr" );
+
 		if ( ( f = fopen( fname, "r" ) ) != NULL )
 		{
 			strcpy( c1_lab, "" );
 			strcpy( c2_lab, "" );
 
-			for ( done = 0; fgets( c1_lab, MAX_LINE_SIZE, f ) != NULL;  )
+			for ( done = 0; fgets( c1_lab, MAX_LINE_SIZE, f ) != NULL;	)
 			{
-				clean_spaces( c1_lab ); 	// eliminate the spaces
-				
+				clean_spaces( c1_lab );		// eliminate the spaces
+
 				for ( i = 0; c1_lab[ i ] != '"' && c1_lab[ i ] !=  '\0' ; ++i )
 					c2_lab[ i ] = c1_lab[ i ];
-				
-				c2_lab[ i ] = '\0'; 			// close the string
-				
+
+				c2_lab[ i ] = '\0';				// close the string
+
 				if ( ! strcmp( c2_lab, "if(!strcmp(label," ) || ! strcmp( c2_lab, "EQUATION(" ) || ! strcmp( c2_lab, "EQUATION_DUMMY(" ) || ! strcmp( c2_lab, "FUNCTION(" ) )
 				{
 					if ( ! strcmp( c2_lab, "if(!strcmp(label," ) )
 						macro = false;
 					else
 						macro = true;
-					
+
 					for ( j = 0; c1_lab[ i + 1 + j ] != '"'; ++j )
-						c2_lab[ j ] = c1_lab[ i + 1 + j ]; 	// prepare the c2_lab to store the var's label			
+						c2_lab[ j ] = c1_lab[ i + 1 + j ];	// prepare the c2_lab to store the var's label
 					c2_lab[ j ] = '\0';
-					
+
 					done = contains( f, lab, strlen( lab ) );
 					if ( done == 1 )
 					{
@@ -436,11 +439,11 @@ void scan_used_lab( char *lab, int *choice )
 					}
 				}
 			}
-			
+
 			fclose( f );
 		}
 	}
-	
+
 	if ( no_window )
 	{
 		cmd( "if [ info exists list_used ] { set list_used [ join $list_used \", \" ] } { set list_used \"(never used)\" }" );
@@ -449,7 +452,7 @@ void scan_used_lab( char *lab, int *choice )
 
 	if ( exist )
 	{
-		if ( caller != 1 )
+		if ( strcmp( parWnd, ".chgelem" ) != 0 )
 			cmd( "bind $list <Double-Button-1> { set bidi [ selection get ]; set done 8; set choice 55 }" );
 	}
 	else
@@ -463,22 +466,20 @@ void scan_used_lab( char *lab, int *choice )
 /****************************************************
 SCAN_USING_LAB
 ****************************************************/
-void scan_using_lab( char *lab, int *choice )
+void scan_using_lab( const char *lab, const char *parWnd )
 {
 	bool found = false;
-	int caller = *choice;
 	variable *cv;
 
+	if ( exists_window( "$list" ) )
+		return;
+
 	// define the correct parent window
-	cmd( "if { %d == 1 } { \
+	cmd( "if { \"%s\" eq \".chgelem\" } { \
 			set list .chgelem.listusing_%s \
 		} else { \
 			set list .listusing_%s \
-		}", caller, lab, lab );
-
-	cmd( "if [ winfo exists $list ] { set choice 1 } { set choice 0 }" );
-	if ( *choice == 1 )
-		return;
+		}", parWnd != NULL ? parWnd : ".", lab, lab );
 
 	cmd( "newtop $list \"Using\" \"destroytop $list\"" );
 
@@ -496,7 +497,7 @@ void scan_using_lab( char *lab, int *choice )
 	cmd( "bind $list.l.l <Home> \"selectinlist $list.l.l 0; break\"" );
 	cmd( "bind $list.l.l <End> \"selectinlist $list.l.l end; break\"" );
 
-	if ( caller != 1 )
+	if ( strcmp( parWnd, ".chgelem" ) != 0 )
 		cmd( "ttk::label $list.l3 -justify center -text \"(double-click to\nobserve the element)\"" );
 	else
 		cmd( "ttk::label $list.l3" );
@@ -507,12 +508,12 @@ void scan_using_lab( char *lab, int *choice )
 
 	cv = root->search_var( root, lab );
 	find_using( root, cv, NULL, & found );
-	
-	cmd( "set choice [ $list.l.l size ]" );
-	if ( *choice != 0 )
+
+	cmd( "set res [ $list.l.l size ]" );
+	if ( get_int( "res" ) != 0 )
 	{
-		if ( caller != 1 )
-			cmd( "bind $list <Double-Button-1> {set bidi [selection get]; set choice 55; set done 8}" );
+		if ( strcmp( parWnd, ".chgelem" ) != 0 )
+			cmd( "bind $list <Double-Button-1> { set bidi [ selection get ]; set choice 55; set done 8 }" );
 	}
 	else
 		cmd( "$list.l.l insert end \"(none)\"" );
@@ -525,19 +526,22 @@ void scan_using_lab( char *lab, int *choice )
 /****************************************************
 SHOW_DESCR
 ****************************************************/
-void show_descr( char *lab, int *choice )
+void show_descr( const char *lab, const char *parWnd )
 {
-	char buf_descr[ TCL_BUFF_STR + 1 ];
+	char buf_descr[ MAX_BUFF_SIZE ];
 	description *cd;
 	variable *cv;
-	
+
 	// define the correct parent window
-	cmd( "switch %d { 0 { set parWnd . } 1 { set parWnd .chgelem } 2 { set parWnd .da } 3 { set parWnd .deb } default { set parWnd . } }", *choice );
-	
+	if ( parWnd != NULL && strlen( parWnd ) > 0 )
+		cmd( "set parWnd %s", parWnd );
+	else
+		cmd( "set parWnd ." );
+
 	cv = root->search_var( NULL, lab );
 	if ( cv == NULL )
 		return;
-	
+
 	cd = search_description( lab );
 
 	cmd( "if { [ string equal $parWnd . ] } { \
@@ -558,7 +562,7 @@ void show_descr( char *lab, int *choice )
 	cmd( "pack $w.f.d.text -expand yes -fill both" );
 	cmd( "pack $w.f.l $w.f.d" );
 	cmd( "pack $w.f -expand yes -fill both -pady 5" );
-	
+
 	if ( ( cv->param == 1 || cv->num_lag > 0 ) && cd->init != NULL )
 	{
 		cmd( "ttk::frame $w.i" );
@@ -572,18 +576,18 @@ void show_descr( char *lab, int *choice )
 		cmd( "pack $w.i.l $w.i.d" );
 		cmd( "pack $w.i -expand yes -fill both -pady 5" );
 	}
-	
+
 	cmd( "done $w b \"destroytop $w; focus $parWnd\"" );
 
 	cmd( "showtop $w centerW 1 1" );
 	cmd( "mousewarpto $w.b.ok" );
-	
-	cmd( "$w.f.d.text insert end \"%s\"", strtcl( buf_descr, cd->text, TCL_BUFF_STR ) );
+
+	cmd( "$w.f.d.text insert end \"%s\"", strtcl( buf_descr, cd->text, MAX_BUFF_SIZE ) );
 	cmd( "$w.f.d.text conf -state disabled" );
 
 	if ( ( cv->param == 1 || cv->num_lag > 0 ) && cd->init != NULL )
 	{
-		cmd( "$w.i.d.text insert end \"%s\"", strtcl( buf_descr, cd->init, TCL_BUFF_STR ) );
+		cmd( "$w.i.d.text insert end \"%s\"", strtcl( buf_descr, cd->init, MAX_BUFF_SIZE ) );
 		cmd( "$w.i.d.text conf -state disabled" );
 	}
 }

@@ -1,4 +1,4 @@
-Labor- and finance-augmented K+S Model (version 5.1.2)
+Labor- and finance-augmented K+S Model (version 5.1.3)
 ======================================================
 
 This version copyright by Marcelo C. Pereira.
@@ -18,16 +18,26 @@ v5.1.1 (12/08/20) - use LSD C++11 pseudo-random generator engine
                     change capacity utilization measure to account for labor
                     fix flagGovExp operation for values less than 2 (minimum income)
                     fix L1shortMax value in example configurations
-v5.1.2 (01/04/21) - fix lag definition and initialization of some variables
+v5.1.2 (01/09/21) - fix lag definition and initialization of some variables
                     fix lagged values for taxes
                     fix firm finance statistics
+                    fix credit pecking order/credit scores
                     unify new machine selection criteria (=scrapping rule)
                     normalize values used to compute imitation euclidean distance
                     improve bank excess reserves and net worth computation and bail-out
                     improve fiscal rules handling
+                    improve monetary and credit rules
                     add bond market (muBonds, thetaBonds, rhoBonds)
                     add intermediate bank capital restriction rule (flagCreditRule=1)
                     add debt repayment control (deltaB)
+v5.1.3 (01/01/22) - fix equation computation order in some cases
+                    fix temporal stock-flow inconsistencies
+                    fix good allocation inconsistencies
+                    improve firm maximum debt handling and statistics
+                    improve government bond market operation
+                    improve real GDP calculation
+                    add full dynamic multi-level SFC testing
+                    improve tests
 
 Relevant references
 ===================
@@ -77,13 +87,13 @@ Cent_wage-Benchmark_v1.lsd = centralized wage, no worker/firm skills, homogeneou
 
 Cent_wage-Baseline_v2.lsd = centralized wage, no worker/firm skills, homogeneous consumption-good, regular financial market (10 banks, variable interest rates, bank credit limits, monetary policy), fixed number of firms, no regulatory shock, close to configuration in 2015 paper (v0.2.1)
 
-No-skills-Fix_entry-No_fin.lsd = no worker/firm skills, homogeneous consumption-good, minimal financial market (1 bank, fixed interest rate, no bank credit limit, no fiscal policy), fixed number of firms, no regulatory shock, close to configuration in 2017 paper model (Fordist regime)
+No_skills-Fix_entry-No_fin.lsd = no worker/firm skills, homogeneous consumption-good, minimal financial market (1 bank, fixed interest rate, no bank credit limit, no fiscal policy), fixed number of firms, no regulatory shock, close to configuration in 2017 paper model (Fordist regime)
 
-Ten-skills-Free_entry-No_fin.lsd = worker tenure skills, quality differentiated consumption-good, minimal financial market (1 bank, fixed interest rate, no bank credit limit, no fiscal policy), entrant firm capital provided by workers (stock equity), variable number of firms, regulatory shock at t=200, close to configuration in 2018 paper (Fordist to Competitive regime transition)
+Ten_skills-Free_entry-No_fin.lsd = worker tenure skills, quality differentiated consumption-good, minimal financial market (1 bank, fixed interest rate, no bank credit limit, no fiscal policy), entrant firm capital provided by workers (stock equity), variable number of firms, regulatory shock at t=200, close to configuration in 2018 paper (Fordist to Competitive regime transition)
 
-Ten-skills-Free_entry-Full_fin.lsd = worker tenure skills, quality differentiated consumption-good, full financial market (10 banks, Taylor rule monetary policy, interest structure, Basel-like bank credit limit, soft fiscal-compact rule, bonds-spread adjustment), variable number of firms, unemployed training, regulatory shock at t=200, close to configuration in 2019 paper (Fordist to Competitive FC regime transition)
+Ten_skills-Free_entry-Full_fin.lsd = worker tenure skills, quality differentiated consumption-good, full financial market (10 banks, Taylor rule monetary policy, interest structure, Basel-like bank credit limit, soft fiscal-compact rule, bonds-spread adjustment), variable number of firms, unemployed training, regulatory shock at t=200, close to configuration in 2019 paper (Fordist to Competitive FC regime transition)
 
-Ten-skills-Free_entry-Bas_fin.lsd = worker tenure skills, quality differentiated consumption-good, basic financial market (10 banks, fixed interest rates, no bank credit limit, no fiscal policy), variable number of firms, regulatory shock at t=200 with pre/post-change firms competing, close to configuration in 2020 paper (invasion scenario)
+Ten_skills-Free_entry-Bas_fin.lsd = worker tenure skills, quality differentiated consumption-good, basic financial market (10 banks, fixed interest rates, no bank credit limit, no fiscal policy), variable number of firms, regulatory shock at t=200 with pre/post-change firms competing, close to configuration in 2020 paper (invasion scenario)
 
 Some set-ups include a regulatory shock at t=200 (parameter TregChg). In some cases, new, post-change entrant firms may compete with the existing pre-change incumbents. The parameters affected by the shock are identified by the suffix "Chg" in the names.
 
@@ -96,8 +106,6 @@ R analysis scripts
 There are several R scripts (.R extension inside R subdirectory) ready to analyze the simulation results:
 
 KS-aggregates.R = overall analysis of macroeconomic aggregates, including scenario comparison, time series plots, de-trended series growth stationarity, temporal correlation structure, hysteresis measures, Monte Carlo experiments comparison (distribution and performance)
-
-KS-aggregates-labor.R = analysis of labor-specific macro aggregates, including scenario statistics comparison, Beveridge, Okun, Philips, matching function and wage curves, Shimer metrics (separation, de-trended labor productivity, vacancy-unemployment to productivity and summary statistics), unemployment recovery hysteresis
 
 KS-sector-1.R = pooled and Monte Carlo firm-level analysis of the capital-good sector, including scenario statistics comparison, size, productivity and growth rate empirical plots and fits to Gaussian, Laplace and Subbotin distributions
 
@@ -113,9 +121,11 @@ KS-kriging-sobol-SA.R = global Sobol variance-based sensitivity analysis using a
 
 KS-polynomial-sobol-SA.R = polynomial meta-model fitting for global Sobol variance-based sensitivity analysis, including alternative meta-model order and interactive terms selection, meta-model estimation and validation, Sobol variance decomposition for direct and interactive effects, and surface response plotting (2D and 3D) of top-influential factors
 
-Other support scripts exist in the R subdirectory and are required by the above scripts. The scripts are configured to use the R subdirectory as the R working directory. Please add all the data required for the analysis (including LSD configuration files) in subdirectories inside the R working directory (the default is 'data'). There is a set of preconfigured test configurations (Sim1-Sim2.lsd in the data subdirectory) which can be executed in LSD and analyzed by the R scripts without any change. Subdiretctories 'ee' and 'sobol' contain test configurations for sensitivity analysis scripts. The sample test configurations are configured for speed but the number of Monte Carlo experiments (runs) is insufficient for reliable inference.
+Other support scripts exist in the R subdirectory and are required by the above scripts. The scripts are configured to use the R subdirectory as the R working directory. Please add all the data required for the analysis (including LSD configuration files) in subdirectories inside the R working directory (the default is 'data'). 
 
-The R scripts require the following R packages (and dependencies) to be installed from the standard repositories: LSDsensitivity, tseries, normalp, nortest, mFilter, np, matrixStats, gplots, corrplot, rmutil, plotrix, extrafont. 16GB or more of available memory is required to run some of the reports.
+There is a set of preconfigured test configurations (Sim1-Sim4.lsd in the data subdirectory) which can be executed in LSD and analyzed by the R scripts without any change. The sample test configurations are configured for speed but the number of Monte Carlo experiments (runs) is insufficient for reliable inference. See 'Configuring the K+S scripts.txt' in R subdirectory for details and recommendations.
+
+The R scripts require the following R packages (and dependencies) to be installed from the standard repositories: LSDsensitivity, tseries, normalp, nortest, mFilter, np, matrixStats, gplots, corrplot, rmutil, plotrix, textplot, extrafont. 12GB or more of available memory is required to run some of the reports. Use 'install-lsd-examples-packages.R' script in R subdirectory to install the required packages automatically.
 
 
 Model regime control
@@ -342,6 +352,7 @@ deltaDeb = share of government debt to pay when debt fiscal rule is binding (]0,
 gammaPi = central bank's Taylor rule sensitivity to target inflation (>=0)
 gammaU = central bank's Taylor rule sensitivity to target unemployment (>=0)
 kConst = interest rate ramping parameter for firms debt by credit class (>=0)
+mPerB = number of periods on banks moving-average calculations (>=1)
 muBonds = sovereign bonds spread (mark-down over central bank prime rate) ([0,1])
 muD = bank spread (mark-down) on deposits (from central bank prime rate) ([0,1])
 muDeb = bank spread (mark-up) on debt (over central bank prime rate) (>=0)
