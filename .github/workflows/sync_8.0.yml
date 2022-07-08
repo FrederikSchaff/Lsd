@@ -16,6 +16,6 @@ jobs:
       uses: FrederikSchaff/github-sync@v2
       with:
         source_repo: "marcov64/Lsd"
-        source_branch: "8.0-beta"
+        source_branch: "8.0-stable"
         destination_branch: "8.0-beta"
         github_token: ${{ secrets.GITHUB_TOKEN }}
