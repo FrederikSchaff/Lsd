@@ -68,7 +68,7 @@ int deb( object *r, object *c, const char *lab, double *res, bool interact, cons
 {
 	bool pre_running, redraw;
 	char ch[ 4 * MAX_ELEM_LENGTH ], ch1[ MAX_ELEM_LENGTH ];
-	int i, j, k, count, cond, eff_lags;
+	int i, j, k, count, cond, debug, eff_lags;
 	double value_search, app_res, *app_values;
 	object *cur, *cur1, *cur2;
 	bridge *cb, *cb1;
@@ -81,6 +81,10 @@ int deb( object *r, object *c, const char *lab, double *res, bool interact, cons
 		cover_browser( "Data Browser...", "Please exit Data Browser\nbefore using the LSD Browser.", false );
 
 	set_buttons_run( false );
+
+	// destroy existing window if INTERACT happens while debugger is stepping
+	if ( interact && exists_var( "interacting" ) && ! get_bool( "interacting" ) )
+		cmd( "destroytop .deb" );
 
 	cmd( "set deb .deb" );
 	cmd( "set lab \"%s\"", lab == NULL ? "" : lab );
@@ -197,19 +201,19 @@ int deb( object *r, object *c, const char *lab, double *res, bool interact, cons
 			{
 				cmd( "ttk::button .deb.b.act.run -width $butWidD -text Run -command { set choice 2; set_c_var done_in 0 } -underline 0" );
 				cmd( "ttk::button .deb.b.act.until -width $butWidD -text Until -command { set choice 16; set_c_var done_in 0 } -underline 3" );
-				cmd( "ttk::button .deb.b.act.ok -width $butWidD -text Step -command { set choice 1; set_c_var done_in 3 } -underline 0" );
+				cmd( "ttk::button .deb.b.act.step -width $butWidD -text Step -command { set choice 1; set_c_var done_in 3 } -underline 0" );
 				cmd( "ttk::button .deb.b.act.call -width $butWidD -text Caller -command { set choice 9 } -underline 0" );
 				cmd( "ttk::button .deb.b.act.prn_v -width $butWidD -text \"v\\\[...\\]\" -command { set choice 15 } -underline 0" );
 
 				cmd( "tooltip::tooltip .deb.b.act.run \"Continue simulation to end\"" );
 				cmd( "tooltip::tooltip .deb.b.act.until \"Continue simulation to given time step\"" );
-				cmd( "tooltip::tooltip .deb.b.act.ok \"Continue simulation to next time step\"" );
+				cmd( "tooltip::tooltip .deb.b.act.step \"Continue simulation to next time step\"" );
 				cmd( "tooltip::tooltip .deb.b.act.call \"Move to caller object\"" );
 				cmd( "tooltip::tooltip .deb.b.act.prn_v \"Show/hide intermediate values\"" );
 
 				cmd( "bind .deb <KeyPress-r> { .deb.b.act.run invoke }; bind .deb <KeyPress-R> { .deb.b.act.run invoke }; bind .deb <F5> { .deb.b.act.run invoke }" );
 				cmd( "bind .deb <KeyPress-i> { .deb.b.act.until invoke }; bind .deb <KeyPress-I> { .deb.b.act.until invoke }; bind .deb <F7> { .deb.b.act.until invoke }" );
-				cmd( "bind .deb <KeyPress-s> { .deb.b.act.ok invoke }; bind .deb <KeyPress-S> { .deb.b.act.ok invoke }; bind .deb <F8> { .deb.b.act.ok invoke }" );
+				cmd( "bind .deb <KeyPress-s> { .deb.b.act.step invoke }; bind .deb <KeyPress-S> { .deb.b.act.step invoke }; bind .deb <F8> { .deb.b.act.step invoke }" );
 				cmd( "bind .deb <KeyPress-c> { .deb.b.act.call invoke }; bind .deb <KeyPress-C> { .deb.b.act.call invoke }; bind .deb <F6> { .deb.b.act.call invoke }" );
 				cmd( "bind .deb <KeyPress-v> { .deb.b.act.prn_v invoke }; bind .deb <KeyPress-V> { .deb.b.act.prn_v invoke }" );
 			}
@@ -232,7 +236,7 @@ int deb( object *r, object *c, const char *lab, double *res, bool interact, cons
 			cmd( "tooltip::tooltip .deb.b.act.stack \"Maximum level of computation stack\"" );
 
 			if ( mode == 1 )
-				cmd( "pack .deb.b.act.run .deb.b.act.until .deb.b.act.ok .deb.b.act.call .deb.b.act.prn_v .deb.b.act.an .deb.b.act.prn_stck .deb.b.act.stack -padx $butSpc -side left" );
+				cmd( "pack .deb.b.act.run .deb.b.act.until .deb.b.act.step .deb.b.act.call .deb.b.act.prn_v .deb.b.act.an .deb.b.act.prn_stck .deb.b.act.stack -padx $butSpc -side left" );
 			else
 				cmd( "pack .deb.b.act.an .deb.b.act.prn_stck .deb.b.act.stack -padx $butSpc -side left" );
 
@@ -250,6 +254,23 @@ int deb( object *r, object *c, const char *lab, double *res, bool interact, cons
 	app_res = *res;
 	Tcl_LinkVar( inter, "value", ( char * ) &app_res, TCL_LINK_DOUBLE );
 	cmd( "set value_change 0" );
+
+	if ( watch_trigger )
+	{
+		if ( watch_write_mode )
+			cmd( "set watch_msg \"      Write watch:\"" );
+		else
+			cmd( "set watch_msg \"      Read watch:\"" );
+
+		cmd( "set watch_name %s", watch_elem );
+	}
+	else
+	{
+		cmd( "set watch_msg \"\"" );
+		cmd( "set watch_name \"\"" );
+	}
+
+	watch_trigger = false;		// clears any watch condition already signaled
 
 	redraw = true;
 	choice = 0;
@@ -269,6 +290,7 @@ int deb( object *r, object *c, const char *lab, double *res, bool interact, cons
 						ttk::label .deb.v.v1.time1 -text \"Case:\"; \
 						ttk::label .deb.v.v1.time2 -width 5 -anchor w -style hl.TLabel; \
 						if { %d } { \
+							set interacting 1; \
 							ttk::label .deb.v.v1.val1 -text \"Value \"; \
 							ttk::entry .deb.v.v1.val2 -width 15 -justify center -validate key -validatecommand { \
 								set n %%P; \
@@ -303,21 +325,24 @@ int deb( object *r, object *c, const char *lab, double *res, bool interact, cons
 								break \
 							} \
 						} else { \
+							set interacting 0; \
 							ttk::label .deb.v.v1.val1 -text \"Value:\"; \
 							ttk::label .deb.v.v1.val2 -width 15 -anchor w -style hl.TLabel \
 						}; \
-						ttk::label .deb.v.v1.obs -text \"(click to change value or view more digits)\"; \
+						ttk::label .deb.v.v1.obs -text \"(click to change or more digits)\"; \
+						ttk::label .deb.v.v1.msg; \
+						ttk::label .deb.v.v1.watch -style hl.TLabel; \
 						if { %d == 1 } { \
-							pack .deb.v.v1.name1 .deb.v.v1.name2 .deb.v.v1.time1 .deb.v.v1.time2 .deb.v.v1.val1 .deb.v.v1.val2 .deb.v.v1.obs -side left; \
+							pack .deb.v.v1.name1 .deb.v.v1.name2 .deb.v.v1.time1 .deb.v.v1.time2 .deb.v.v1.val1 .deb.v.v1.val2 .deb.v.v1.obs .deb.v.v1.msg .deb.v.v1.watch -side left; \
 							bind .deb <KeyPress-g> { set choice 28 }; \
 							bind .deb <KeyPress-G> { set choice 28 } \
-						} { \
+						} else { \
 							pack .deb.v.v1.name1 .deb.v.v1.name2 .deb.v.v1.time1 .deb.v.v1.time2 -side left \
 						} \
 					}", interact ? 1 : 0, mode );
 
-				cmd( ".deb.v.v1.name2 conf -text \"%s\"", lab == NULL ? "" : lab );
-				cmd( ".deb.v.v1.time2 conf -text \"%d	   \"", t );
+				cmd( ".deb.v.v1.name2 configure -text \"%s\"", lab == NULL ? "" : lab );
+				cmd( ".deb.v.v1.time2 configure -text \"%d	   \"", t );
 			}
 
 			// create the element list
@@ -344,6 +369,13 @@ int deb( object *r, object *c, const char *lab, double *res, bool interact, cons
 						.deb.v.v1.obs configure -text \"  (enter value and click Run or press Enter to continue)\" \
 						} \
 					} " );
+				cmd( ".deb.b.act.until configure -state disabled" );
+				cmd( ".deb.b.act.step configure -state disabled" );
+			}
+			else
+			{
+				cmd( ".deb.b.act.until configure -state normal" );
+				cmd( ".deb.b.act.step configure -state normal" );
 			}
 
 			// disable or enable the caller button
@@ -428,6 +460,12 @@ int deb( object *r, object *c, const char *lab, double *res, bool interact, cons
 					.deb.cc.grid.can yview moveto [ lindex $lstDebPos 0 ]; \
 				}" );
 			cmd( "unset -nocomplain lstDebPos" );
+		}
+
+		if ( mode == 1 || mode == 4 )
+		{
+			cmd( ".deb.v.v1.msg configure -text \"$watch_msg\"" );
+			cmd( ".deb.v.v1.watch configure -text $watch_name" );
 		}
 
 		cmd( "update idletasks" );
@@ -567,13 +605,19 @@ int deb( object *r, object *c, const char *lab, double *res, bool interact, cons
 
 			// element change (click on parameter/variable)
 			case 8:
-				Tcl_LinkVar( inter, "debug", ( char * ) &count, TCL_LINK_INT );
+				if ( mode != 1 && mode != 3 )		// do only if debugger is active
+				{
+					choice = 0;
+					break;
+				}
+
+				Tcl_LinkVar( inter, "debug", ( char * ) &debug, TCL_LINK_INT );
 				Tcl_LinkVar( inter, "time", ( char * ) &t, TCL_LINK_INT );
 				Tcl_LinkVar( inter, "i", ( char * ) &i, TCL_LINK_INT );
 
 				cv = r->search_var( NULL, get_str( "res" ) );
 				i = cv->last_update;
-				count = ( cv->debug == 'd' ) ? 1 : 0;
+				debug = ( cv->deb_mode == 'd' || cv->deb_mode == 'W' || cv->deb_mode == 'R' ) ? 1 : 0;
 				eff_lags = ( cv->last_update >= cv->num_lag ) ? cv->num_lag : cv->num_lag - 1;
 				app_values = new double[ eff_lags + 1 ];
 				cmd( "set debugall 0" );
@@ -710,7 +754,29 @@ int deb( object *r, object *c, const char *lab, double *res, bool interact, cons
 
 				cmd( "destroytop $e" );
 
-				cv->debug = ( count == 1 ) ? 'd' : 'n';
+				if ( debug )
+				{
+					if ( cv->deb_mode == 'n' )
+						cv->deb_mode = 'd';
+					else
+						if ( cv->deb_mode == 'w' )
+							cv->deb_mode = 'W';
+						else
+							if ( cv->deb_mode == 'r' )
+								cv->deb_mode = 'R';
+				}
+				else
+				{
+					if ( cv->deb_mode == 'd' )
+						cv->deb_mode = 'n';
+					else
+						if ( cv->deb_mode == 'W' )
+							cv->deb_mode = 'w';
+						else
+							if ( cv->deb_mode == 'R' )
+								cv->deb_mode = 'r';
+				}
+
 				Tcl_UnlinkVar( inter, "debug" );
 				count = choice;
 
@@ -719,7 +785,7 @@ int deb( object *r, object *c, const char *lab, double *res, bool interact, cons
 					for ( cur = r; cur != NULL; cur = cur->hyper_next( cur->label ) )
 					{
 						cv1 = cur->search_var( cur, cv->label );
-						cv1->debug = cv->debug;
+						cv1->deb_mode = cv->deb_mode;
 					}
 
 				choice = count;
@@ -1127,8 +1193,9 @@ int deb( object *r, object *c, const char *lab, double *res, bool interact, cons
 
 			// change the object number of instances (click on level / object instance)
 			case 17:
-				if ( r->up != NULL )
-					entry_new_objnum( r, "" );
+				if ( mode == 1 || mode == 3 )		// do only if debugger is active
+					if ( r->up != NULL )
+						entry_new_objnum( r, "" );
 
 				choice = 0;
 				break;
@@ -1402,7 +1469,8 @@ int deb( object *r, object *c, const char *lab, double *res, bool interact, cons
 
 			// right-click (set all) on multi-instanced parameter or variable
 			case 25:
-				set_all( r, get_str( "res" ), 0, ".deb" );
+				if ( mode == 1 || mode == 3 )		// do only if debugger is active
+					set_all( r, get_str( "res" ), 0, ".deb" );
 
 				choice = 0;
 				break;
@@ -1417,6 +1485,12 @@ int deb( object *r, object *c, const char *lab, double *res, bool interact, cons
 
 			// Debug variable under computation CTRL+G
 			case 28:
+				if ( mode != 1 && mode != 3 )		// do only if debugger is active
+				{
+					choice = 0;
+					break;
+				}
+
 				if ( asl == NULL && stacklog != NULL )
 				{
 					asl = stacklog;

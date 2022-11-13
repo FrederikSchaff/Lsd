@@ -102,6 +102,9 @@ void show_graph( object *t )
 	cmd( "bind .str.f.c <Button-1> { \
 			if { [ info exists res_g ] } { \
 				set choice_g 24 \
+			} elseif { %%y <= $rootyM } { \
+				set res_g Root; \
+				set choice_g 24 \
 			} \
 		}" );
 	cmd( "bind .str.f.c <Double-Button-1> { \
@@ -238,7 +241,7 @@ void create_float_list( object *t )
 				sp_upd = false;
 
 			// set flags string
-			cmd( "set varFlags \"%s%s%s%s%s\"", ( cv->save || cv->savei ) ? "+" : "", cv->plot ? "*" : "", cv->debug == 'd' ? "!" : "", cv->parallel ? "&" : "", sp_upd ? "\u00A7" : "" );
+			cmd( "set varFlags \"%s%s%s%s%s%s\"", ( cv->save || cv->savei ) ? "+" : "", cv->plot ? "*" : "", ( cv->deb_mode == 'd' || cv->deb_mode == 'W' || cv->deb_mode == 'R' ) ? "!" : "", ( cv->deb_mode == 'w' || cv->deb_mode == 'W' ) ? "?" : "", ( cv->deb_mode == 'r' || cv->deb_mode == 'R' ) ? "\u00BF" : "", cv->parallel ? "&" : "", sp_upd ? "\u00A7" : "" );
 
 			if ( cv->param == 0 )
 			{
@@ -551,11 +554,13 @@ void put_text( const char *str, const char *n, int x, int y, const char *str2 )
 				if { $CurPlatform eq \"mac\" } { \
 					set __focus__ [ focus ] \
 				}; \
-				wm geometry .list +[ expr { %%X + 5 } ]+[ expr { %%Y + 5 } ]; \
-				wm deiconify .list; \
-				catch { raise .list }; \
-				if { $CurPlatform eq \"mac\" } { \
-					after idle { catch { focus -force $__focus__ } } \
+				catch { \
+					wm geometry .list +[ expr { %%X + 5 } ]+[ expr { %%Y + 5 } ]; \
+					wm deiconify .list; \
+					raise .list; \
+					if { $CurPlatform eq \"mac\" } { \
+						after idle { catch { focus -force $__focus__ } } \
+					} \
 				} \
 			} ] \
 		}", str2, str2, str, n, str2, str2, str2 );

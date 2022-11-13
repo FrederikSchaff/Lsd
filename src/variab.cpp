@@ -55,13 +55,13 @@ flag identifying whether the variable has to be saved or not in the result file
 - int plot;
 Flag used to indicate variables that are plotted in the run time graph.
 
-- char debug;
+- char deb_mode;
 flag used to indicate the variables to debug. If this flag is equal 'd', when the
 simulation is run in debug mode it stops immediately after the computation of
 its value.
 
 - int deb_cond;
-Like the flag debug, but it stops the simulation if the attached condition is
+Like the flag deb_mode, but it stops the simulation if the attached condition is
 satisfied. It does not require that the simulation is run in debug mode.
 Its different values represent the different conditions for stopping: <, > or ==
 
@@ -143,7 +143,7 @@ variable::variable( void )
 	lab_tit = NULL;
 	label = NULL;
 	data_loaded = '-';
-	debug = 'n';
+	deb_mode = 'n';
 	data = NULL;
 	val = NULL;
 	deb_cnd_val = 0;
@@ -180,7 +180,7 @@ variable::variable( const variable &v )
 	lab_tit = v.lab_tit;
 	label = v.label;
 	data_loaded = v.data_loaded;
-	debug = v.debug;
+	deb_mode = v.deb_mode;
 	data = v.data;
 	val = v.val;
 	deb_cnd_val = v.deb_cnd_val;
@@ -275,7 +275,16 @@ double variable::cal( object *caller, int lag )
 	double app;
 
 	if ( param == 1 )
+	{
+		if ( debug_flag && t == when_debug && ( deb_mode == 'w' || deb_mode == 'W' ) )
+		{
+			watch_trigger = true;
+			watch_write_mode = false;
+			strncpy( watch_elem, label, MAX_ELEM_LENGTH );
+		}
+
 		return val[ 0 ];				// it's a parameter, ignore lags
+	}
 
 #ifndef _NP_
 	// prepare mutex for variables and functions updated in multiple threads
@@ -317,7 +326,16 @@ double variable::cal( object *caller, int lag )
 		{
 			// already calculated this time step or not to be calculated this time step
 			if ( last_update >= t || t < next_update )
+			{
+				if ( debug_flag && t == when_debug && ( deb_mode == 'w' || deb_mode == 'W' ) )
+				{
+					watch_trigger = true;
+					watch_write_mode = false;
+					strncpy( watch_elem, label, MAX_ELEM_LENGTH );
+				}
+
 				return( val[ 0 ] );
+			}
 #ifndef _NP_
 			// wait for computation of this variable by other threads
 			if ( parallel_mode && ! dummy )
@@ -493,7 +511,7 @@ double variable::cal( object *caller, int lag )
 			fprintf( log_file, "%s\t= %g\t(t=%d)\n", label, val[ 0 ], t );
 
 		// open the debugger if required
-		if ( debug_flag && t == when_debug && debug == 'd' && deb_cond == 0 )
+		if ( debug_flag && t == when_debug && ( watch_trigger || ( deb_cond == 0 && ( deb_mode == 'd' || deb_mode == 'W' || deb_mode == 'R' ) ) ) )
 			deb( ( object * ) up, caller, label, &val[ 0 ], false );
 		else
 			switch ( deb_cond )
@@ -555,10 +573,18 @@ double variable::cal( object *caller, int lag )
 	error:
 
 	eff_lag = ( param == 0 ) ? eff_lag : lag;
-	error_hard( "invalid lag used",
-				"check your configuration (variable max lag) or\ncode (used lags in equation) to prevent this situation",
-				false,
-				"variable or function '%s' (object '%s') requested \nwith lag=%d but declared with lag=%d\nPossible fixes:\n- change the model configuration, declaring '%s' with at least lag=%d,\n- change the code of '%s' requesting the value of '%s' with lag=%d maximum, or\n- enable USE_SAVED and mark '%s' to be saved (variables only)", label, up->label, eff_lag, num_lag, label, eff_lag, caller == NULL ? "(none)" : caller->label, label, num_lag, label );
+
+	if ( eff_lag > 0 )
+		error_hard( "invalid lag used",
+					"check your configuration (variable max lag) or\ncode (used lags in equation) to prevent this situation",
+					false,
+					"variable or function '%s' (object '%s') requested \nwith lag=%d but declared with lag=%d\nPossible fixes:\n- change the model configuration, declaring '%s' with at least lag=%d,\n- change the code of '%s' requesting the value of '%s' with lag=%d maximum, or\n- enable USE_SAVED and mark '%s' to be saved (variables only)", label, up->label, eff_lag, num_lag, label, eff_lag, caller == NULL ? "(none)" : caller->label, label, num_lag, label );
+	else
+		error_hard( "invalid lag used",
+					"check your code (used lags in equation) to prevent negative lag",
+					false,
+					"variable or function '%s' (object '%s') requested \nwith lag=%d but negative lags are not allowed here\nPossible fix: use positive lag instead", label, up->label, eff_lag );
+
 	return 0;
 }
 

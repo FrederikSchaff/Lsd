@@ -308,8 +308,8 @@ void empty_lattice( void );
 void empty_sensitivity( sense *cs );
 void empty_stack( void );
 void enable_plot( void );
-void fill_list_par( object *r, int flag_all );
-void fill_list_var( object *r, int flag_all, int flag_init );
+void fill_list_par( object *r, bool show_all );
+void fill_list_var( object *r, bool show_all, bool lag_only );
 void find_lags( object *r );
 void find_using( object *r, variable *v, FILE *frep, bool *found );
 void get_sa_limits( object *r, FILE *out, const char *sep );
@@ -420,10 +420,10 @@ void update_descr_dict( void );
 void update_more_tab( const char *w, bool adding = false );
 void warn_distr( int *errCnt, bool *stopErr, const char *distr, const char *msg );
 void wipe_out( object *d );
-void write_list( FILE *frep, object *root, int flag_all, const char *prefix );
+void write_list( FILE *frep, object *root, bool show_all, const char *prefix );
 void write_obj( object *r, FILE *frep, int *elemDone );
 void write_str( object *r, FILE *frep, int dep, const char *prefix );
-void write_var( variable *v, FILE *frep );
+void write_var( object *r, variable *v, FILE *frep );
 
 #ifndef _NP_
 void parallel_update( variable *v, object* p, object *caller = NULL );
@@ -451,6 +451,8 @@ extern bool scrollB;			// scroll check box state in current runtime plot
 extern bool struct_loaded;		// a valid configuration file is loaded
 extern bool unsavedData;		// control for unsaved simulation results
 extern bool unsavedSense;		// control for unsaved changes in sensitivity data
+extern bool watch_trigger;		// indicate that a watch condition was met
+extern bool watch_write_mode;	// flag for write-only watch condition
 extern bool worker_ready;		// parallel worker ready flag
 extern bool worker_crashed;		// parallel worker crash flag
 extern char *eq_file;			// equation file content
@@ -465,6 +467,7 @@ extern char name_rep[ ];		// documentation report file name
 extern char nonavail[ ];		// string for unavailable values
 extern char path_res[ ];		// path of last used results directory
 extern char path_sens[ ];		// path of last used sensitivity directory
+extern char watch_elem[ ];		// name of element triggering watch condition
 extern description *descr;		// model description structure
 extern double t_dist_cl[ T_CLEVS ];// t-distribution table confidence levels
 extern double t_dist_st[ T_CLEVS ][ 36 ];// t-distribution table statistics
