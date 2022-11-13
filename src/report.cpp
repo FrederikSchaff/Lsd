@@ -1,29 +1,29 @@
 /*************************************************************
 
-	LSD 8.0 - May 2021
+	LSD 8.0 - May 2022
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
 	Copyright Marco Valente and Marcelo Pereira
 	LSD is distributed under the GNU General Public License
-	
+
 	See Readme.txt for copyright information of
 	third parties' code used in LSD
-	
+
  *************************************************************/
 
 /*************************************************************
 REPORT.CPP
-This file contains the code for the report generating routines. 
+This file contains the code for the report generating routines.
 
-The main function, (report) needs the pointer to the root of the model. 
-It also needs the equation file name to be correctly set (if the file 
-does not exist, the routine ask for it). The output of the routine is 
-a html file containing the main information on the model. This file is 
+The main function, (report) needs the pointer to the root of the model.
+It also needs the equation file name to be correctly set (if the file
+does not exist, the routine ask for it). The output of the routine is
+a html file containing the main information on the model. This file is
 meant to be used as basic structure to be filled with modellers' comments
 in order to obtain the complete documentation of the model.
 
-The report lists all the objects, variables and parameters, all linked with 
+The report lists all the objects, variables and parameters, all linked with
 pointers, so that readers can easily jump hypertextually through the whole report.
 
 - Each object is listed with indication of its ancestors.
@@ -43,7 +43,9 @@ and also the whole set of variables and parameters used in the its own equation.
 #define TEX_BOTTOM 2.5
 
 bool table;
-int code;
+char path_rep[ MAX_PATH_LENGTH ] = "";
+char tmp_rep[ MAX_BUFF_SIZE ];
+int detail;
 int desc;
 int extra;
 int file_error;
@@ -57,12 +59,14 @@ int tab_lines;
 /******************************
 REPORT
 *******************************/
-void report( int *choice, object *r )
+void report( object *r )
 {
-	char *app, ch;
+	bool html2;
+	char ch, fname[ MAX_PATH_LENGTH ];
+	const char *app;
 	int step, elemDone;
 	FILE *f, *frep;
-	
+
 	file_error = 0;
 
 	if ( ! struct_loaded )
@@ -71,24 +75,23 @@ void report( int *choice, object *r )
 		return;
 	}
 
-	sprintf( name_rep, "report_%s.html", simul_name );
-	
+	snprintf( name_rep, MAX_PATH_LENGTH, "report_%s.html", strlen( simul_name ) > 0 ? simul_name : "model" );
+
 	cmd( "set mrep %s", name_rep );
-	cmd( "set choice [ file exists $mrep ]" );
-	if ( *choice == 1 )
+	cmd( "set res [ file exists $mrep ]" );
+	if ( get_bool( "res" ) )
 	{
 		cmd( "set answer [ ttk::messageBox -parent . -message \"Model report already exists\" -detail \"Please confirm overwriting it.\" -type okcancel -title Warning -icon warning -default ok ]" );
-		cmd( "if { ! [ string compare -nocase $answer ok ] } { set choice 0 } { set choice 1 }" );
-		if ( *choice == 1 )
+		cmd( "if { ! [ string compare -nocase $answer ok ] } { set res 0 } { set res 1 }" );
+		if ( get_bool( "res" ) )
 			return;
-		
-		cmd( "set prep [ pwd ]" );
-		strncpy( path_rep, ( char * ) Tcl_GetVar( inter, "prep", 0 ), MAX_PATH_LENGTH );
+
+		eval_str( "[ pwd ]", path_rep, MAX_PATH_LENGTH );
 	}
 	else
-		strncpy( path_rep, path, MAX_PATH_LENGTH );
+		strcpyn( path_rep, path, MAX_PATH_LENGTH );
 
-	Tcl_LinkVar( inter, "code", ( char * ) &code, TCL_LINK_BOOLEAN );
+	Tcl_LinkVar( inter, "detail", ( char * ) &detail, TCL_LINK_BOOLEAN );
 	Tcl_LinkVar( inter, "init", ( char * ) &init, TCL_LINK_BOOLEAN );
 	Tcl_LinkVar( inter, "desc", ( char * ) &desc, TCL_LINK_BOOLEAN );
 	Tcl_LinkVar( inter, "extra", ( char * ) &extra, TCL_LINK_BOOLEAN );
@@ -97,9 +100,9 @@ void report( int *choice, object *r )
 	desc = true;
 	obs = true;
 	init = true;
-	code = true;
+	detail = true;
 	extra = false;
-	cmd( "set reptit %s", simul_name );
+	cmd( "set reptit \"%s\"", strlen( simul_name ) > 0 ? simul_name : NO_CONF_NAME );
 	cmd( "set lmenu 1" );
 	cmd( "set html2 1" );
 	cmd( "set tit2 \"Comments\"" );
@@ -130,8 +133,8 @@ void report( int *choice, object *r )
 	cmd( "ttk::checkbutton .w.g.opt.extra -text \"User section\" -variable extra -command { if { $extra } { .w.s.e2.file.new conf -state normal; .w.s.e2.h conf -state normal; .w.s.e2.header.tit conf -state normal; .w.s.e2.file.tit conf -state normal } { .w.s.e2.file.new conf -state disabled; .w.s.e2.h conf -state disabled; .w.s.e2.header.tit conf -state disabled; .w.s.e2.file.tit conf -state disabled } }" );
 	cmd( "ttk::checkbutton .w.g.opt.obs -text \"Selected variables\" -variable obs" );
 	cmd( "ttk::checkbutton .w.g.opt.init -text \"Initial values\" -variable init" );
-	cmd( "ttk::checkbutton .w.g.opt.code -text \"Equations code\" -variable code" );
-	cmd( "pack .w.g.opt.desc .w.g.opt.extra .w.g.opt.obs .w.g.opt.init .w.g.opt.code -anchor w" );
+	cmd( "ttk::checkbutton .w.g.opt.detail -text \"Object details\" -variable detail" );
+	cmd( "pack .w.g.opt.desc .w.g.opt.extra .w.g.opt.obs .w.g.opt.init .w.g.opt.detail -anchor w" );
 
 	cmd( "pack .w.g.l .w.g.opt" );
 
@@ -165,34 +168,31 @@ void report( int *choice, object *r )
 
 	here_create_report:
 
-	*choice = 0;
-	while ( *choice == 0 )
+	choice = 0;
+	while ( choice == 0 )
 		Tcl_DoOneEvent( 0 );
 
-	if ( *choice == 3 )
+	if ( choice == 3 )
 	{
 		cmd( "destroytop .w" );
 		goto end;
 	}
 
-	if ( *choice == 2 )
-	{ 
-		cmd( "set mrep [ file tail \"$res\" ]" );
-		app = ( char * ) Tcl_GetVar( inter, "mrep", 0 );
+	if ( choice == 2 )
+	{
+		app = eval_str( "[ file tail \"$res\" ]" );
 		if ( app == NULL || strlen( app ) == 0 )
 			goto here_create_report;
-		
-		strncpy( name_rep, app, MAX_PATH_LENGTH );
 
-		cmd( "set prep [ file dirname  \"$res\" ]" );
-		strncpy( path_rep, ( char * ) Tcl_GetVar( inter, "prep", 0 ), MAX_PATH_LENGTH );
+		strcpyn( name_rep, app, MAX_PATH_LENGTH );
+		eval_str( "[ file dirname  \"$res\" ]", path_rep, MAX_PATH_LENGTH );
 	}
-		
+
 	cmd( "destroytop .w" );
-	
+
 	cmd( "set eqf [ file join \"%s\" \"%s\" ]", exec_path, equation_name );
 
-	while ( strlen( equation_name ) == 0 || ( f = fopen( ( char * ) Tcl_GetVar( inter, "eqf", 0 ), "r" ) ) == NULL )
+	while ( strlen( equation_name ) == 0 || ( f = fopen( get_str( "eqf" ), "r" ) ) == NULL )
 	{
 		cmd( "set answer [ ttk::messageBox -parent . -type okcancel -default ok -icon error -title Error -message \"Equation file '$eqf' not found\" -detail \"Press 'OK' to select another file.\"]" );
 		cmd( "if [ string equal $answer ok ] { \
@@ -200,24 +200,24 @@ void report( int *choice, object *r )
 				if [ fn_spaces \"$eqf\" . ] { \
 					set eqf \"\" \
 				}; \
-				set choice 1 \
+				set res 1 \
 			} { \
-				set choice 0 \
+				set res 0 \
 			}" );
 
-		if ( *choice == 1 )
+		if ( get_bool( "res" ) )
 		{
-			app = ( char * ) Tcl_GetVar( inter, "eqf", 0 );
+			app = get_str( "eqf" );
 			if ( app != NULL && strlen( app ) > 0 )
-				strncpy( equation_name, app, MAX_PATH_LENGTH );
+				strcpyn( equation_name, app, MAX_PATH_LENGTH );
 		}
 		else
 			goto end;
 	}
 
 	fclose( f );
-	cmd( "set choice $lmenu" );
-	lmenu = *choice;
+	cmd( "set l $lmenu" );
+	lmenu = get_int( "l" );
 
 	frep = create_frames( path_rep, name_rep );
 
@@ -226,17 +226,17 @@ void report( int *choice, object *r )
 		cmd( "ttk::messageBox -parent . -message \"Cannot write to disk\" -detail \"Please check if the model directory is not full or READ-ONLY.\" -type ok -title Error -icon error" );
 		goto end;
 	}
-		
+
 	stop = false;
 	step = 1;
 	cmd( "set nElem [ llength $modElem ]" );
-	cmd( "progressbox .prep \"Creating Report\" \"Report generation steps\" \"Step\" %d { set stop true } \".\" \"Element\" $nElem", desc + extra + obs + init + code );	
+	cmd( "progressbox .prep \"Creating Report\" \"Report generation steps\" \"Step\" %d { set stop true } \".\" \"Element\" $nElem", desc + extra + obs + init + detail );
 
 
 	fprintf( frep, "<HTML>\n<HEAD> <META NAME=\"Author\" CONTENT=\"Automatically generated by LSD - Laboratory for Simulation Development, copyright by Marco Valente\">\n" );
 	fprintf( frep, "<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=iso-8859-1\">  <style> table {border-collapse: collapse} td, th {border: 1px solid #dddddd; padding: 8px;} tr:nth-child(even) {background-color: #dddddd;} </style> </HEAD> <BODY>" );
 
-	app = ( char * ) Tcl_GetVar( inter, "reptit", 0 );
+	app = get_str( "reptit" );
 
 	fprintf( frep, "<TITLE>LSD Report - Model: \"%s\"</TITLE>", app );
 	fprintf( frep, "<I>Automatically generated LSD report.</I><BR>" );
@@ -247,8 +247,8 @@ void report( int *choice, object *r )
 
 	if ( desc )
 	{
-		sprintf( msg, "%s/description.txt", exec_path );
-		f = fopen( msg, "r" );
+		snprintf( fname, MAX_PATH_LENGTH, "%s/description.txt", exec_path );
+		f = fopen( fname, "r" );
 		if ( f != NULL )
 		{
 			for ( ch = fgetc( f ); ch != EOF; ch = fgetc( f ) )
@@ -267,7 +267,7 @@ void report( int *choice, object *r )
 						fprintf( frep, "%c", ch );
 						break;
 				}
-				
+
 			fclose( f );
 			fprintf( frep, "<BR><BR>" );
 		}
@@ -276,16 +276,16 @@ void report( int *choice, object *r )
 			fprintf( frep, "No description file available.<BR>\n" );
 			plog( "\nFile description.txt not found. Description section skipped... " );
 		}
-	 
+
 		cmd( "prgboxupdate .prep %d", step++ );
 	}
-	
+
 	if ( stop )
 		goto end_report;
 
 	if ( extra )
 	{
-		app = ( char * ) Tcl_GetVar( inter, "file2", 0 );
+		app = get_str( "file2" );
 		if ( app == NULL )
 			plog( "\nMissing file name for user section. Skipped... " );
 		else
@@ -293,13 +293,13 @@ void report( int *choice, object *r )
 			f = fopen( app, "r" );
 			if ( f != NULL )
 			{
-				app = ( char * ) Tcl_GetVar( inter, "tit2", 0 );
+				app = get_str( "tit2" );
 				fprintf( frep, "<H3>%s</H3>", app );
-			
-				cmd( "set choice $html2" );
+
+				html2 = get_bool( "html2" );
 				for ( ch = fgetc( f ); ch != EOF; ch = fgetc( f ) )
 				{
-					if ( *choice == 0 )
+					if ( ! html2 )
 					{
 						switch ( ch )
 						{
@@ -316,24 +316,24 @@ void report( int *choice, object *r )
 								fprintf( frep, "%c", ch );
 								break;
 						}
-					} 
+					}
 					else
-						fprintf( frep, "%c", ch ); 
-				} 
-			   
+						fprintf( frep, "%c", ch );
+				}
+
 				fclose( f );
 				fprintf( frep, "<BR><BR>" );
 			}
 			else
 			{
 				fprintf( frep, "User section file not available.<BR>\n" );
-				plog( "\nFile %s not found. User section skipped... ", "", app );
+				plog( "\nFile %s not found. User section skipped... ", app );
 			}
 		}
 
 		cmd( "prgboxupdate .prep %d", step++ );
 	}
-	
+
 	if ( stop )
 		goto end_report;
 
@@ -341,7 +341,7 @@ void report( int *choice, object *r )
 	{
 		int begin = 1;
 		show_rep_initial( frep, r, &begin, frep );
-		
+
 		begin = 1;
 		show_rep_observe( frep, r, &begin, frep );
 
@@ -357,9 +357,9 @@ void report( int *choice, object *r )
 	fprintf( frep, "<H3>Object tree</H3>\n" );
 
 	write_str( r, frep, 0, "" );
-	write_list( frep, r, 1, "" );
+	write_list( frep, r, true, "" );
 	create_table_init( r, frep );
-	
+
 	if ( init )
 	{
 		fprintf( frep, "<HR WIDTH=\"100%%\">\n" );
@@ -368,28 +368,28 @@ void report( int *choice, object *r )
 		fprintf( frep, "<H3>Object tree</H3>\n" );
 
 		write_str( r, frep, 0, "_i_" );
-		write_list( frep, r, 1, "_i_" );
+		write_list( frep, r, true, "_i_" );
 
 		create_initial_values( r, frep );
 
 		cmd( "prgboxupdate .prep %d", step++ );
 	}
-	
+
 	if ( stop )
 		goto end_report;
 
-	if ( code )
+	if ( detail )
 	{
 		fprintf( frep, "<HR WIDTH=\"100%%\">\n" );
-		
-		fprintf( frep, "<A NAME=\"_DETAILS_\"><H2>Equations code</H2></A>\n" );
+
+		fprintf( frep, "<A NAME=\"_DETAILS_\"><H2>Object detail</H2></A>\n" );
 		fprintf( frep, "<H3>Object tree</H3>\n" );
 
 		write_str( r, frep, 0, "_d_" );
-		write_list( frep, r, 1, "_d_" );
+		write_list( frep, r, true, "_d_" );
 
 		cmd( "set app [ file tail \"%s\" ]", equation_name );
-		app = ( char * ) Tcl_GetVar( inter, "app", 0 );
+		app = get_str( "app" );
 		fprintf( frep, "<BR><i>Equation file:</i> &nbsp;<TT><u>%s</u></TT><BR><BR>", app );
 
 		elemDone = 0;
@@ -397,9 +397,9 @@ void report( int *choice, object *r )
 
 		cmd( "prgboxupdate .prep %d %d", step, elemDone );
 	}
-	
+
 	end_report:
-	
+
 	fprintf( frep,"</BODY> </HTML>" );
 	fclose( frep );
 
@@ -408,25 +408,25 @@ void report( int *choice, object *r )
 	if ( stop )
 	{
 		cmd( "set fullFileName [ file join \"%s\" \"%s\" ]", path_rep, name_rep );
-		remove( ( char * ) Tcl_GetVar( inter, "fullFileName", 0 ) );
+		remove( get_str( "fullFileName" ) );
 		cmd( "set fullFileName [ file join \"%s\" \"head_%s\" ]", path_rep, name_rep );
-		remove( ( char * ) Tcl_GetVar( inter, "fullFileName", 0 ) );
+		remove( get_str( "fullFileName" ) );
 		cmd( "set fullFileName [ file join \"%s\" \"body_%s\" ]", path_rep, name_rep );
-		remove( ( char * ) Tcl_GetVar( inter, "fullFileName", 0 ) );
+		remove( get_str( "fullFileName" ) );
 	}
 	else
 	{
 		if ( strlen( path_rep ) > 0 )
-			plog( "\nReport saved in file: %s/%s\n", "", path_rep, name_rep );
+			plog( "\nReport saved in file: %s/%s\n", path_rep, name_rep );
 		else
-			plog( "\nReport saved in file: %s\n", "", name_rep );
-		
+			plog( "\nReport saved in file: %s\n", name_rep );
+
 		cmd( "open_browser \"%s\" \"%s\"", path_rep, name_rep );
 	}
 
 	end:
 
-	Tcl_UnlinkVar( inter, "code" );
+	Tcl_UnlinkVar( inter, "detail" );
 	Tcl_UnlinkVar( inter, "init" );
 	Tcl_UnlinkVar( inter, "desc" );
 	Tcl_UnlinkVar( inter, "extra" );
@@ -436,24 +436,24 @@ void report( int *choice, object *r )
 /**********************************
 SHOW_REPORT
 **********************************/
-void show_report( int *choice, const char *par_wnd )
+void show_report( const char *par_wnd )
 {
-	cmd( "set choice [ open_browser \"%s\" \"%s\" ]", path_rep, name_rep );
-	
-	if ( *choice == 0 )
+	cmd( "set res [ open_browser \"%s\" \"%s\" ]", path_rep, name_rep );
+
+	if ( ! get_bool( "res" ) )
 	{
 		cmd( "set answer [ ttk::messageBox -parent %s -message \"Model report not found\" -detail \"You may create a model report file from menu Model or press 'OK' to look for another report file.\" -type okcancel -title Warning -icon warning -default cancel ]", par_wnd );
-		cmd( "set choice [ string equal $answer ok ]" );
-		if ( *choice == 0 )
+		cmd( "set res [ string equal $answer ok ]" );
+		if ( ! get_bool( "res" ) )
 			return;
 
 		if ( strlen( path_rep ) > 0 )
 			cmd( "set fname [ tk_getOpenFile -parent %s -title \"Load Report File\" -defaultextension \".html\" -initialdir \"%s\" -filetypes { {{HTML files} {.html}} } ]", par_wnd, path_rep );
 		else
 			cmd( "set fname [ tk_getOpenFile -parent %s -title \"Load Report File\" -defaultextension \".html\" -filetypes { {{HTML files} {.html}} } ]", par_wnd );
-			
-		cmd( "if { $fname == \"\" || [ fn_spaces \"$fname\" %s ] } { set choice 0 } { set choice 1 }", par_wnd );
-		if ( *choice == 0 )
+
+		cmd( "if { $fname == \"\" || [ fn_spaces \"$fname\" %s ] } { set res 0 } { set res 1 }", par_wnd );
+		if ( ! get_bool( "res" ) )
 			return;
 
 		cmd( "open_browser \"\" \"$fname\"" );
@@ -471,47 +471,37 @@ void write_obj( object *r, FILE *frep, int *elemDone )
 	object *cur, *cur2;
 	variable *cv;
 
-	for ( cur = r; cur != NULL && ! stop; cur = skip_next_obj( cur, &count ) )
+	for ( count = 0, cur = r; cur != NULL && ! stop; cur = skip_next_obj( cur, &count ) )
 	{
-		for ( count = 0, cv = cur->v; cv != NULL; cv = cv->next )
-			if ( cv->param != 1 )
-				count = 1;
-	  
-		if ( count != 0 )	// avoid no need for code, typically root or parameters only object
+		fprintf( frep, "<HR WIDTH=\"100%%\">\n" );
+
+		fprintf( frep, "<H3><A NAME=\"_d_%s\">Object: &nbsp;<TT><U>%s</U></TT></A></H3>\n", cur->label, cur->label );
+
+		if ( cur->up != NULL )
 		{
-			fprintf( frep, "<HR WIDTH=\"100%%\">\n" );
-			
-			fprintf( frep, "<H3><A NAME=\"_d_%s\">Object: &nbsp;<TT><U>%s</U></TT></A></H3>\n", cur->label, cur->label );
-			
-			if ( cur->up != NULL )
-			{
-				fprintf( frep,"<i>Contained in: &nbsp;</i>" );
-				ancestors( cur, frep );
-				fprintf( frep, "<BR>\n" );
-			}
-			 
-			if ( cur->b != NULL )
-			{
-				fprintf( frep,"<i>Containing: &nbsp;</i>" );
-				fprintf( frep, "<TT><A HREF=\"#%s\">%s</A></TT>", cur->b->blabel, cur->b->blabel );
-				for ( cb = cur->b->next; cb != NULL; cb = cb->next )
-					fprintf( frep, "<TT>,  <A HREF=\"#%s\">%s</A></TT>", cb->blabel, cb->blabel );
-				fprintf( frep, "<BR>\n" );
-			}
-			
+			fprintf( frep,"<i>Contained in: &nbsp;</i>" );
+			ancestors( cur, frep );
 			fprintf( frep, "<BR>\n" );
-			write_list( frep, cur, 0, "_d_" );
-			
-			for ( cv = cur->v; cv != NULL && ! stop; cv = cv->next )
-			{
-				write_var( cv, frep );
-				cmd( "prgboxupdate .prep \"\" %d", ( *elemDone )++ );
-			}
 		}
-		else	// just update the progressbar
-			for ( cv = cur->v; cv != NULL && ! stop; cv = cv->next )
-				cmd( "prgboxupdate .prep \"\" %d", ( *elemDone )++ );
-	  
+
+		if ( cur->b != NULL )
+		{
+			fprintf( frep,"<i>Containing: &nbsp;</i>" );
+			fprintf( frep, "<TT><A HREF=\"#%s\">%s</A></TT>", cur->b->blabel, cur->b->blabel );
+			for ( cb = cur->b->next; cb != NULL; cb = cb->next )
+				fprintf( frep, "<TT>,  <A HREF=\"#%s\">%s</A></TT>", cb->blabel, cb->blabel );
+			fprintf( frep, "<BR>\n" );
+		}
+
+		fprintf( frep, "<BR>\n" );
+		write_list( frep, cur, false, "_d_" );
+
+		for ( cv = cur->v; cv != NULL && ! stop; cv = cv->next )
+		{
+			write_var( r, cv, frep );
+			cmd( "prgboxupdate .prep \"\" %d", ( *elemDone )++ );
+		}
+
 		if ( cur->b != NULL && ! stop )
 		{
 			cur2 = cur->b->head;
@@ -524,17 +514,20 @@ void write_obj( object *r, FILE *frep, int *elemDone )
 /******************************
 WRITE_VAR
 *******************************/
-void write_var( variable *v, FILE *frep )
+void write_var( object *r, variable *v, FILE *frep )
 {
 	bool one, found;
-	char *app, *fname, c1_lab[ 2 * MAX_LINE_SIZE ], c2_lab[ 2 * MAX_LINE_SIZE ], c3_lab[ 2 * MAX_LINE_SIZE ], updt_in[ MAX_ELEM_LENGTH + 1 ];
+	char *app, c1_lab[ 2 * MAX_LINE_SIZE ], c2_lab[ 2 * MAX_LINE_SIZE ], c3_lab[ 2 * MAX_LINE_SIZE ], updt_in[ MAX_ELEM_LENGTH ];
+	const char *fname;
 	int i, j, k, done, flag_begin, flag_string, flag_comm, flag_var, nfiles;
+	object *cur;
+	variable *cv;
 	FILE *ffun ;
 
 	cmd( "update" );
 
 	fprintf( frep, "<HR WIDTH=\"100%%\">\n" );
-		
+
 	if ( v->param == 1 )
 		fprintf( frep, "<A NAME=\"_d_%s\"><H4>Parameter: &nbsp;<TT><U>%s</U></TT></H4></A>", v->label, v->label );
 	if ( v->param == 0 )
@@ -543,7 +536,7 @@ void write_var( variable *v, FILE *frep )
 		fprintf( frep, "<A NAME=\"_d_%s\"><H4>Function: &nbsp;<TT><U>%s</U></TT></H4></A>", v->label, v->label );
 
 	fprintf( frep, "<I>Contained in: &nbsp;</I><A HREF=\"#%s\"><TT>%s</TT></A><BR>", v->up->label, v->up->label );
-	 
+
 	fprintf( frep, "<I>Used in: &nbsp;</I>" );
 
 	// search in all source files
@@ -551,17 +544,17 @@ void write_var( variable *v, FILE *frep )
 	cmd( "if { [ lsearch -exact -nocase $source_files \"%s\" ] == -1 } { lappend source_files \"%s\" }", equation_name, equation_name );
 	cmd( "set res [ llength $source_files ]" );
 	nfiles = get_int( "res" );
-		
+
 	for ( one = false, k = 0; k < nfiles; ++k )
 	{
 		cmd( "set brr [ lindex $source_files %d ]", k );
 		cmd( "if { ! [ file exists $brr ] && [ file exists \"%s/$brr\" ] } { set brr \"%s/$brr\" }", exec_path, exec_path );
-		fname = ( char * ) Tcl_GetVar( inter, "brr", 0 );
+		fname = get_str( "brr" );
 
 		if ( ( ffun = fopen( fname, "r" ) ) == NULL )
 		{
 			if ( ++file_error < ERR_LIM )
-				plog( "\nError opening file '%s': %s", "", fname, strerror( errno ) );
+				plog( "\nError opening file '%s': %s", fname, strerror( errno ) );
 			continue;
 		}
 
@@ -570,10 +563,10 @@ void write_var( variable *v, FILE *frep )
 			if ( is_equation_header( c1_lab, c2_lab, updt_in ) )
 			{
 				done = contains( ffun, v->label, strlen( v->label ) );
-		
+
 				if ( done )
 				{
-					fprintf( frep, "<TT>%s<A HREF=\"#_d_%s\">%s</A></TT>", one ? ", " : "", c2_lab,  c2_lab );
+					fprintf( frep, "<TT>%s<A HREF=\"#_d_%s\">%s</A></TT>", one ? ", " : "", c2_lab,	 c2_lab );
 					one = true;
 				}
 			}
@@ -590,15 +583,59 @@ void write_var( variable *v, FILE *frep )
 	if ( v->param == 0 || v->param == 2 )
 	{
 		fprintf( frep,"<I>Using: &nbsp;</I>" );
-		
+
 		found = false;
 		find_using( root, v, frep, & found );
-		
+
 		if ( ! found )
 			fprintf( frep, "(none)" );
-	} 
 
-	fprintf( frep,"<BR>\n" );
+		fprintf( frep, "<BR>\n" );
+	}
+
+	fprintf( frep, "<BR>\n" );
+
+	// print initial values
+	if ( v->param == 1 || ( v->param == 0 && v->num_lag > 0 ) )
+	{
+		fprintf( frep,"<I>Initial values (by instance): &nbsp;</I>" );
+
+		if ( v->param == 1 || v->num_lag == 1 )
+		{
+			fprintf( frep, "%g", v->val[ 0 ] );
+
+			for ( j = 1, cur = r->hyper_next( r->label ); cur != NULL && j < MAX_INIT; cur = cur->hyper_next( cur->label ), ++j )
+			{
+				cv = cur->search_var( cur, v->label );
+				fprintf( frep, ", %g", cv->val[ 0 ] );
+			}
+
+			if ( j == MAX_INIT && cur != NULL )
+				fprintf( frep, ", ..." );
+
+			fprintf( frep, "<BR>\n" );
+		}
+		else
+		{
+			for ( i = 0; i < v->num_lag; ++i )
+			{
+				fprintf( frep, "<P style=\"margin-left:10px;\"><I>Lag %d:</I> %g", i + 1, v->val[ i ] );
+
+				for ( j = 1, cur = r->hyper_next( r->label ); cur != NULL && j < MAX_INIT; cur = cur->hyper_next( cur->label ), ++j )
+				{
+					cv = cur->search_var( cur, v->label );
+					fprintf( frep, ", %g", cv->val[ i ] );
+				}
+
+				if ( j == MAX_INIT && cur != NULL )
+					fprintf( frep, ", ..." );
+			}
+
+			fprintf( frep, "</P>\n" );
+		}
+
+		fprintf( frep, "<BR>\n" );
+	}
 
 	if ( v->param == 1 )
 		return;
@@ -607,12 +644,12 @@ void write_var( variable *v, FILE *frep )
 	{
 		cmd( "set brr [ lindex $source_files %d ]", k );
 		cmd( "if { ! [ file exists $brr ] && [ file exists \"%s/$brr\" ] } { set brr \"%s/$brr\" }", exec_path, exec_path );
-		fname = ( char * ) Tcl_GetVar( inter, "brr", 0 );
+		fname = get_str( "brr" );
 
 		if ( ( ffun = fopen( fname, "r" ) ) == NULL )
 		{
 			if ( ++file_error < ERR_LIM )
-				plog( "\nError opening file '%s': %s", "", fname, strerror( errno ) );
+				plog( "\nError opening file '%s': %s", fname, strerror( errno ) );
 			continue;
 		}
 
@@ -625,38 +662,38 @@ void write_var( variable *v, FILE *frep )
 				if ( ! macro )
 					done = 0;
 				else
-					done = 1; 		// will never stop with {} only
-			 
+					done = 1;		// will never stop with {} only
+
 				if ( ! strcmp( c2_lab, v->label ) )
 				{
 					found = false;
 					one = true;
-					 
+
 					if ( k == 0 )
-						fprintf( frep,"<BR><I>Equation code:</I><BR>\n" );
+						fprintf( frep,"<I>Equation code:</I><BR>\n" );
 					else
-						fprintf( frep,"<BR><I>Equation code</I> <TT>(%s)</TT>:<BR>\n", fname );
-					
+						fprintf( frep,"<I>Equation code</I> <TT>(%s)</TT>:<BR>\n", fname );
+
 					fprintf( frep, "<BR>\n<TT>%s</TT>", c1_lab );
-					 
+
 					while ( done > 0 || ! found )
 					{
 						found = true;
 						fgets( c1_lab, 2 * MAX_LINE_SIZE, ffun );
-						strcpy( c3_lab, c1_lab );
+						strcpyn( c3_lab, c1_lab, 2 * MAX_LINE_SIZE );
 						clean_spaces( c3_lab );
-						
+
 						// handle dummy equations without RESULT closing
 						if ( eq_dum && ( ! strncmp( c1_lab, "EQUATION(", 9 ) || ! strncmp( c1_lab, "EQUATION_DUMMY(", 15 ) || ! strncmp( c1_lab, "FUNCTION(", 9 ) || ! strncmp( c1_lab, "MODELEND", 8 ) ) )
 						{
 							if ( strlen( updt_in ) > 0 )
-								sprintf( c1_lab, "(DUMMY EQUATION: variable '%s' updated in '%s')", v->label, updt_in );
+								snprintf( c1_lab, 2 * MAX_LINE_SIZE, "(DUMMY EQUATION: variable '%s' updated in '%s')", v->label, updt_in );
 							else
-								sprintf( c1_lab, "(DUMMY EQUATION: variable '%s' not updated here)", v->label );
-								
+								snprintf( c1_lab, 2 * MAX_LINE_SIZE, "(DUMMY EQUATION: variable '%s' not updated here)", v->label );
+
 							done = 0;
 						}
-						
+
 						app = strstr( c1_lab, "{" );
 						if ( app != NULL )
 							done++;
@@ -665,10 +702,10 @@ void write_var( variable *v, FILE *frep )
 							done--;
 						flag_string = flag_var = 0;
 						fprintf( frep, "<BR><TT>" );
-						
+
 						if ( flag_comm == 1 )
 							fprintf( frep, "<FONT COLOR=\"#009900\">" );
-						
+
 						flag_begin = 0;
 						for ( j = 0; c1_lab[ j ] != '\0'; ++j )
 						{
@@ -681,39 +718,39 @@ void write_var( variable *v, FILE *frep )
 								flag_string = 1;
 								j++;
 							}
-							
+
 							if ( flag_comm == 0 && flag_string == 1 && c1_lab[ j ] == '\"' )
 							{
 								fprintf( frep, "</A>\"" );
 								flag_string = 0;
 								j++ ;
 							}
-							
+
 							if ( flag_comm == 0 && c1_lab[ j ] == '/' && c1_lab[ j + 1 ] == '*' )
 							{
 								fprintf( frep, "<FONT COLOR=\"#009900\">" );
 								flag_comm = 1;
 							}
-								
+
 							if ( flag_comm == 1 && c1_lab[ j ] == '/' && c1_lab[j - 1 ] == '*' )
 							{
 								fprintf( frep, "/</FONT>" );
 								flag_comm = 0;
 								j++;
 							}
-							
+
 							if ( flag_comm == 0 && c1_lab[ j ] == '/' && c1_lab[ j + 1 ] == '/' )
 							{
 								fprintf( frep, "<FONT COLOR=\"#009900\">" );
 								flag_comm = 2;
 							}
-							
+
 							if ( flag_comm == 0 && c1_lab[ j ] == 'v' && c1_lab[ j + 1 ] == '[' )
 							{
 								fprintf( frep, "<FONT COLOR=\"#FF0000\">" );
 								flag_var = 1;
 							}
-							
+
 							if ( flag_comm == 0 && flag_var == 1 && c1_lab[ j ] == ']' )
 							{
 								fprintf( frep, "]</FONT>" );
@@ -741,21 +778,21 @@ void write_var( variable *v, FILE *frep )
 										if ( flag_comm == 1 )
 											fprintf( frep, "</FONT>" );
 						}
-						  
+
 						if ( flag_comm == 2 )
 						{
 							fprintf( frep, "</FONT>" );
 							flag_comm = 0;
 						}
-                        
+
 						fprintf( frep, "</TT>\n" );
-						
+
 						if ( ! strncmp( c3_lab, "RESULT(", 7 ) && macro )
-							done = 0; 		// force it to stop
+							done = 0;		// force it to stop
 					}
-					  
+
 					fprintf( frep, "</FONT><BR><BR>\n" );
-					break; 
+					break;
 				}
 			}
 		}
@@ -764,7 +801,7 @@ void write_var( variable *v, FILE *frep )
 	}
 
 	if ( ! one )
-		fprintf( frep,"<BR><I>Equation code</I>: (not available)<BR><BR>\n" );
+		fprintf( frep,"<I>Equation code</I>: (not available)<BR><BR>\n" );
 }
 
 
@@ -775,7 +812,8 @@ void find_using( object *r, variable *v, FILE *frep, bool *found )
 {
 	bool one;
 	int count, done, i, nfiles;
-	char *fname, c1_lab[ 2 * MAX_LINE_SIZE ], c2_lab[ 2 * MAX_LINE_SIZE ], updt_in[ MAX_ELEM_LENGTH + 1 ];
+	char c1_lab[ 2 * MAX_LINE_SIZE ], c2_lab[ 2 * MAX_LINE_SIZE ], updt_in[ MAX_ELEM_LENGTH ];
+	const char *fname;
 	object *cur;
 	variable *cv;
 	FILE *ffun;
@@ -785,21 +823,21 @@ void find_using( object *r, variable *v, FILE *frep, bool *found )
 	cmd( "if { [ lsearch -exact -nocase $source_files \"%s\" ] == -1 } { lappend source_files \"%s\" }", equation_name, equation_name );
 	cmd( "set res [ llength $source_files ]" );
 	nfiles = get_int( "res" );
-	
+
 	// first check if variable has a dummy equation and abort if so
 	for ( i = 0; i < nfiles; ++i )
 	{
 		cmd( "set brr [ lindex $source_files %d ]", i );
 		cmd( "if { ! [ file exists $brr ] && [ file exists \"%s/$brr\" ] } { set brr \"%s/$brr\" }", exec_path, exec_path );
-		fname = ( char * ) Tcl_GetVar( inter, "brr", 0 );
-		
+		fname = get_str( "brr" );
+
 		if ( ( ffun = fopen( fname, "r" ) ) == NULL )
 		{
 			if ( ++file_error < ERR_LIM )
-				plog( "\nError opening file '%s': %s", "", fname, strerror( errno ) );
+				plog( "\nError opening file '%s': %s", fname, strerror( errno ) );
 			continue;
 		}
-		
+
 		while ( fgets( c1_lab, 2 * MAX_LINE_SIZE, ffun ) != NULL )
 			if ( is_equation_header( c1_lab, c2_lab, updt_in ) )
 				if ( eq_dum && ! strcmp( c2_lab, v->label ) )
@@ -807,27 +845,27 @@ void find_using( object *r, variable *v, FILE *frep, bool *found )
 					fclose( ffun );
 					return;
 				}
-				
+
 		fclose( ffun );
 	}
-	
+
 	// now search for all elements in all objects in all files
 	for ( one = false, cur = r; cur != NULL; cur = skip_next_obj( cur, &count ) )
 	{
 		for ( cv = cur->v; cv != NULL; cv = cv->next )
 		{
 			cmd( "set usingList [ list ]" );
-			
+
 			for ( i = 0; i < nfiles; ++i )
 			{
 				cmd( "set brr [ lindex $source_files %d ]", i );
 				cmd( "if { ! [ file exists $brr ] && [ file exists \"%s/$brr\" ] } { set brr \"%s/$brr\" }", exec_path, exec_path );
-				fname = ( char * ) Tcl_GetVar( inter, "brr", 0 );
+				fname = get_str( "brr" );
 
 				if ( ( ffun = fopen( fname, "r" ) ) == NULL )
 				{
 					if ( ++file_error < ERR_LIM )
-						plog( "\nError opening file '%s': %s", "", fname, strerror( errno ) );
+						plog( "\nError opening file '%s': %s", fname, strerror( errno ) );
 					continue;
 				}
 
@@ -846,7 +884,7 @@ void find_using( object *r, variable *v, FILE *frep, bool *found )
 								continue;
 							else
 								cmd( "lappend usingList %s", cv->label );
-							
+
 							if ( frep != NULL )
 							{
 								fprintf( frep, "<TT>%s<A HREF=\"#_d_%s\">%s</A></TT>", one ? ", " : "", cv->label, cv->label );
@@ -854,12 +892,12 @@ void find_using( object *r, variable *v, FILE *frep, bool *found )
 							}
 							else
 								cmd( "$list.l.l insert end %s", cv->label );
-							
+
 							*found = true;
 						}
 					}
 				}
-				
+
 				fclose( ffun );
 			}
 		}
@@ -877,12 +915,12 @@ CONTAINS
  The file passed is moved to point to the next equation
  It correctly skip the commented text, either by // or by / * ... * /
 ****************************************************/
-bool contains( FILE *f, char *lab, int len )
+bool contains( FILE *f, const char *lab, int len )
 {
 	bool found = false;
 	int bra, start, i, j, got, comm = 0;
 	char c1_lab[ MAX_LINE_SIZE ], pot[ MAX_LINE_SIZE ];
-	
+
 	if ( ! macro )
 	{
 		start = 1;
@@ -899,22 +937,22 @@ bool contains( FILE *f, char *lab, int len )
 	{
 		if ( comm == 1 )
 			comm = 0;
-		
-		strcpy( pot, c1_lab );
+
+		strcpyn( pot, c1_lab, MAX_LINE_SIZE );
 		clean_spaces( pot );
-		
+
 		if ( ! strncmp( pot, "RESULT(", 7 ) )
 			bra--;
-		
+
 		for ( i = 0; c1_lab[ i ] != 0; ++i ) // scans each character
 		{
-			if ( c1_lab[ i ] == '{' ) 		// if it is an open bracket
+			if ( c1_lab[ i ] == '{' )		// if it is an open bracket
 			{
 				bra++;
 				start = 0;
 			}
 			else
-				if ( c1_lab[ i ] == '}' ) 	// if it is a closed bracket
+				if ( c1_lab[ i ] == '}' )	// if it is a closed bracket
 					bra--;
 				else
 				{
@@ -926,31 +964,32 @@ bool contains( FILE *f, char *lab, int len )
 						else
 							if ( comm == 2 && c1_lab[ i ] == '*' && c1_lab[ i + 1 ] == '/' )
 								comm = 0;
-							
+
 					if ( comm == 0 && c1_lab[ i ] == '\"' && ! found ) // if it is a quote (supposedly open quotes)
 					{
 						for ( j = i + 1; c1_lab[ j ] != '\"'; ++j ) // copy the characters till the last quotes
 							pot[ j - i - 1 ] = c1_lab[ j ];
-							
+
 						pot[ j - i - 1 ] = c1_lab[ j ];
-		
+
 						// scan the whole word, until a different char is not found
 						got = 1;
-						if ( pot[ 0 ] != '\"' ) 			// in case the eq. contains "" it gets fucked up..
-							for ( j = 0; got == 1 && pot[ j ] != '\"' && lab + j != NULL; ++j )
+						if ( pot[ 0 ] != '\"' )				// in case the eq. contains "" it gets fucked up..
+							for ( j = 0; got == 1 && pot[ j ] != '\"' && lab != NULL; ++j )
 								if ( pot[ j ] != lab[ j ])
 									got = 0;
-						for ( ; pot[ j ] != '\"'; ++j ); 	// finishes the word, until the closed quotes
-						
+
+						for ( ; pot[ j ] != '\"'; ++j );	// finishes the word, until the closed quotes
+
 						i = i + j + 1;
-						
+
 						if ( got == 1 && j == len )
 							found = true;
 					}
 				}
 		}
 	}
-	
+
 	return found;
 }
 
@@ -958,57 +997,57 @@ bool contains( FILE *f, char *lab, int len )
 /******************************
 WRITE_STR
 *******************************/
-void write_str( object *r, FILE *frep, int dep, char const *prefix )
+void write_str( object *r, FILE *frep, int dep, const char *prefix )
 {
 	int len, i, j, trash;
 	bridge *cb;
 	object *cur;
-	
+
 	trash = 0;
 	if ( r->up != NULL )
 	{
 		if ( r->up->b->head != r )
 			for ( i = 0; i < dep; ++i )
 			{
-				if ( msg[ i ] == ' ' )
+				if ( tmp_rep[ i ] == ' ' )
 					fprintf( frep, "<TT>&nbsp;</TT>" );
 				else
 					fprintf( frep, "<TT>|</TT>" );
 			}
-			
+
 		fprintf( frep, "<TT>&mdash;&gt;</TT>" );
 		cur = skip_next_obj( r, &trash );
 		if ( cur != NULL )
-			msg[ dep ] = '|';
+			tmp_rep[ dep ] = '|';
 		else
-			msg[ dep ] = ' ';
-		
-		msg[ ++dep ] = ' ';
+			tmp_rep[ dep ] = ' ';
+
+		tmp_rep[ ++dep ] = ' ';
 		trash = 1;
 	}
 
 	fprintf( frep, "<TT><A HREF=\"#%s%s\">%s</A></TT>", prefix, r->label, r->label );
 	len = strlen( r->label );
 	for ( i = 0; i < len; ++i )
-		msg[ dep + i + trash ] = ' ';
+		tmp_rep[ dep + i + trash ] = ' ';
 	dep = dep + len + trash;
 	j = dep;
-	
+
 	for ( cb = r->b; cb != NULL; cb = cb->next )
 	{
 		cur = cb->head;
 		write_str( cur, frep, j, prefix );
 	}
-	
+
 	if ( r->b == NULL )
 	{
 		fprintf( frep, "<BR>\n" );
 		for ( i = 0; i < dep; ++i )
-			if ( msg[ i ] == ' ' )
+			if ( tmp_rep[ i ] == ' ' )
 				fprintf( frep, "<TT>&nbsp;</TT>" );
 			else
 				fprintf( frep, "<TT>|</TT>" );
-			
+
 		fprintf( frep, "<BR>\n" );
 	}
 }
@@ -1017,106 +1056,91 @@ void write_str( object *r, FILE *frep, int dep, char const *prefix )
 /********************************
 WRITE_LIST
 *********************************/
-void write_list( FILE *frep, object *root, int flag_all, char const *prefix )
+void write_list( FILE *frep, object *root, bool show_all, const char *prefix )
 {
 	int num, i;
-	char *app, s1[ 2 * MAX_ELEM_LENGTH ], s2[ MAX_ELEM_LENGTH ];
+	char s1[ 2 * MAX_ELEM_LENGTH ], s2[ MAX_ELEM_LENGTH ];
 
 	Tcl_LinkVar( inter, "num", ( char * ) &num, TCL_LINK_INT );
 
-	if ( flag_all == 1 ) 					// initial listing
+	if ( show_all )							// initial listing?
 		fprintf( frep, "<H3>Variables</H3>\n" );
 	else
 		fprintf( frep, "<i>Variables: &nbsp;</i>" );
 
-	cmd( "lappend rawlist" ); 				// create the list if not existed
-	cmd( "unset rawlist" ); 				// empty the list
-	cmd( "lappend rawlist" ); 				// create a surely empty list
+	cmd( "set rawlist [ list ]" );			// create an empty list
 
-	if ( ! strcmp( prefix, "_i_" ) )
-		fill_list_var( root, flag_all, 1 ); // insert only lagged variables
+	if ( strcmp( prefix, "_i_" ) == 0 )
+		fill_list_var( root, show_all, true ); // insert only lagged variables
 	else
-		fill_list_var( root, flag_all, 0 );	// insert all the variables
+		fill_list_var( root, show_all, false );	// insert all the variables
 
-	cmd( "set alphalist [lsort -dictionary $rawlist]" );
-	cmd( "set num [llength $alphalist]" );
-	
+	cmd( "set alphalist [ lsort -dictionary $rawlist ]" );
+	cmd( "set num [ llength $alphalist ]" );
+
 	// distinguish the case you are compiling the initial list of element (all) or for a single Object)
-	if ( flag_all == 0 ) 
-		sprintf( s1, "form_v_%s_%s", root->label, prefix );
+	if ( ! show_all )
+		snprintf( s1, 2 * MAX_ELEM_LENGTH, "form_v_%s_%s", root->label, prefix );
 	else
-		sprintf( s1, "form_v_all_%s_%s", root->label, prefix );  
+		snprintf( s1, 2 * MAX_ELEM_LENGTH, "form_v_all_%s_%s", root->label, prefix );
 
 	if ( lmenu )
-	{
-		create_form( num, s1, prefix, frep ); 
-		if ( num == 0 )
-			fprintf( frep, "(none)<BR>\n" );
-	}
+		create_form( num, s1, prefix, frep );
 	else
-	{
 		for ( i = 0; i < num; ++i )
 		{
 			cmd( "set app [ lindex $alphalist %d ]", i );
-			app = ( char * ) Tcl_GetVar( inter, "app", 0 );
-			strcpy( msg, app );
-			sscanf( msg, "%s %s", s1, s2);
+			sscanf( get_str( "app" ), "%s %s", s1, s2);
 			fprintf( frep, "<TT><A HREF=\"#%s%s\">%s</A></TT>", prefix, s1, s1 );
-			
+
 			if ( i < num - 1 )
 				fprintf( frep, "<TT>, </TT>" );
 		}
 
-		if ( num > 0 )
-			fprintf( frep, "<BR>\n" );
-		else
-			fprintf( frep, "(none)<BR>\n" );
-	}
-	 
-	if ( flag_all == 1 ) 					// initial listing
+	if ( num == 0 )
+		fprintf( frep, "(none)<BR>\n" );
+	else
+		fprintf( frep, "<BR>\n" );
+
+	if ( show_all )							// initial listing
 		fprintf( frep, "<H3>Parameters</H3>\n" );
 	else
 		fprintf( frep, "<i>Parameters: &nbsp;</i>" );
 
-	cmd( "lappend rawlist" ); 				// create the list if not existed
-	cmd( "unset rawlist" ); 				// empty the list
-	cmd( "lappend rawlist" ); 				// create a surely empty list
+	cmd( "lappend rawlist" );				// create the list if not existed
+	cmd( "unset rawlist" );					// empty the list
+	cmd( "lappend rawlist" );				// create a surely empty list
 
-	fill_list_par( root, flag_all );
+	fill_list_par( root, show_all );
 
-	cmd( "set alphalist [lsort -dictionary $rawlist]" );
-	cmd( "set num [llength $alphalist]" );
-	
-	//distinguish the case you are compiling the initial list of element (all) or for a single Object)
-	if ( flag_all == 0 )
-		sprintf( s1, "form_p_%s_%s", root->label, prefix );
+	cmd( "set alphalist [ lsort -dictionary $rawlist ]" );
+	cmd( "set num [ llength $alphalist ]" );
+
+	// distinguish the case you are compiling the initial list of element (all) or for a single Object)
+	if ( ! show_all )
+		snprintf( s1, 2 * MAX_ELEM_LENGTH, "form_p_%s_%s", root->label, prefix );
 	else
-		sprintf( s1, "form_p_all_%s_%s", root->label, prefix ); 
+		snprintf( s1, 2 * MAX_ELEM_LENGTH, "form_p_all_%s_%s", root->label, prefix );
 
 	if ( lmenu )
-	{
-		create_form( num, s1, prefix, frep ); 
-		if ( num == 0 )
-			fprintf( frep, "(none)<BR>\n" );
-	}
+		create_form( num, s1, prefix, frep );
 	else
-	{
 		for ( i = 0; i < num; ++i )
 		{
 			cmd( "set app [ lindex $alphalist %d ]", i );
-			app = ( char * ) Tcl_GetVar( inter, "app", 0 );
-			strcpy( msg, app );
-			fprintf( frep, "<TT><A HREF=\"#%s%s\">%s</A></TT>",prefix, msg, msg );
-			
+			fprintf( frep, "<TT><A HREF=\"#%s%s\">%s</A></TT>", prefix, get_str( "app" ), get_str( "app" ) );
+
 			if ( i < num - 1 )
 				fprintf( frep, "<TT>, </TT>" );
 		}
-	 
-		if ( num > 0 )
-			fprintf( frep, "<BR>\n" );
-		else
-			fprintf( frep, "(none)<BR>\n" );
-	}
+
+	if ( num == 0 )
+		fprintf( frep, "(none)<BR>\n" );
+	else
+		fprintf( frep, "<BR>\n" );
+
+	if ( ! show_all )
+		fprintf( frep, "<BR>\n" );
 
 	Tcl_UnlinkVar( inter, "num" );
 }
@@ -1124,29 +1148,29 @@ void write_list( FILE *frep, object *root, int flag_all, char const *prefix )
 /********************************
 FILL_LIST_VAR
 *********************************/
-void fill_list_var( object *r, int flag_all, int flag_init )
+void fill_list_var( object *r, bool show_all, bool lag_only )
 {
 	bridge *cb;
 	variable *cv;
 
 	for ( cv = r->v; cv != NULL; cv = cv->next )
 	{
-		if ( ( cv->param == 0 || cv->param == 2 ) && ( flag_init == 0 || cv->num_lag > 0) )
+		if ( ( cv->param == 0 || cv->param == 2 ) && ( ! lag_only || cv->num_lag > 0 ) )
 		cmd( "lappend rawlist \"%s (%d)\"", cv->label, cv->num_lag );
 	}
-	
-	if ( flag_all == 0 )
+
+	if ( ! show_all )
 		return;
-	
+
 	for ( cb = r->b; cb != NULL; cb = cb->next )
-		fill_list_var( cb->head, flag_all, flag_init );
+		fill_list_var( cb->head, show_all, lag_only );
 }
 
 
 /********************************
 FILL_LIST_PAR
 *********************************/
-void fill_list_par( object *r, int flag_all )
+void fill_list_par( object *r, bool show_all )
 {
 	bridge *cb;
 	variable *cv;
@@ -1156,12 +1180,12 @@ void fill_list_par( object *r, int flag_all )
 		if ( cv->param == 1 )
 			cmd( "lappend rawlist \"%s\"", cv->label );
 	}
-	
-	if ( flag_all == 0 )
+
+	if ( ! show_all )
 		return;
-	
+
 	for ( cb = r->b; cb != NULL; cb = cb->next )
-		fill_list_par( cb->head, flag_all);
+		fill_list_par( cb->head, show_all);
 }
 
 
@@ -1177,12 +1201,12 @@ void create_table_init( object *r, FILE *frep )
 	variable *cv;
 
 	fprintf( frep, "<HR WIDTH=\"100%%\">\n" );
-	 
+
 	fprintf( frep, "<H3><A NAME=\"%s\">Object: &nbsp;<TT><U>%s</U></TT></A></H3>", r->label, r->label );
 
 	if ( r->up != NULL )
 	{
-		fprintf( frep, "<i>Contained in: &nbsp;</i>" ); 
+		fprintf( frep, "<i>Contained in: &nbsp;</i>" );
 		ancestors( r, frep );
 		fprintf( frep, "<BR>\n" );
 	}
@@ -1197,13 +1221,13 @@ void create_table_init( object *r, FILE *frep )
 	}
 
 	fprintf( frep, "<BR>\n" );
-	write_list( frep, r, 0, "" );
+	write_list( frep, r, false, "" );
 
 	cd = search_description( r->label );
 	if ( has_descr_text ( cd ) )
 	{
 		fprintf( frep, "<i>Description:</i><BR>\n" );
-		
+
 		for ( i = 0; cd->text[ i ] != '\0'; ++i )
 		{
 			switch ( cd->text[ i ])
@@ -1222,7 +1246,7 @@ void create_table_init( object *r, FILE *frep )
 					break;
 			}
 		}
-		
+
 		fprintf( frep, "<BR>\n" );
 	}
 
@@ -1236,7 +1260,7 @@ void create_table_init( object *r, FILE *frep )
 		fprintf( frep, "<td><center><i>Lags</i></center></td>\n" );
 		fprintf( frep, "<td><center><i>Description and initial values comments</i></center></td>\n" );
 		fprintf( frep, "</tr>" );
-	
+
 		for ( cv = r->v; cv != NULL; cv = cv->next )
 		{
 			fprintf( frep, "<tr VALIGN=TOP>" );
@@ -1254,7 +1278,7 @@ void create_table_init( object *r, FILE *frep )
 				else
 					fprintf( frep, "<td></td>\n" );
 			}
-	   
+
 			cd = search_description( cv->label );
 
 			fprintf( frep, "<td> " );
@@ -1280,13 +1304,13 @@ void create_table_init( object *r, FILE *frep )
 							break;
 					}
 				}
-	  
+
 			if ( cv->param == 1 || cv->num_lag > 0 )
 				if ( cd->init != NULL && strlen( cd->init ) > 0 )
 				{
 					if ( desc_text )
 						fprintf( frep, "<br>\n" );
-		
+
 					for ( i = 0; cd->init[ i ] != '\0'; ++i )
 						switch ( cd->init[ i ])
 						{
@@ -1304,10 +1328,10 @@ void create_table_init( object *r, FILE *frep )
 								break;
 						}
 				}
-	 
+
 			fprintf( frep, "</td></tr>\n" );
 		}
-		
+
 		fprintf( frep, "</table><br>\n" );
 	}
 
@@ -1336,37 +1360,37 @@ void create_initial_values( object *r, FILE *frep )
 		for ( cb = r->b; cb != NULL; cb = cb->next )
 			create_initial_values( cb->head, frep );
 		return;
-	}  
-	 
+	}
+
 	for ( count = 0, cur = r; cur != NULL; cur = cur->hyper_next( cur->label ) )
 		count++;
 
 	fprintf( frep, "<HR WIDTH=\"100%%\">\n" );
 	fprintf( frep, "<H3><A NAME=\"%s\">Object: &nbsp;<TT><U>%s</U></TT></A></H3>", r->label, r->label );
-	fprintf( frep, "<i>Instances number: &nbsp</i>%d<BR>", count );
-	fprintf( frep, "<i>Instances group(s): &nbsp;</i>" ); 
+	fprintf( frep, "<i>Instance number: &nbsp</i>%d<BR>", count );
+	fprintf( frep, "<i>Instance group(s): &nbsp;</i>" );
 
 	for ( i = 0, cur = r; cur != NULL; )
-	{ 
+	{
 		count = 1;
 		while ( cur->next != NULL && ! strcmp( cur->label, ( cur->next )->label ) )
 		{
 			++count;
 			cur = cur->next;
 		}
-		
+
 		fprintf( frep, "%d ", count );
 		cur = cur->hyper_next( cur->label );
 		++i;
-		
+
 		if ( i > MAX_INIT )
 		{
 			fprintf( frep, "..." );
 			cur = NULL;
 		}
 	}
-	
-	fprintf( frep, "<BR><BR>\n" ); 
+
+	fprintf( frep, "<BR><BR>\n" );
 	fprintf( frep, "<table BORDER>" );
 	fprintf( frep, "<tr>" );
 	fprintf( frep, "<td><center><i>Element</i></center></td>\n" );
@@ -1382,18 +1406,18 @@ void create_initial_values( object *r, FILE *frep )
 			fprintf( frep, "<td><a NAME=\"_i_%s\"><A HREF=\"#%s\"><TT>%s</TT></A></a></td>\n", cv->label, cv->label, cv->label );
 			fprintf( frep, "<td>Par.</td>\n" );
 			fprintf( frep, "<td>%g", cv->val[ 0 ] );
-			
-			for ( j = 1, cur = r->hyper_next( r->label ); cur !=NULL && j < MAX_INIT; cur = cur->hyper_next( cur->label ), ++j )
+
+			for ( j = 1, cur = r->hyper_next( r->label ); cur != NULL && j < MAX_INIT; cur = cur->hyper_next( cur->label ), ++j )
 			{
 				cv1 = cur->search_var( cur, cv->label );
 				fprintf( frep, ", %g", cv1->val[ 0 ] );
 			}
-			
+
 			if ( j == MAX_INIT && cur != NULL )
 				fprintf( frep, ", ..." );
 
 			fprintf( frep, "</td></tr>\n" );
-		}   
+		}
 		else
 		{
 			for ( i = 0; i < cv->num_lag; ++i )
@@ -1402,21 +1426,21 @@ void create_initial_values( object *r, FILE *frep )
 				fprintf( frep, "<td><a NAME=\"_i_%s\"><A HREF=\"#%s\"><TT>%s</TT></A></a></td>\n", cv->label, cv->label, cv->label );
 				fprintf( frep, "<td>%d</td>\n", i + 1 );
 				fprintf( frep, "<td>%g", cv->val[ i ] );
-				
+
 				for ( j = 1, cur = r->hyper_next( r->label ); cur != NULL && j < MAX_INIT; cur = cur->hyper_next( cur->label ), ++j )
 				{
 					cv1 = cur->search_var( cur, cv->label );
 					fprintf( frep, ", %g", cv1->val[ i ] );
 				}
-				
+
 				if ( j == MAX_INIT && cur != NULL )
 					fprintf( frep, ", ..." );
-			  
+
 				fprintf( frep, "</td></tr>\n" );
 			}
 		}
 	}
-	
+
 	fprintf( frep, "</table><BR>\n" );
 
 	for ( cb = r->b; cb != NULL; cb = cb->next )
@@ -1429,12 +1453,12 @@ IS_EQUATION_HEADER
 Squeeze the spaces out of line and returns 1 if the line is an equation header,
 placing the Variable label in Var
 *********************************/
-bool is_equation_header( char *raw_line, char *var, char *updt_in )
+bool is_equation_header( const char *raw_line, char *var, char *updt_in )
 {
 	bool header;
 	int i, j;
 	char *line = new char[ strlen( raw_line ) + 1 ];
-	
+
 	eq_dum = false;
 	strcpy( line, raw_line );
 	clean_spaces( line );
@@ -1442,25 +1466,25 @@ bool is_equation_header( char *raw_line, char *var, char *updt_in )
 	if ( ! strncmp( line, "if(!strcmp(label,", 17 ) || ! strncmp( line, "EQUATION(", 9 ) || ! strncmp( line, "EQUATION_DUMMY(", 9 ) || ! strncmp( line, "FUNCTION(", 9 ) )
 	{
 		header = true;
-		
+
 		if ( ! strncmp( line, "if(!strcmp(label,", 17 ) )
 			macro = false;
 		else
 			macro = true;
-		
+
 		if ( ! strncmp( line, "EQUATION_DUMMY(", 15 ) )
 			eq_dum = true;
-				
+
 		for ( i = 0; line[ i ] != '"' && line[ i ] != '\0' && i < MAX_LINE_SIZE; ++i );
-		
+
 		for ( j = ++i; line[ i ] != '"' && line[ i ] != '\0' && i < MAX_LINE_SIZE; ++i )
 			var[ i - j ] = line[ i ];
 		var[ i - j ] = '\0';
-		
+
 		if ( eq_dum )
 		{
 			for ( ++i; line[ i ] != '"' && line[ i ] != '\0' && i < MAX_LINE_SIZE; ++i );
-			
+
 			if ( line[ i ] == '"' && line[ i + 1 ] != '"' )	// non-empty name?
 			{
 				for ( j = 0, ++i; line[ i ] != '"' && line[ i ] != '\0' && j < MAX_LINE_SIZE; ++i, ++j )
@@ -1477,13 +1501,13 @@ bool is_equation_header( char *raw_line, char *var, char *updt_in )
 		header = false;
 
 	delete [ ] line;
-	
+
 	return header;
 }
 
 
 /************
- ANCESTORS 
+ ANCESTORS
  ************/
 void ancestors( object *r, FILE *f, bool html )
 {
@@ -1505,14 +1529,14 @@ void ancestors( object *r, FILE *f, bool html )
 
 
 /************
- CREATE_FRAMES 
+ CREATE_FRAMES
  ************/
 FILE *create_frames( const char *path, const char *fname )
 {
 	FILE *f;
-	
+
 	cmd( "set fullFileName [ file join \"%s\" \"%s\" ]", path, fname );
-	f = fopen( ( char * ) Tcl_GetVar( inter, "fullFileName", 0 ), "w" );
+	f = fopen( get_str( "fullFileName" ), "w" );
 	if ( f == NULL )
 		return NULL;
 
@@ -1524,7 +1548,7 @@ FILE *create_frames( const char *path, const char *fname )
 	fclose( f );
 
 	cmd( "set fullFileName [ file join \"%s\" \"head_%s\" ]", path, fname );
-	f = fopen( ( char * ) Tcl_GetVar( inter, "fullFileName", 0 ), "w" );
+	f = fopen( get_str( "fullFileName" ), "w" );
 	if ( f == NULL )
 		return NULL;
 
@@ -1535,44 +1559,40 @@ FILE *create_frames( const char *path, const char *fname )
 	fprintf( f, "<a href=\"body_%s#_MODEL_STRUCTURE_\" target=body>Structure</a> &nbsp", fname );
 	if ( init )
 		fprintf( f, "<a href=\"body_%s#_INITIALVALUES_\" target=body>Initialization</a> &nbsp", fname );
-	if ( code )
+	if ( detail )
 		fprintf( f, "<a href=\"body_%s#_DETAILS_\" target=body>Code</a> &nbsp", fname );
 
 	fprintf( f, "</body> </html>" );
 	fclose( f );
 
 	cmd( "set fullFileName [ file join \"%s\" \"body_%s\" ]", path, fname );
-	f = fopen( ( char * ) Tcl_GetVar( inter, "fullFileName", 0 ), "w" );
+	f = fopen( get_str( "fullFileName" ), "w" );
 
 	return f;
 }
 
 
 /************
-CREATE LIST FORMS FOR LABELS. 
+CREATE LIST FORMS FOR LABELS.
 **********/
-void create_form( int num, char const *title, char const *prefix, FILE *frep )
+void create_form( int num, const char *title, const char *prefix, FILE *frep )
 {
 	int i;
-	char s1[ 2 * MAX_ELEM_LENGTH ], s2[ 2 * MAX_ELEM_LENGTH ], *app;
+	char s1[ 2 * MAX_ELEM_LENGTH ], s2[ 2 * MAX_ELEM_LENGTH ];
 
 	if ( num == 0 )
 		return;
 
-	sprintf( msg, "<form name=\"%s\" method=\"POST\">\n", title );
-	fprintf( frep,"%s",msg );
-	sprintf( msg, "<select name=\"entry\" class=\"form\">\n" );
-	fprintf( frep,"%s", msg );
+	fprintf( frep, "<form name=\"%s\" method=\"POST\">\n", title );
+	fprintf( frep, "<select name=\"entry\" class=\"form\">\n" );
 
 	for ( i = 0; i < num; ++i )
 	{
 		cmd( "set app [ lindex $alphalist %d ]", i );
-		app = ( char * ) Tcl_GetVar( inter, "app", 0 );
-		strcpy( msg, app );
-		sscanf( msg, "%s %s", s1, s2 );
+		sscanf( get_str( "app" ), "%s %s", s1, s2 );
 		fprintf( frep, "<option value=\"#%s%s\">%s</option>\n", prefix, s1, s1 );
 	}
-	
+
 	fprintf( frep, "</select>\n" );
 	fprintf( frep, "<INPUT TYPE=button VALUE=\"Show\" onClick=\"location.href = document.%s.entry.options[document.%s.entry.selectedIndex].value\">\n", title, title );
 	fprintf( frep, "</form>" );
@@ -1599,30 +1619,30 @@ void show_rep_observe( FILE *f, object *n, int *begin, FILE *frep )
 				*begin = 0;
 				table = true;
 				fprintf( f,"<H3>Relevant elements to observe</H3>\n" );
-				
+
 				fprintf( f, "<table BORDER>" );
 				fprintf( f, "<tr>" );
 				fprintf( f, "<td><center><i>Element</i></center></td>\n" );
 				fprintf( f, "<td><center><i>Object</i></center></td>" );
 				fprintf( f, "<td><center><i>Type</i></center></td>\n" );
-				fprintf( f, "<td><center><i>Description</i></center></td>\n" );    
+				fprintf( f, "<td><center><i>Description</i></center></td>\n" );
 				fprintf( f, "</tr>" );
 			}
-			
+
 			fprintf( f, "<tr VALIGN=TOP>" );
-		 
+
 			fprintf( f, "<td><TT><A HREF=\"#%s\">%s</A></TT></td>", cv->label, cv->label );
 			fprintf( f, "<td><TT><A HREF=\"#%s\">%s</A></TT></td>", n->label, n->label );
-			
+
 			if ( cv->param == 1 )
 				fprintf( f, "<td>Parameter</td>" );
 			if ( cv->param == 0 )
 				fprintf( f, "<td>Variable</td>" );
 			if ( cv->param == 2 )
 				fprintf( f, "<td>Function</td>" );
-			
-			fprintf( f, "<td>" ); 
-			
+
+			fprintf( f, "<td>" );
+
 			if ( has_descr_text ( cd ) )
 				for ( i = 0; cd->text[ i ] != '\0'; ++i )
 				{
@@ -1642,8 +1662,8 @@ void show_rep_observe( FILE *f, object *n, int *begin, FILE *frep )
 							break;
 					}
 				}
-		 
-			fprintf( f, "</td></tr>\n" );    
+
+			fprintf( f, "</td></tr>\n" );
 		}
 	}
 
@@ -1675,29 +1695,29 @@ void show_rep_initial( FILE *f, object *n, int *begin, FILE *frep )
 				*begin = 0;
 				table = true;
 				fprintf( f,"<H3>Relevant elements to initialize</H3>\n" );
-				
+
 				fprintf( f, "<table BORDER>" );
 				fprintf( f, "<tr>" );
 				fprintf( f, "<td><center><i>Element</i></center></td>\n" );
 				fprintf( f, "<td><center><i>Object</i></center></td>" );
 				fprintf( f, "<td><center><i>Type</i></center></td>\n" );
-				fprintf( f, "<td><center><i>Description and initial values comments</i></center></td>\n" );    
+				fprintf( f, "<td><center><i>Description and initial values comments</i></center></td>\n" );
 				fprintf( f, "</tr>" );
 			}
-			
+
 			fprintf( f, "<tr VALIGN=TOP>" );
 			fprintf( f, "<td><TT><A HREF=\"#%s\">%s</A></TT></td>", cv->label, cv->label );
 			fprintf( f, "<td><TT><A HREF=\"#%s\">%s</A></TT></td>", n->label, n->label );
-			
+
 			if ( cv->param == 1 )
 				fprintf( f, "<td>Parameter</td>" );
 			if ( cv->param == 0 )
 				fprintf( f, "<td>Variable</td>" );
 			if ( cv->param == 2 )
 				fprintf( f, "<td>Function</td>" );
-				
-			fprintf( f, "<td>" ); 
-			
+
+			fprintf( f, "<td>" );
+
 			bool desc_text = false;
 			if ( has_descr_text ( cd ) )
 				for ( i = 0; cd->text[ i ] != '\0'; ++i )
@@ -1720,12 +1740,12 @@ void show_rep_initial( FILE *f, object *n, int *begin, FILE *frep )
 							break;
 					}
 				}
-				
+
 			if ( ( cv->param == 1 || cv->num_lag > 0 ) && cd->init != NULL && strlen( cd->init ) > 0 )
 			{
 				if ( desc_text )
 					fprintf( frep, "<br>\n" );
-				 
+
 				for ( i = 0; cd->init[ i ] != '\0'; ++i )
 				{
 					switch ( cd->init[ i ] )
@@ -1745,9 +1765,9 @@ void show_rep_initial( FILE *f, object *n, int *begin, FILE *frep )
 					}
 				}
 			}
-			  
+
 			fprintf( f, " <A HREF=\"#_i_%s\">(Show initial values)</A>",  cv->label );
-			fprintf( f, "</td></tr>\n" );    
+			fprintf( f, "</td></tr>\n" );
 		}
 	}
 
@@ -1765,18 +1785,18 @@ void show_rep_initial( FILE *f, object *n, int *begin, FILE *frep )
 void tex_strcpy( char *&s1, char* s2 )
 {
 	int i, j;
-	
+
 	// handle active underscores and other special chars in label references
 	for ( i = 0, j = 0; s2[ j ] != '\0'; ++j )
 		if ( s2[ j ] == '_' || s2[ j ] == '^' || s2[ j ] == '$' || s2[ j ] == '&' )
 			++i;
-		
+
 	if ( i > 0 )
 	{
 		delete [ ] s1;
 		s1 = new char[ 2 * strlen( s2 ) + 1 + i * 6 ];
 	}
-	
+
 	for ( i = 0, j = 0; s2[ j ] != '\0'; ++i, ++j )
 		switch ( s2[ j ] )
 		{
@@ -1798,9 +1818,9 @@ void tex_strcpy( char *&s1, char* s2 )
 				memcpy( s1 + i, "\\string", 7 );
 				i += 7;
 			default:
-				s1[ i ] = s2[ j ]; 
+				s1[ i ] = s2[ j ];
 		}
-		
+
 	s1[ i ] = '\0';
 }
 
@@ -1811,7 +1831,7 @@ void tex_strcpy( char *&s1, char* s2 )
 void tex_fprintf( FILE *f, char* text )
 {
 	bool newline = false;
-	
+
 	for ( int i = 0; text[ i ] != '\0'; ++i )
 		switch ( text[ i ] )
 		{
@@ -1821,15 +1841,15 @@ void tex_fprintf( FILE *f, char* text )
 				newline = true;
 				break;
 			case '>':
-				fprintf( f, "\\textgreater " ); 
+				fprintf( f, "\\textgreater " );
 				newline = false;
 				break;
 			case '<':
-				fprintf( f, "\\textless " ); 
+				fprintf( f, "\\textless " );
 				newline = false;
 				break;
 			case '\\':
-				fprintf( f, "/" ); 
+				fprintf( f, "/" );
 				newline = false;
 				break;
 			case '_':
@@ -1841,14 +1861,14 @@ void tex_fprintf( FILE *f, char* text )
 			case '$':
 			case '#':
 			case '&':
-				fprintf( f, "\\" ); 
+				fprintf( f, "\\" );
 			default:
-				fprintf( f, "%c", text[ i ] ); 
+				fprintf( f, "%c", text[ i ] );
 				newline = false;
 		}
 }
 
-				
+
 /****************************************************
  TEX_REPORT_HEAD
  ****************************************************/
@@ -1856,7 +1876,7 @@ void tex_report_head( FILE *f, bool table )
 {
 	fprintf( f, "\\documentclass{article}\n\n" );
 	fprintf( f, "\\usepackage[%s,left=%fcm,right=%fcm,top=%fcm,bottom=%fcm]{geometry}\n", TEX_PAPER, TEX_LEFT, TEX_RIGHT, TEX_TOP, TEX_BOTTOM );
-	
+
 	if ( table )
 	{
 		fprintf( f, "\\usepackage{color}\n" );
@@ -1871,17 +1891,17 @@ void tex_report_head( FILE *f, bool table )
 		fprintf( f, "\\newcommand{\\hr}[1] {\\hrf{#1}{#1}}\n" );
 		fprintf( f, "\\newcommand{\\hrf}[2] {\\hyperref[#1]{\\texttt{\\detokenize{#2}}}}\n" );
 	}
-	
+
 	fprintf( f, "\\setlength{\\parindent}{0cm}\n\n" );
 
-	fprintf( f, "\\title{Model: \\lsd{%s}}\n", simul_name );
+	fprintf( f, "\\title{Model: \\lsd{%s}}\n", strlen( simul_name ) > 0 ? simul_name : NO_CONF_NAME );
 	fprintf( f, "\\author{Automatically generated LSD report}\n" );
 	fprintf( f, "\\date{}\n\n" );
 
 	fprintf( f, "\\begin{document}\n\n" );
 	fprintf( f, "\\maketitle\n\n" );
 }
-	  
+
 
 /****************************************************
  TEX_REPORT_STRUCT
@@ -1900,7 +1920,7 @@ void tex_report_struct( object *r, FILE *f, bool table )
 	tex_strcpy( ol, r->label );
 	fprintf( f, "\\subsection{Object: \\lsd{%s}} \\label{%s}\n\n", r->label, ol );
 	delete [ ] ol;
-	
+
 	if ( r->up != NULL )
 	{
 		fprintf( f,"\\emph{Contained in:} " );
@@ -1912,7 +1932,7 @@ void tex_report_struct( object *r, FILE *f, bool table )
 	{
 		fprintf( f,"\\emph{Containing:} \\lsd{%s}", r->b->blabel );
 		for ( cb = r->b->next; cb != NULL; cb = cb->next )
-			fprintf( f, ",  \\lsd{%s}", cb->blabel );
+			fprintf( f, ",	\\lsd{%s}", cb->blabel );
 		fprintf( f, "\n\n" );
 	}
 
@@ -1923,9 +1943,9 @@ void tex_report_struct( object *r, FILE *f, bool table )
 	if ( r->v != NULL )
 	{
 		if ( ! table )
-			fprintf( f,"\\emph{Contained elements:}\n\n" );	
+			fprintf( f,"\\emph{Contained elements:}\n\n" );
 		else
-			fprintf( f, "\\begin{longtabu} to \\textwidth {|l|l|l|X|}\n  \\hline\n  \\textbf{Element} & \\textbf{Type} & \\textbf{Lags} & \\textbf{Description and initial values comments} \\\\ \n  \\hline \\endhead\n  \\multicolumn{4}{r}{\\textit{Continued on next page...}} \\\\ \n  \\endfoot\n  \\endlastfoot\n" );
+			fprintf( f, "\\begin{longtabu} to \\textwidth {|l|l|l|X|}\n	 \\hline\n	\\textbf{Element} & \\textbf{Type} & \\textbf{Lags} & \\textbf{Description and initial values comments} \\\\ \n	 \\hline \\endhead\n  \\multicolumn{4}{r}{\\textit{Continued on next page...}} \\\\ \n	\\endfoot\n	 \\endlastfoot\n" );
 	}
 
 	for ( cv = r->v; cv != NULL; cv = cv->next )
@@ -1934,7 +1954,7 @@ void tex_report_struct( object *r, FILE *f, bool table )
 		tex_strcpy( vl, cv->label );
 		fprintf( f, "  \\lsd{%s} \\label{%s}", cv->label , vl );
 		delete [ ] vl;
-		
+
 		if ( ! table )
 		{
 			if ( cv->param == 0 )
@@ -1961,7 +1981,7 @@ void tex_report_struct( object *r, FILE *f, bool table )
 			else
 				fprintf( f, "%d & ", cv->num_lag );
 		}
-		
+
 		bool desc_text = false;
 		cd = search_description( cv->label );
 		if ( has_descr_text ( cd ) )
@@ -1971,7 +1991,7 @@ void tex_report_struct( object *r, FILE *f, bool table )
 			desc_text = true;
 			tex_fprintf( f, cd->text );
 		}
-	  
+
 		if ( table && ( cv->param == 1 || cv->num_lag > 0 ) && cd->init != NULL && strlen( cd->init ) > 0 )
 		{
 			if ( desc_text )
@@ -1980,9 +2000,9 @@ void tex_report_struct( object *r, FILE *f, bool table )
 		}
 
 		if ( ! table )
-			fprintf( f, "\\newline \n" ); 
+			fprintf( f, "\\newline \n" );
 		else
-			fprintf( f, "\\\\ \n  \\hline \n" ); 
+			fprintf( f, "\\\\ \n  \\hline \n" );
 	}
 
 	if ( r->v != NULL )
@@ -2013,12 +2033,12 @@ void tex_report_observe( object *r, FILE *f, bool table )
 		fprintf( f, "\\section{Relevant elements to observe}\n\n" );
 		tab_lines = 0;
 		if ( table )
-			fprintf( f, "\\begin{longtabu} to \\textwidth {|l|l|l|X|}\n  \\hline\n  \\textbf{Element} & \\textbf{Object} & \\textbf{Type} & \\textbf{Description} \\\\ \n  \\hline \\endhead\n  \\multicolumn{4}{r}{\\textit{Continued on next page...}} \\\\ \n  \\endfoot\n  \\endlastfoot\n" );
+			fprintf( f, "\\begin{longtabu} to \\textwidth {|l|l|l|X|}\n	 \\hline\n	\\textbf{Element} & \\textbf{Object} & \\textbf{Type} & \\textbf{Description} \\\\ \n  \\hline \\endhead\n	\\multicolumn{4}{r}{\\textit{Continued on next page...}} \\\\ \n  \\endfoot\n  \\endlastfoot\n" );
 	}
 
 	ol = new char[ 2 * strlen( r->label ) + 1 ];
 	tex_strcpy( ol, r->label );
-			
+
 	for ( cv = r->v; cv != NULL; cv = cv->next )
 	{
 		cd = search_description( cv->label );
@@ -2026,7 +2046,7 @@ void tex_report_observe( object *r, FILE *f, bool table )
 		{
 			vl = new char[ 2 * strlen( cv->label ) + 1 ];
 			tex_strcpy( vl, cv->label );
-			
+
 			if ( ! table )
 				fprintf( f, "\\hrf{%s}{%s} (object \\hrf{%s}{%s}) \\newline \n", vl, cv->label, ol, r->label );
 			else
@@ -2040,17 +2060,17 @@ void tex_report_observe( object *r, FILE *f, bool table )
 					fprintf( f, "Function & " );
 				if ( has_descr_text ( cd ) )
 					tex_fprintf( f, cd->text );
-				fprintf( f, "\\\\ \n  \\hline \n" ); 
-			} 
-			
+				fprintf( f, "\\\\ \n  \\hline \n" );
+			}
+
 			++tab_lines;
-		
+
 			delete [ ] vl;
 		}
 	}
 
 	delete [ ] ol;
-			
+
 	for ( cb = r->b; cb != NULL; cb = cb->next )
 		tex_report_observe( cb->head, f, table );
 
@@ -2086,12 +2106,12 @@ void tex_report_init( object *r, FILE *f, bool table )
 		fprintf( f, "\\section{Relevant elements to initialize}\n\n" );
 		tab_lines = 0;
 		if ( table )
-			fprintf( f, "\\begin{longtabu} to \\textwidth {|l|l|l|X|}\n  \\hline\n  \\textbf{Element} & \\textbf{Object} & \\textbf{Type} & \\textbf{Description and initial values comments} \\\\ \n  \\hline \\endhead\n  \\multicolumn{4}{r}{\\textit{Continued on next page...}} \\\\ \n  \\endfoot\n  \\endlastfoot\n" );
+			fprintf( f, "\\begin{longtabu} to \\textwidth {|l|l|l|X|}\n	 \\hline\n	\\textbf{Element} & \\textbf{Object} & \\textbf{Type} & \\textbf{Description and initial values comments} \\\\ \n  \\hline \\endhead\n	\\multicolumn{4}{r}{\\textit{Continued on next page...}} \\\\ \n  \\endfoot\n  \\endlastfoot\n" );
 	}
 
 	ol = new char[ 2 * strlen( r->label ) + 1 ];
 	tex_strcpy( ol, r->label );
-			
+
 	for ( cv = r->v; cv != NULL; cv = cv->next )
 	{
 		cd = search_description( cv->label );
@@ -2099,7 +2119,7 @@ void tex_report_init( object *r, FILE *f, bool table )
 		{
 			vl = new char[ 2 * strlen( cv->label ) + 1 ];
 			tex_strcpy( vl, cv->label );
-			
+
 			if ( ! table )
 				fprintf( f, "\\hrf{%s}{%s} (object \\hrf{%s}{%s}) \\newline \n", vl, cv->label, ol, r->label );
 			else
@@ -2111,31 +2131,31 @@ void tex_report_init( object *r, FILE *f, bool table )
 					fprintf( f, "Parameter & " );
 				if ( cv->param == 2 )
 					fprintf( f, "Function & " );
-		  
+
 				bool desc_text = false;
 				if ( has_descr_text ( cd ) )
 				{
 					desc_text = true;
 					tex_fprintf( f, cd->text );
 				}
-				
+
 				if ( ( cv->param == 1 || cv->num_lag > 0 ) && cd->init != NULL && strlen( cd->init ) > 0 )
 				{
 					if ( desc_text )
 						fprintf( f, "\\newline " );
 					tex_fprintf( f, cd->init );
 				}
-				fprintf( f, "\\\\ \n  \\hline \n" ); 
+				fprintf( f, "\\\\ \n  \\hline \n" );
 			}
-		
+
 			++tab_lines;
-			
+
 			delete [ ] vl;
-		} 
+		}
 	}
 
 	delete [ ] ol;
-			
+
 	for ( cb = r->b; cb != NULL; cb = cb->next )
 		tex_report_init( cb->head, f, table );
 
@@ -2173,17 +2193,17 @@ void tex_report_initall( object *r, FILE *f, bool table )
 	if ( r->up == NULL )
 	{
 		fprintf( f, "\\section{Initial values}\n\n" );
-		fprintf( f, "\\begin{longtabu} to \\textwidth {|l|l|l|X|}\n  \\hline\n  \\textbf{Object} & \\textbf{Element} & \\textbf{Lag} & \\textbf{Initial values (by instance)} \\\\ \n  \\hline \\endhead\n  \\multicolumn{4}{r}{\\textit{Continued on next page...}} \\\\ \n  \\endfoot\n  \\endlastfoot\n" );
+		fprintf( f, "\\begin{longtabu} to \\textwidth {|l|l|l|X|}\n	 \\hline\n	\\textbf{Object} & \\textbf{Element} & \\textbf{Lag} & \\textbf{Initial values (by instance)} \\\\ \n  \\hline \\endhead\n	\\multicolumn{4}{r}{\\textit{Continued on next page...}} \\\\ \n  \\endfoot\n  \\endlastfoot\n" );
 	}
 
 	ol = new char[ 2 * strlen( r->label ) + 1 ];
 	tex_strcpy( ol, r->label );
-			
+
 	for ( cv = r->v; cv != NULL; cv = cv->next )
 	{
 		vl = new char[ 2 * strlen( cv->label ) + 1 ];
 		tex_strcpy( vl, cv->label );
-		
+
 		if ( cv->param == 1 )
 		{
 			fprintf( f, "  \\lsd{%s} & \\lsd{%s} & & %g", ol, vl, cv->val[ 0 ] );
@@ -2194,7 +2214,7 @@ void tex_report_initall( object *r, FILE *f, bool table )
 			}
 			if ( j == MAX_INIT && cur != NULL )
 				fprintf( f, ", ..." );
-			  
+
 			fprintf( f, " \\\\ \n  \\hline \n" );
 		}
 		else
@@ -2209,16 +2229,16 @@ void tex_report_initall( object *r, FILE *f, bool table )
 				}
 				if ( j == MAX_INIT && cur != NULL )
 					fprintf( f, ", ..." );
-				  
+
 				fprintf( f, " \\\\ \n  \\hline \n" );
 			}
 		}
-		
+
 		delete [ ] vl;
 	}
 
 	delete [ ] ol;
-			
+
 	for ( cb = r->b; cb != NULL; cb = cb->next )
 		tex_report_initall( cb->head, f, table );
 

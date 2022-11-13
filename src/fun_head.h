@@ -1,15 +1,15 @@
 /*************************************************************
 
-	LSD 8.0 - May 2021
+	LSD 8.0 - May 2022
 	written by Marco Valente, Universita' dell'Aquila
 	and by Marcelo Pereira, University of Campinas
 
 	Copyright Marco Valente and Marcelo Pereira
 	LSD is distributed under the GNU General Public License
-	
+
 	See Readme.txt for copyright information of
 	third parties' code used in LSD
-	
+
  *************************************************************/
 
 /*************************************************************
@@ -36,14 +36,11 @@ void init_map( ) { };
 bool fast_lookup = true;
 #endif
 
-// set pointers to NULL to protect users (small overhead) if not disabled
-#if defined FAST_LOOKUP && ! defined NO_POINTER_INIT
-bool no_ptr_chk = false;
-#define INIT_POINTERS \
-	h = i = j = k = 0; \
-	cur = cur1 = cur2 = cur3 = cur4 = cur5 = cur6 = cur7 = cur8 = cur9 = cyccur = cyccur2 = cyccur3 = NULL; \
-	curl = curl1 = curl2 = curl3 = curl4 = curl5 = curl6 = curl7 = curl8 = curl9 = NULL; \
-	f = NULL;
+// enable pointer checking to protect users (medium overhead) if not disabled
+#if defined FAST_LOOKUP && ! defined NO_POINTER_CHECK
+
+const bool no_pointer_check = false;
+
 #define CHK_PTR_NOP( O ) if ( chk_ptr( O ) ) bad_ptr_void( O, __FILE__, __LINE__ );
 #define CHK_PTR_CHR( O ) chk_ptr( O ) ? bad_ptr_chr( O, __FILE__, __LINE__ ) :
 #define CHK_PTR_DBL( O ) chk_ptr( O ) ? bad_ptr_dbl( O, __FILE__, __LINE__ ) :
@@ -53,14 +50,11 @@ bool no_ptr_chk = false;
 #define CHK_PTR_VOID( O ) chk_ptr( O ) ? bad_ptr_void( O, __FILE__, __LINE__ ) :
 #define CHK_OBJ_OBJ( O ) chk_obj( O ) ? bad_ptr_obj( O, __FILE__, __LINE__ ) :
 #define CHK_HK_OBJ( O, X ) chk_hook( O, X ) ? no_hook_obj( O, X, __FILE__, __LINE__ ) :
-#define CHK_LNK_DBL( O ) O == NULL ? nul_lnk_dbl( __FILE__, __LINE__ ) :
-#define CHK_LNK_OBJ( O ) O == NULL ? nul_lnk_obj( __FILE__, __LINE__ ) :
-#define CHK_LNK_VOID( O ) O == NULL ? nul_lnk_void( __FILE__, __LINE__ ) :
-#define CHK_NODE_CHR( O ) O->node == NULL ? no_node_chr( O->label, __FILE__, __LINE__ ) :
-#define CHK_NODE_DBL( O ) O->node == NULL ? no_node_dbl( O->label, __FILE__, __LINE__ ) :
+
 #else
-bool no_ptr_chk = true;
-#define INIT_POINTERS
+
+const bool no_pointer_check = true;
+
 #define CHK_PTR_NOP( O )
 #define CHK_PTR_CHR( O )
 #define CHK_PTR_DBL( O )
@@ -70,11 +64,40 @@ bool no_ptr_chk = true;
 #define CHK_PTR_VOID( O )
 #define CHK_OBJ_OBJ( O )
 #define CHK_HK_OBJ( O, X )
+
+#ifdef NO_POINTER_CHECK
+#undef NO_POINTER_CHECK
+#endif
+
+#endif
+
+// initialize pointers to NULL to protect users (small overhead) if not disabled
+#if defined FAST_LOOKUP && ! defined NO_POINTER_INIT
+
+const bool no_pointer_init = false;
+
+#define INIT_POINTERS \
+	h = i = j = k = 0; \
+	cur = cur1 = cur2 = cur3 = cur4 = cur5 = cur6 = cur7 = cur8 = cur9 = cyccur = cyccur2 = cyccur3 = NULL; \
+	curl = curl1 = curl2 = curl3 = curl4 = curl5 = curl6 = curl7 = curl8 = curl9 = NULL; \
+	f = NULL;
+#define CHK_LNK_DBL( O ) O == NULL ? nul_lnk_dbl( __FILE__, __LINE__ ) :
+#define CHK_LNK_OBJ( O ) O == NULL ? nul_lnk_obj( __FILE__, __LINE__ ) :
+#define CHK_LNK_VOID( O ) O == NULL ? nul_lnk_void( __FILE__, __LINE__ ) :
+#define CHK_NODE_CHR( O ) O->node == NULL ? no_node_chr( O->label, __FILE__, __LINE__ ) :
+#define CHK_NODE_DBL( O ) O->node == NULL ? no_node_dbl( O->label, __FILE__, __LINE__ ) :
+
+#else
+
+const bool no_pointer_init = true;
+
+#define INIT_POINTERS
 #define CHK_LNK_DBL( O )
 #define CHK_LNK_OBJ( O )
 #define CHK_LNK_VOID( O )
 #define CHK_NODE_CHR( O )
 #define CHK_NODE_DBL( O )
+
 #endif
 
 // user defined variables for all equations (to be defined in equation file)
@@ -94,18 +117,12 @@ bool no_ptr_chk = true;
 	EQ_USER_VARS
 
 #define EQ_NOT_FOUND \
-	char msg[ TCL_BUFF_STR ]; \
-	sprintf( msg, "equation not found for variable '%s'", label ); \
-	error_hard( msg, "equation not found", "check your configuration (variable name) or\ncode (equation name) to prevent this situation\nPossible problems:\n- There is no equation for this variable\n- The equation name is different from the variable name (case matters!)" ); \
+	error_hard( "equation not found", "check your configuration (variable name) or\ncode (equation name) to prevent this situation\nPossible problems:\n- There is no equation for this variable\n- The equation name is different from the variable name (case matters!)", false, "equation not found for variable '%s'", label ); \
 	return res;
-	
+
 #define EQ_TEST_RESULT \
 	if ( quit == 0 && ( ( ! use_nan && is_nan( res ) ) || is_inf( res ) ) ) \
-	{ \
-		char msg[ TCL_BUFF_STR ]; \
-		sprintf( msg, "equation for '%s' produces the invalid value '%lf' at time %d", label, res, t ); \
-		error_hard( msg, "invalid equation result", "check your equation code to prevent invalid math operations\nPossible problems:\n- Illegal math operation (division by zero, log of negative number etc.)\n- Use of too-large/small value in calculation\n- Use of non-initialized temporary variable in calculation", true ); \
-	}
+		error_hard( "invalid equation result", "check your equation code to prevent invalid math operations\nPossible problems:\n- Illegal math operation (division by zero, log of negative number etc.)\n- Use of too-large/small value in calculation\n- Use of non-initialized temporary variable in calculation", true, "equation for '%s' produces the invalid value '%lf' at case %d", label, res, t );
 
 #ifndef _NW_
 #define DEBUG_CODE \
@@ -154,7 +171,7 @@ bool no_ptr_chk = true;
 		variable *var = this; \
 		object app; \
 		EQ_BEGIN
-		
+
 #define MODELEND \
 		EQ_NOT_FOUND \
 		end: \
@@ -164,7 +181,7 @@ bool no_ptr_chk = true;
 	}
 
 #define EQUATION( X ) \
-	if ( ! strcmp( label, X ) ) { 
+	if ( ! strcmp( label, X ) ) {
 
 #define RESULT( X ) \
 		res = X; \
@@ -218,12 +235,12 @@ bool no_ptr_chk = true;
 #define MODELEND \
 		}; \
 	}
-			
+
 #define EQUATION( X ) \
 	{ string( X ), [ ]( object *caller, variable *var ) \
 		{ \
 			EQ_BEGIN
-		
+
 #define RESULT( X ) \
 			; \
 			res = X; \
@@ -292,6 +309,8 @@ bool no_ptr_chk = true;
 #define CURRENT ( var->val[ 0 ] )
 #define THIS ( p )
 #define CALLER ( c )
+#define NAME ( ( const char * ) p->label )
+#define NAMES( O ) ( chk_ptr( O ) ? NULL : ( const char * ) O->label )
 #define NEXT ( p->next )
 #define NEXTS( O ) ( CHK_PTR_OBJ( O ) O->next )
 #define PARENT ( p->up )
@@ -304,24 +323,8 @@ bool no_ptr_chk = true;
 #define RUN ( ( double ) cur_sim )
 #define LAST_RUN ( ( double ) sim_num )
 
-#define LOG( ... ) \
-{ \
-	if ( ! fast ) \
-	{ \
-		char msg[ TCL_BUFF_STR ]; \
-		sprintf( msg, __VA_ARGS__ ); \
-		plog( msg ); \
-	} \
-}
-#define PLOG( ... ) \
-{ \
-	if ( fast_mode < 2 ) \
-	{ \
-		char msg[ TCL_BUFF_STR ]; \
-		sprintf( msg, __VA_ARGS__ ); \
-		plog( msg ); \
-	} \
-}
+#define LOG( ... ) ( ! fast ? plog( __VA_ARGS__ ) : ( void ) NULL )
+#define PLOG( ... ) ( fast_mode < 2 ? plog( __VA_ARGS__ ) : ( void ) NULL )
 
 #define V( X ) ( p->cal( p, ( char * ) X, 0 ) )
 #define VL( X, Y ) ( p->cal( p, ( char * ) X, Y ) )
@@ -429,7 +432,7 @@ bool no_ptr_chk = true;
 #define INTERACTS( O, X, Y ) ( CHK_PTR_DBL( O ) O->interact( ( char * ) X, Y, v, i, j, h, k, \
 	cur, cur1, cur2, cur3, cur4, cur5, cur6, cur7, cur8, cur9, \
 	curl, curl1, curl2, curl3, curl4, curl5, curl6, curl7, curl8, curl9 ) )
-	
+
 #define SEARCH( X ) ( p->search( ( char * ) X, false ) )
 #define SEARCHS( O, X ) ( CHK_PTR_OBJ( O ) O->search( ( char * ) X, false ) )
 #define SEARCH_CND( X, Y ) ( p->search_var_cond( ( char * ) X, Y, 0 ) )
@@ -634,7 +637,7 @@ bool no_ptr_chk = true;
 #define CYCLE3_SAFES( O, X, Y ) for ( X = cycle_obj( O, ( char * ) Y, "CYCLE_SAFES" ), \
 								 cyccur3 = brother( X ); X != NULL; X = cyccur3, \
 								 cyccur3 != NULL ? cyccur3 = brother( cyccur3 ) : cyccur3 = cyccur3 )
-								 
+
 #ifdef NO_POINTER_INIT
 #define CYCLE_LINK( O ) for ( O = p->node->first; O != NULL; O = O->next )
 #define CYCLE_LINKS( C, O ) for ( O = C->node->first; O != NULL; O = O->next )
@@ -663,13 +666,15 @@ bool no_ptr_chk = true;
 extern Tcl_Interp *inter;
 #endif
 
-double init_lattice( double pixW = 0, double pixH = 0, double nrow = 100, double ncol = 100, 
-					 char const lrow[ ] = "y", char const lcol[ ] = "x", char const lvar[ ] = "", 
+double init_lattice( double pixW = 0, double pixH = 0, double nrow = 100, double ncol = 100,
+					 const char lrow[ ] = "y", const char lcol[ ] = "x", const char lvar[ ] = "",
 					 object *p = NULL, int init_color = -0xffffff );
 double poidev( double xm, long *idum_loc = NULL );
-int deb( object *r, object *c, char const *lab, double *res, bool interact = false, const char *hl_var = "" );
+int deb( object *r, object *c, const char *lab, double *res, bool interact = false, const char *hl_var = "" );
 object *go_brother( object *c );
 void cmd( const char *cm, ... );
+
+char msg[ MAX_BUFF_SIZE ];							// legacy auxiliary buffer
 
 #define FUNCTION( X ) \
 	if ( ! strcmp( label, X ) ) { \
@@ -738,7 +743,7 @@ void cmd( const char *cm, ... );
 	f = fopen( "log.txt", "a" ); \
 	fprintf( f, "t=%d\t%s\t(cur=%g)\n", t, var->label, var->val[0] ); \
 	fclose( f );
- 
+
 #define DEBUG_AT( X ) \
 	if ( t >= X ) \
 	{ \

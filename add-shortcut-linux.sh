@@ -1,7 +1,7 @@
 #!/bin/bash
 #**************************************************************
 #
-#	LSD 8.0 - May 2021
+#	LSD 8.0 - May 2022
 #	written by Marco Valente, Universita' dell'Aquila
 #	and by Marcelo Pereira, University of Campinas
 #
@@ -44,8 +44,9 @@ else
 	sed 's:$LSDROOT:'"$LSDROOT"':g' "$LSDROOT/$TARGET" > "$DESKTOP/$TARGET"
 	chmod +x "$DESKTOP/$TARGET"
 
+	# make shortcut clickable in newer GNOME
 	if command -v gio &> /dev/null; then
-		gio set "$DESKTOP/$TARGET" "metadata::trusted" true
+		dbus-launch gio set "$DESKTOP/$TARGET" "metadata::trusted" true > /dev/null 2>&1
 	fi
 	
 	# also add icon to user window manager configuration

@@ -2,6 +2,33 @@
 #
 # ----------------- K+S Aggregates analysis ---------------------
 #
+#   Written by Marcelo C. Pereira, University of Campinas
+#
+#   Copyright Marcelo C. Pereira
+#   Distributed under the GNU General Public License
+#
+#   The default configuration assumes that the supplied LSD
+#   simulation configurations (basename Sim):
+#     R/data/Sim1.lsd
+#     R/data/Sim2.lsd
+#   are executed before this script is used.
+#
+#   To execute the simulations, (1) open LSD Model Manager (LMM),
+#   (2) in LSD Model Browser, open the model which contains this
+#   script (double click), (3) in LMM, compile and run the model
+#   (menu Model>Compile and Run), (4) in LSD Model Browser, load
+#   the desired configuration (menu File>Load), (5) execute the
+#   configuration (menu Run>Run or Run> Parallel Run), accepting
+#   the defaults (parallel run is optional but typically saves
+#   significant execution time).
+#
+#   IMPORTANT: this script assumes the R working directory is set
+#   to the R subfolder where this script file is stored. This can
+#   be done automatically in RStudio if a project is created at
+#   this subfolder, or using the command setwd(). The "folder"
+#   variable below must always point to a (relative) subfolder
+#   of the R working directory.
+#
 #******************************************************************
 
 #******************************************************************
@@ -10,19 +37,25 @@
 #
 #******************************************************************
 
-folder   <- "data"                    # data files folder
-baseName <- "Sim"                     # data files base name (same as .lsd file)
-nExp <- 2                             # number of experiments
-iniDrop <- 0                          # initial time steps to drop (0=none)
-nKeep <- -1                           # number of time steps to keep (-1=all)
+folder    <- "data"                 # data files folder
+baseName  <- "Sim"                  # data files base name (same as .lsd file)
+nExp      <- 2                      # number of experiments
+iniDrop   <- 0                      # initial time steps to drop (0=none)
+nKeep     <- -1                     # number of time steps to keep (-1=all)
+mcStat    <- "mean"                 # Monte Carlo statistic ("mean", "median")
+mcDist    <- ""                     # distance metric to find MC typical run
+CI        <- 0.95                   # confidence level
+bootR     <- 999                    # bootstrap replicates (bootCI != NULL)
+bootCI    <- NULL                   # bootstrap confidence interval method (SLOW)
+                                    # (NULL (no bootstrap), "basic", or "bca")
 
 expVal <- c( "Free entry", "Entry after exit" )   # case parameter values
 
-# Aggregated variables to use
-logVars <- c( "GDP", "GDPnom", "D2", "G", "Gbail", "Tax", "Deb", "Def", "DefP",
-              "dN", "I", "EI", "A", "A1", "A2", "S1", "S2", "Deb1", "Deb2",
-              "NWb", "NW1", "NW2", "W1", "W2", "wReal", "BadDeb", "TC", "Loans",
-              "CD", "CS" )
+# aggregated variables to use
+logVars <- c( "Creal", "GDPreal", "GDPnom", "G", "Gbail", "Tax", "Deb", "Def",
+              "DefP", "dN", "Ireal", "EI", "A", "A1", "A2", "S1", "S2", "Deb1",
+              "Deb2", "NWb", "NW1", "NW2", "W1", "W2", "wReal", "BadDeb",
+              "TC", "Loans", "CD", "CS" )
 aggrVars <- append( logVars, c( "dGDP", "dCPI", "dA", "dw", "CPI", "Q2u",
                                 "F1", "F2", "entry1", "entry2", "entry1exit",
                                 "entry2exit", "exit1", "exit2", "exit1fail",
@@ -33,28 +66,20 @@ aggrVars <- append( logVars, c( "dGDP", "dCPI", "dA", "dw", "CPI", "Q2u",
 
 # ==== Process LSD result files ====
 
-# Package with LSD interface functions
-library( LSDinterface, verbose = FALSE, quietly = TRUE )
+# load support packages and functions
+source( "KS-support-functions.R" )
 
 # remove warnings for saved data
-# !diagnostics suppress = A, S, M, m
+# !diagnostics suppress = mc, mcP, mcX, P, X, S, M, m, C, c
 
 # ---- Read data files ----
 
 # Function to read one experiment data (to be parallelized)
 readExp <- function( exper ) {
-  if( nExp > 1 ) {
-    myFiles <- list.files( path = folder,
-                           pattern = paste0( baseName, exper, "_[0-9]+.res" ),
-                           full.names = TRUE )
-  } else {
-    myFiles <- list.files( path = folder,
-                           pattern = paste0( baseName, "_[0-9]+.res" ),
-                           full.names = TRUE )
-  }
-
-  if( length( myFiles ) < 1 )
-    stop( "Data files not found. Check 'folder', 'baseName' and 'nExp' parameters." )
+  if( nExp > 1 )
+    myFiles <- list.files.lsd( folder, paste0( baseName, exper ) )
+  else
+    myFiles <- list.files.lsd( folder, baseName )
 
   cat( "Data files: ", myFiles, "\n" )
 
@@ -67,18 +92,43 @@ readExp <- function( exper ) {
   nSize  <- dim( mc )[ 3 ]               # Monte Carlo sample size
 
   # Compute Monte Carlo averages and std. deviation and store in 2D arrrays
-  stats <- info.stats.lsd( mc )
+  stats <- info.stats.lsd( mc, median = ( mcStat == "median" ), ci = mcStat,
+                           ci.conf = CI, ci.boot = bootCI, boot.R = bootR )
 
-  # Insert a t column
-  t <- as.integer( rownames( stats$avg ) )
-  A <- as.data.frame( cbind( t, stats$avg ) )
-  S <- as.data.frame( cbind( t, stats$sd ) )
+  t <- as.integer( rownames( stats$avg ) )      # t column to insert in tables
+
+  if( mcStat == "median" ) {                    # pick desired statistic set
+    P <- as.data.frame( cbind( t, stats$med ) )
+    S <- as.data.frame( cbind( t, stats$mad ) )
+  } else {
+    P <- as.data.frame( cbind( t, stats$avg ) )
+    S <- as.data.frame( cbind( t, stats$sd ) )
+  }
+
   M <- as.data.frame( cbind( t, stats$max ) )
   m <- as.data.frame( cbind( t, stats$min ) )
+  C <- as.data.frame( cbind( t, stats$ci.hi ) )
+  c <- as.data.frame( cbind( t, stats$ci.lo ) )
+
+  if( ! is.null( mcDist ) && mcDist != "" ) {   # use typical runs?
+    d <- info.distance.lsd( mc, P, distance = mcDist, rank = TRUE )
+
+    mcP <- d$close[ 1, ]
+    P <- matrix( nrow = nTsteps, ncol = 0 )
+    for( i in 1 : length( mcP ) )
+      P <- cbind( P, mc[ , names( mcP[ i ] ), mcP[ i ] ] )
+
+    dimnames( P ) <- list( dimnames( mc )[[ 1 ]], names( mcP ) )
+    P <- as.data.frame( cbind( t, P ) )
+
+    mcX <- names( d$rank )[ 1 ]
+    X <- as.data.frame( cbind( t, mc[ , , mcX ] ) )
+  } else
+    mcP <- mcX <- X <- NULL
 
   # Save temporary results to disk to save memory
   tmpFile <- paste0( folder, "/", baseName, exper, "_aggr.Rdata" )
-  save( mc, A, S, M, m, nTsteps, nVar, nSize, file = tmpFile )
+  save( mc, mcP, mcX, P, X, S, M, m, C, c, nTsteps, nVar, nSize, file = tmpFile )
 
   return( tmpFile )
 }
@@ -89,14 +139,11 @@ tmpFiles <- lapply( 1 : nExp, readExp )
 # ---- Organize data read from files ----
 
 # fill the lists to hold data
-mcData <- list()  # 3D Monte Carlo data
-Adata <- list()  # average data
-Sdata <- list()  # standard deviation data
-Mdata <- list()  # maximum data
-mdata <- list()  # minimum data
+mcData <- mcPtag <- mcXtag <- Pdata <- Xdata <- Sdata <- Mdata <- mdata <-
+  Cdata <- cdata <- list( )
 nTsteps.1 <- nSize.1 <- 0
 
-for( k in 1 : nExp ) {                      # realocate data in separate lists
+for( k in 1 : nExp ) {                      # relocate data in separate lists
 
   load( tmpFiles[[ k ]] )                   # pick data from disk
   file.remove( tmpFiles[[ k ]] )            # and delete temporary file
@@ -106,16 +153,26 @@ for( k in 1 : nExp ) {                      # realocate data in separate lists
 
   mcData[[ k ]] <- mc
   rm( mc )
-  Adata[[ k ]] <- A
+
+  Pdata[[ k ]] <- P
   Sdata[[ k ]] <- S
   Mdata[[ k ]] <- M
   mdata[[ k ]] <- m
+  Cdata[[ k ]] <- C
+  cdata[[ k ]] <- c
   nTsteps.1 <- nTsteps
   nSize.1 <- nSize
+
+  if( ! is.null( mcDist ) && mcDist != "" ) {   # use typical runs?
+    mcPtag[[ k ]] <- mcP
+    mcXtag[[ k ]] <- mcX
+    Xdata[[ k ]] <- X
+  } else
+    Xdata[[ k ]] <- P
 }
 
 # free memory
-rm( tmpFiles, A, S, M, m, nTsteps.1, nSize.1 )
+rm( tmpFiles, mcP, mcX, P, X, S, M, m, C, c, nTsteps.1, nSize.1 )
 invisible( gc( verbose = FALSE ) )
 
 
@@ -128,11 +185,10 @@ invisible( gc( verbose = FALSE ) )
 # ===================== User parameters =========================
 
 bCase     <- 1      # experiment to be used as base case
-CI        <- 0.95   # desired confidence interval
 nBins     <- 15     # number of bins to use in histograms
 warmUpPlot<- 100    # number of "warm-up" runs for plots
 nTplot    <- -1     # last period to consider for plots (-1=all)
-warmUpStat<- 300    # warm-up runs to evaluate all statistics
+warmUpStat<- 200    # warm-up runs to evaluate all statistics
 nTstat    <- -1     # last period to consider for statistics (-1=all)
 lowP      <- 6      # bandpass filter minimum period
 highP     <- 32     # bandpass filter maximum period
@@ -161,14 +217,8 @@ pTypes <- c( 4, 4, 4, 4, 4, 4 )
 
 # ====== External support functions & definitions ======
 
-library( LSDsensitivity, verbose = FALSE, quietly = TRUE )
-if( ! exists( "log0", mode = "function" ) ||
-    ! exists( "time_plots", mode = "function" ) ||
-    ! exists( "box_plots", mode = "function" ) ) {    # already loaded?
-  source( "KS-support-functions.R" )
-  source( "KS-time-plots.R" )
-  source( "KS-box-plots.R" )
-}
+source( "KS-time-plots.R" )
+source( "KS-box-plots.R" )
 
 # remove warnings for support functions and saved data
 # !diagnostics suppress = mc, nTsteps, nKeep, nVar, nSize, log0, t.test0
@@ -181,6 +231,25 @@ if( ! exists( "log0", mode = "function" ) ||
 
 if( repName == "" )
   repName <- baseName
+
+# create tags for MC-specific plots
+if( ! is.null( mcDist ) && mcDist != "" ) {   # use typical runs?
+  Ptag <- c( )
+  for( i in 1 : length( mcPtag[[ 1 ]] ) ) {
+    Ptag[ i ] <- mcPtag[[ 1 ]][ i ]
+    if( length( mcPtag ) > 1 )
+      for( j in 2 : length( mcPtag ) )
+        Ptag[ i ] <- paste( Ptag[ i ], mcPtag[[ j ]][ i ], sep = "|" )
+  }
+  names( Ptag ) <- names( mcPtag[[ 1 ]] )
+  Xtag <- unlist( mcXtag )
+  fileTag <- paste0( "_", ifelse( length( mcXtag ) > 1, "multi-mc", mcXtag[[ 1 ]] ) )
+} else {
+  Ptag <- rep( mcStat, nVar )
+  names( Ptag ) <- dimnames( mcData[[ 1 ]] )[[ 2 ]]
+  Xtag <- rep( mcStat, nExp )
+  fileTag <- ""
+}
 
 # Generate fancy labels & build labels list legend
 legends <- vector( )
@@ -213,7 +282,7 @@ critCorr <- qnorm( 1 - ( 1 - CI ) / 2 ) / sqrt( nTstat )
 
 # ==== Create PDF ====
 
-pdf( paste0( folder, "/", repName, "_aggr_plots.pdf" ),
+pdf( paste0( folder, "/", repName, "_aggr_plots_", mcStat, fileTag, ".pdf" ),
      width = plotW, height = plotH )
 par( mfrow = c ( plotRows, plotCols ) )             # define plots per page
 
@@ -222,12 +291,12 @@ par( mfrow = c ( plotRows, plotCols ) )             # define plots per page
 # ====== Experiment comparison plots & statistics ======
 #
 
-time_plots( mcData, Adata, mdata, Mdata, Sdata, nExp, nSize, nTsteps, TmaskPlot,
-            CI, legends, colors, lTypes, smoothing )
+time_plots( mcData, Pdata, Xdata, mdata, Mdata, Sdata, cdata, Cdata, mcStat,
+            nExp, nSize, nTsteps, TmaskPlot, CI, Ptag, Xtag, legends, colors,
+            lTypes, smoothing )
 
-box_plots( mcData, nExp, nSize, TmaxStat, TmaskStat, warmUpStat,
-           nTstat, legends, legendList, sDigits, bPlotCoef,
-           bPlotNotc, folder, repName )
+box_plots( mcData, mcStat, nExp, nSize, TmaxStat, TmaskStat, warmUpStat, nTstat,
+           legends, legendList, sDigits, bPlotCoef, bPlotNotc, folder, repName )
 
 #
 # ====== Experiment-specific plots & statistics ======
@@ -242,7 +311,7 @@ for( k in 1 : nExp ) { # Experiment k
   # cross-section times selection
   csT <- c( round( ( warmUpPlot + nTplot + 1 ) / 2 ), nTplot )
 
-  plot_histo( csT, mcData[[ k ]][ , "GDP", ], log = 1, bins = nBins,
+  plot_histo( csT, mcData[[ k ]][ , "GDPreal", ], log = 3, bins = nBins,
               tit = paste( "GDP distribution (",
                            legends[ k ], ")" ),
               subtit = paste( "( mean at dotted line / cross sections at (",
@@ -286,40 +355,44 @@ for( k in 1 : nExp ) { # Experiment k
   bpfMsg <- paste0( "Baxter-King bandpass-filtered series, low =", lowP,
                     "Q / high = ", highP, "Q / order = ", bpfK )
 
-  plot_bpf( list( log0( Adata[[ k ]]$GDP ), log0( Adata[[ k ]]$D2 ),
-                  log0( Adata[[ k ]]$I ), log0( Adata[[ k ]]$A ) ),
+  plot_bpf( list( log0( Xdata[[ k ]]$GDPreal ), log0( Xdata[[ k ]]$Creal ),
+                  log0( Xdata[[ k ]]$Ireal ), log0( Xdata[[ k ]]$A ) ),
             pl = lowP, pu = highP, nfix = bpfK, mask = TmaskPlot,
             col = colors, lty = lTypes,
             leg = c("GDP", "Consumption", "Investment", "Productivity" ),
             xlab = "Time", ylab = "Filtered series",
             tit = paste( "GDP cycles (", legends[ k ], ")" ),
-            subtit = paste( "(", bpfMsg, "/ MC runs =", nSize, ")" ) )
+            subtit = paste( "(", bpfMsg, "/ MC runs =", nSize,
+                            "/ MC ", Xtag[ k ], ")" ) )
 
-  plot_bpf( list( Adata[[ k ]]$U, Adata[[ k ]]$V ),
+  plot_bpf( list( Xdata[[ k ]]$U, Xdata[[ k ]]$V ),
             pl = lowP, pu = highP, nfix = bpfK, mask = TmaskPlot,
             col = colors, lty = lTypes,
             leg = c( "Productivity", "Unemployment", "Vacancy" ),
             xlab = "Time", ylab = "Filtered series",
             tit = paste( "Shimer puzzle (", legends[ k ], ")" ),
-            subtit = paste( "(", bpfMsg, "/ MC runs =", nSize, ")" ) )
+            subtit = paste( "(", bpfMsg, "/ MC runs =", nSize,
+                            "/ MC ", Xtag[ k ], ")" ) )
 
-  plot_bpf( list( log0( Adata[[ k ]]$GDP ), Adata[[ k ]]$entry1exit,
-                  Adata[[ k ]]$entry2exit ),
+  plot_bpf( list( log0( Xdata[[ k ]]$GDPreal ), Xdata[[ k ]]$entry1exit,
+                  Xdata[[ k ]]$entry2exit ),
             pl = lowP, pu = highP, nfix = bpfK, mask = TmaskPlot,
             resc = c( 0.5, NA ), col = colors, lty = lTypes,
             leg = c( "GDP", "Net entry (capital)",
             "Net entry (consumption)" ),
             xlab = "Time", ylab = "Filtered series (rescaled)",
             tit = paste( "Net entry and business cycle (", legends[ k ], ")" ),
-            subtit = paste( "(", bpfMsg, "/ MC runs =", nSize, ")" ) )
+            subtit = paste( "(", bpfMsg, "/ MC runs =", nSize,
+                            "/ MC ", Xtag[ k ], ")" ) )
 
   #
   # ---- Correlation table ----
   #
 
-  corr_table( c( "GDP", "D2", "I", "CPI", "A", "U", "wReal", "mu2avg", "r",
-                 "DebGDP", "TC", "Loans", "BadDeb", "entry1exit", "entry2exit" ),
-              mcData[[1]], plot = TRUE,
+  corr_table( c( "GDPreal", "Creal", "Ireal", "CPI", "A", "U", "wReal",
+                 "mu2avg", "r", "DebGDP", "TC", "Loans", "BadDeb", "entry1exit",
+                 "entry2exit" ),
+              mcData[[ k ]], plot = TRUE,
               logVars = c( 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 2, 2, 2, 0, 0 ),
               mask = TmaskStat, pl = lowP, pu = highP, nfix = bpfK,
               tit = paste( "Pearson correlation coefficients (", legends[ k ], ")" ),
@@ -351,8 +424,9 @@ for( k in 1 : nExp ) { # Experiment k
   dimnames( mcData[[ k ]] )[[ 2 ]][ seq( newVar, newVar - 1 + 5 ) ] <-
     c( "Deb12", "NWS12", "exit12fail", "entry12", "netEntr12" )
 
-  corr.struct.1 <- corr_struct( "GDP", c( "D2", "I", "EI", "dN", "U", "A",
-                                          "mu2avg", "Deb12", "NWS12", "exit12fail" ),
+  corr.struct.1 <- corr_struct( "GDPreal", c( "Creal", "Ireal", "EI", "dN", "U",
+                                              "A", "mu2avg", "Deb12", "NWS12",
+                                              "exit12fail" ),
                                 mcData[[ k ]], labRef = "GDP (output)",
                                 labVars = c( "Consumption", "Investment",
                                              "Net investment", "Change in inventories",
@@ -374,8 +448,8 @@ for( k in 1 : nExp ) { # Experiment k
                      testMsg, sep = "\n" )
   title( main = title, sub = subTitle )
 
-  corr.struct.2 <- corr_struct( "GDP", c( "D2", "I", "A", "entry12", "netEntr12",
-                                          "wReal", "U", "V" ),
+  corr.struct.2 <- corr_struct( "GDPreal", c( "Creal", "Ireal", "A", "entry12",
+                                              "netEntr12", "wReal", "U", "V" ),
                                 mcData[[ k ]], labRef = "GDP (output)",
                                 labVars = c( "Consumption", "Investment",
                                              "Productivity", "Entry", "Net entry",
@@ -394,7 +468,7 @@ for( k in 1 : nExp ) { # Experiment k
   # ---- MC growth statistics and unit root tests ----
   #
 
-  key.stats <- growth_stats( c( "GDP", "D2", "I", "A", "wReal", "Loans" ),
+  key.stats <- growth_stats( c( "GDPreal", "Creal", "Ireal", "A", "wReal", "Loans" ),
                              mcData[[ k ]], mask = TmaskStat,
                              labVars = c( "GDP (output)", "Consumption",
                                           "Investment", "Product.", "Real wage",

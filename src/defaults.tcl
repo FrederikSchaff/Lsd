@@ -1,28 +1,30 @@
 #*************************************************************
 #
-#	LSD 8.0 - May 2021
+#	LSD 8.0 - May 2022
 #	written by Marco Valente, Universita' dell'Aquila
 #	and by Marcelo Pereira, University of Campinas
 #
 #	Copyright Marco Valente and Marcelo Pereira
 #	LSD is distributed under the GNU General Public License
-#	
+#
 #	See Readme.txt for copyright information of
 #	third parties' code used in LSD
-#	
+#
 #*************************************************************
 
 #*************************************************************
 # DEFAULTS.TCL
-# Default values for the Tk windowing system. 
+# Default values for the Tk windowing system.
 #*************************************************************
 
 # default colors in palette and other elements, according to the theme type (light/dark)
 set defcolorsL	{ black red green #d0d000 #fb46bc blue DeepSkyBlue1 RoyalBlue1 PaleTurquoise2 cyan aquamarine DarkSeaGreen1 chartreuse1 OliveDrab khaki3 LightGoldenrod4 sienna1 chocolate4 firebrick3 orange1 salmon3 }
 set defcolorsD	{ white tomato green yellow2 pink "steel blue" DeepSkyBlue1 RoyalBlue1 PaleTurquoise2 cyan aquamarine DarkSeaGreen1 chartreuse1 OliveDrab khaki3 LightGoldenrod4 sienna1 chocolate4 firebrick3 orange1 salmon3 }
 
-set hlcolorL	red			; # general highlight color
-set hlcolorD	tomato		; # general highlight color
+set hlcolorL	red			; # general highlight color (light mode)
+set hlcolorD	tomato		; # general highlight color (dark mode)
+set dhlcolorL	gray		; # general disabled highlight color (light mode)
+set dhlcolorD	gray		; # general disabled highlight color (dark mode)
 set commcolorL	green4		; # color of comments (light mode)
 set commcolorD	DarkOliveGreen3	; # color of comments (dark mode)
 set strcolorL	blue4		; # color of strings (light mode)
@@ -57,6 +59,12 @@ set ttipcolorL	LightYellow	; # color of tooltip background (light mode)
 set ttipcolorD	SteelBlue4	; # color of tooltip background (dark mode)
 
 # OS specific minimum window sizes (horizontal & vertical) (must be even numbers)
+set hsizeLminMac		800	; # LMM window
+set vsizeLminMac		600
+set hsizeLminLinux		800
+set vsizeLminLinux		600
+set hsizeLminWindows	800
+set vsizeLminWindows	600
 set hsizeBminMac		520	; # browser window
 set vsizeBminMac		600
 set hsizeBminLinux		460
@@ -66,7 +74,7 @@ set vsizeBminWindows	600
 set hsizeGminMac		670	; # log window
 set vsizeGminMac		360
 set hsizeGminLinux		670
-set vsizeGminLinux		400
+set vsizeGminLinux		430
 set hsizeGminWindows	620
 set vsizeGminWindows	360
 set hsizeAminMac		860	; # analysis of results window
@@ -91,8 +99,6 @@ set vsizeDminWindows	400
 # main windows size (must be even numbers)
 set hsizeL		800	; # LMM horizontal size in pixels
 set vsizeL		600	; # LMM vertical size in pixels
-set hsizeLmin	800	; # LMM minimum horizontal size in pixels
-set vsizeLmin	600	; # LMM minimum vertical size in pixels
 set hsizeM 		600	; # model structure horizontal size in pixels
 set vsizeM		360	; # model structure vertical size in pixels
 set hsizeNmin	300	; # objects numbers editor minimum horizontal size in pixels
@@ -130,6 +136,7 @@ set rstepM		0.1	; # relative scaling factor step step
 set rfactM		0.3	; # horizontal range exponential factor
 set rinitM		750	; # horizontal initial width (4 root sons)
 set rincrM		100	; # horizontal width increase step
+set rootyM		15	; # vertical height of the root object click area
 
 # runtime windows margins and defaults
 set hsizeR		500	; # horizontal size in pixels
@@ -182,7 +189,7 @@ set cscaleLat	1.0	; # default color scale (1:1.0)
 set sfmwheel	1	; # increase to accelerate mouse wheel and decrease to slow down
 set winmwscale	30	; # scroll minimum wheel movement (precision) factor in Windows
 set mouseWarp	0	; # set to 0 to disable auto-snapping (ignored in Windows)
-	
+
 # internal plot defaults
 set fontP		{ Helvetica 9 normal }; # default plot text font/size/mode
 set hticksP		3	; # number of horizontal plot legend ticks
@@ -294,8 +301,8 @@ set gnuplotWindows		"wgnuplot.exe"
 # default diff application settings
 set diffApp				"tkdiff.tcl"; # command line diff application to use
 set diffAppType			0			; # type of application (0=tk/1=terminal/2=graphical)
-set diffFile1			""			; # option to inform first file name		
-set diffFile2			""			; # option to inform second file name		
+set diffFile1			""			; # option to inform first file name
+set diffFile2			""			; # option to inform second file name
 set diffFile1name		"-L"		; # option for naming first file
 set diffFile2name		"-L"		; # option for naming second file
 set diffOptions			"-lsd"		; # other options
