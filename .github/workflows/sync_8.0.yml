@@ -1,5 +1,5 @@
- # This workflow keeps the 8.0 beta branch in sync with the upstream branch. Note: Force is used! (all changes to local 8.0 will be lost)
-name: Synchronise 8.0 beta branch
+ # This workflow keeps the 8.0 stable branch in sync with the upstream branch. Note: Force is used! (all changes to local 8.0 will be lost)
+name: Synchronise 8.0 stable branch
 
 on:
   workflow_dispatch:  
@@ -17,5 +17,5 @@ jobs:
       with:
         source_repo: "marcov64/Lsd"
         source_branch: "8.0-stable"
-        destination_branch: "8.0-beta"
+        destination_branch: "8.0-stable"
         github_token: ${{ secrets.GITHUB_TOKEN }}
