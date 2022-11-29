@@ -2,17 +2,17 @@
 #
 # This workflow will automatically create a PR when updates on 8.0-beta are detected, updating any existing PR that is not yet closed.
 # The PR is also automatically tested and, if the test is successful, it is automatically merged into the test automation branch.
-name: CI create/update PR [8.0-beta] -> [8.0-beta-test-automation]
+name: CI create/update PR [8.0] -> [8.0-test-automation]
 
 env:
-  SOURCE_BRANCH: "origin/8.0-beta"
-  TARGET_BRANCH: "8.0-beta-test-automation"
-  CI_BRANCH: "CI/PR-8.0-beta--into--test-automation"
+  SOURCE_BRANCH: "origin/8.0-stable"
+  TARGET_BRANCH: "8.0-test-automation"
+  CI_BRANCH: "CI/PR-8.0--into--test-automation"
 
 on:
   workflow_dispatch:
   push:
-    branches: [8.0-beta]
+    branches: [8.0-stable]
 
 jobs:
   create-or-update-PR:
